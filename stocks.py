@@ -84,12 +84,19 @@ def holdings_to_file(df, tax_deductions, filename, year):
     with open('taxdata.json', 'r') as jf:
         taxdata = json.load(jf)
     tax_deduction_rate = taxdata['tax_deduction_rates'][str(year)][0]
+    df = df.set_index('idx')
+    tax_deductions = tax_deductions[tax_deductions.index.isin(df.index)]
     df['tax_deduction'] = tax_deductions
-    df['tax_deduction'] += df.apply (lambda row: (row['price_nok'] * tax_deduction_rate)/100, axis=1)
+
+    def t(current_deduction, price_nok):
+        return current_deduction + (price_nok * tax_deduction_rate)/100
+
+    df['tax_deduction'] = df.apply (lambda row: t(row['tax_deduction'], row['price_nok']), axis=1)
     df['date'] = df['date'].apply(lambda x: x.strftime('%Y-%m-%d %R%z'))
-    df.drop('idx', axis=1, inplace=True)
+
     with open(filename, 'w') as f:
         json.dump(df.to_dict('records'), f, indent=4)
+    return df
 
 def sales(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
@@ -118,7 +125,6 @@ def sales(df: pd.DataFrame) -> pd.DataFrame:
                 break
     return dfr
             
-
 def gains(df, tax_deductions):
     f = FMV()
     if len(df) == 0:
@@ -199,7 +205,6 @@ def cash(df):
     ### 56330.26 => 483006.11NOK
     
 def annual_report(year, td):
-
     tax_deductions = td.trades()[['tax_deduction', 'idx']].set_index('idx')
 
     # Dividends
@@ -221,14 +226,15 @@ def annual_report(year, td):
             print(tabulate(g, headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
         
     b = balance(td.trades())
-    
+
     # TODO: Make this configurable
     # Must be called after dividends and sales are done
-    holdings_to_file(b, tax_deductions, f'data/holdings-{str(year)}.json', year)
+    # Add tax deductions for next year
+    h = holdings_to_file(b, tax_deductions, f'data/holdings-{str(year)}.json', year)
     
     pd.options.display.float_format = '{:.2f}'.format
-    print('HOLDINGS:\n==========')
-    print(tabulate(b, headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
+    print(f'HOLDINGS {year}:\n==========')
+    print(tabulate(h, headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
 
     # Wealth
     r = holdings(b, year)
