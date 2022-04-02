@@ -35,6 +35,7 @@ class TDTransactionsJSON():
         tmp = self.df[(self.df.type.isin(['TRADE', 'RECEIVE_AND_DELIVER'])) & (self.df['transactionItem.instrument.assetType'] == 'EQUITY')]
         if len(tmp) == 0:
             self.df_trades = self.dfprevh
+            self.df_trades['idx'] = pd.Index(range(len(self.df_trades.index)))
             return self.dfprevh
         df = pd.DataFrame()
         df[['type', 'symbol', 'date',
