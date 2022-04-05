@@ -12,10 +12,16 @@ from typing import Union, Tuple
 import numpy as np
 
 class FMV():
-    def __init__(self, fetch_stock_data=False) -> None:
-        self.symbols = {}
-        self.fetch_stock_data = fetch_stock_data
+    _instance = None
 
+    def __new__(cls):
+        if cls._instance is None:
+            print('Creating the object')
+            cls._instance = super(FMV, cls).__new__(cls)
+            # Put any initialization here.
+            cls.symbols = {}
+        return cls._instance
+    
     def fetch_stock(self, symbol):
         '''Returns a dictionary of date and closing value'''
         apikey='LN6PYRQ0I5LKDY51'
@@ -116,7 +122,7 @@ class FMV():
                 date_str = str(date)
         return np.nan
 
-    def get_currency(self, currency, date: Union[str, datetime]):
+    def get_currency(self, currency:str, date: Union[str, datetime]) -> float:
         date, date_str = self.parse_date(date)
         self.refresh(currency, date, True)
         for i in range(5):

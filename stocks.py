@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import pandas as pd
 import numpy as np
 from tabulate import tabulate
@@ -8,9 +9,72 @@ import json
 import argparse
 import os
 from fmv import FMV
-from trans import TDTransactionsJSON
+from trans import read_transactions
 from typing import Tuple
 
+class Cash():
+    ''' Cash balance.'''
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            print('Creating the object')
+            cls._instance = super(Cash, cls).__new__(cls)
+            # Put any initialization here.
+            cls.df = pd.DataFrame(columns=['type', 'symbol', 'date', 'qty', 'price_nok'])
+        return cls._instance
+
+    def debit(self, date, qty, price_nok):
+        self.df.loc[len(self.df.index)] = 'BUY', 'USD', date, qty, price_nok
+
+    def credit(self, date, qty, price_nok):
+        self.df.loc[len(self.df.index)] = 'SELL', 'USD', date, qty, price_nok
+
+    def withdrawal(self, date, qty, price_nok):
+        self.df.loc[len(self.df.index)] = 'WIRE', 'USD', date, qty, price_nok
+
+    def process(self):
+        # import IPython
+        # IPython.embed()
+        # self.df.sort_values(by='date', inplace=True)
+        
+        buys = self.df[self.df.type == 'BUY'].sort_values(by='date')
+        buys['idx'] = 0
+        sale = self.df[self.df.type == 'SELL'].sort_values(by='date')
+        df = self.df.copy()
+        dfr = pd.DataFrame(columns=['symbol', 'qty', 'open_date', 'open_price', 'close_date',
+                                    'close_price',  'sales_idx', 'idx'])
+
+        for si, sr in sale.iterrows():
+            to_sell = abs(sr.qty)
+            for bi, br in buys.iterrows():
+                if br.qty >= to_sell:
+                    df.loc[bi, 'qty'] -= to_sell
+                    no = to_sell
+                    to_sell = 0
+                else:
+                    to_sell -= br.qty
+                    no = br.qty
+                    df.loc[bi, 'qty'] = 0
+                if no > 0:
+                    print('SOLD', br)
+                    dfr.loc[len(dfr.index)] = [sr['symbol'], no, br['date'],  br['price_nok'], sr['date'],
+                                             sr['price_nok'], si, bi ]
+                if to_sell == 0:
+                    break
+                
+        f = FMV()
+        if len(dfr) == 0:
+            return None
+
+        #df['usdnok_close'] = df.apply(lambda x: f.get_currency('USD', x.close_date), axis=1)
+        
+        def g(row):
+            gain = row.close_price - row.open_price
+            return gain * row.qty
+        dfr['total_gain_nok'] = dfr.apply(g, axis=1)
+        return dfr
+ 
 def active_balance(df: pd.DataFrame) -> pd.DataFrame:
     '''
     Given a set of trades using FIFO sell order calculate the final set of stock sets.
@@ -54,7 +118,7 @@ def balance_by_symbol_and_date(df, symbol, date):
     ''' Active balance for a symbol up to a given date '''
     f = FMV()
 
-    df = df.copy()
+    df = df.copy() # Needed?
     df = df[(df.symbol == symbol) & (df.date <= date)]
     if df.empty:
         return df
@@ -100,14 +164,18 @@ def holdings_to_file(df, tax_deductions, filename, year):
 
 def sales(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-
-    buys = df[df['qty'] > 0].sort_values(by='date').copy()
+    c = Cash()
+    f = FMV()
+    buys = df[df['qty'] > 0].sort_values(by='date')
+    buys = buys.copy()
     sales = df[df['qty'] < 0].sort_values(by='date').copy()
 
     dfr = pd.DataFrame(columns=['symbol', 'qty', 'open_date', 'open_price', 'open_price_nok', 'close_date',
-                                'close_price', 'tax_deduction', 'idx'])
+                                'close_price', 'tax_deduction', 'sales_idx', 'idx'])
 
     for idx, row in sales.iterrows():
+        # Buying USD in the cash account
+        c.debit(row['date'], row['cost'], f.get_currency('USD', row['date']))
         to_sell = abs(row['qty'])
         for bidx, brow in buys[buys['symbol'] == row['symbol']].iterrows():
             if brow['qty'] >= to_sell:
@@ -120,7 +188,7 @@ def sales(df: pd.DataFrame) -> pd.DataFrame:
                 buys['qty'].loc[bidx] = 0
             if no > 0:
                 dfr.loc[len(dfr.index)] = [row['symbol'], no, brow['date'], brow['price'], brow['price_nok'], row['date'],
-                                           row['price'], brow['tax_deduction'], brow['idx'] ]
+                                           row['price'], brow['tax_deduction'], idx, brow['idx'] ]
             if to_sell == 0:
                 break
     return dfr
@@ -129,6 +197,7 @@ def gains(df, tax_deductions):
     f = FMV()
     if len(df) == 0:
         return None
+    df = df.copy()
     df['usdnok_close'] = df.apply(lambda x: f.get_currency('USD', x.close_date), axis=1)
     
     def g(row):
@@ -154,6 +223,7 @@ def dividends(df, df_dividends, df_tax, td):
     dft = df_tax.copy()
     if dfd.empty and dft.empty:
         return None, td
+    c = Cash()
 
     dfd = dfd.reset_index()
     dft = dft.reset_index()
@@ -166,6 +236,8 @@ def dividends(df, df_dividends, df_tax, td):
     dfd['adjdivnok'] = 0
 
     for idx, row in dfd.iterrows():
+        c.debit(row.date, row.dividend, row.usdnok)
+        c.credit(row.date, row.tax, row.usdnok)
         b = balance_by_symbol_and_date(df, row.symbol, row.date)
         if b.empty:
             print('*** Empty balance for: ', row)
@@ -186,60 +258,65 @@ def dividends(df, df_dividends, df_tax, td):
     return dfd, td
 
 def cash(df):
-    #df = df[(df['type'] == 'JOURNAL') & (dfo['description'] == "W-8 WITHHOLDING")].sort_values(by='transactionDate')
-    print('CASH\n', df)
+    print('CASH CASH', df)
+    c = Cash()
     
-    # Transfers
-    dft = df[df.type == 'ELECTRONIC_FUND']
+    for i, r in df.iterrows():
+        print('WWW', r)
+        c.withdrawal(r['date'], r['cash'], 483006.11/abs(r['cash']))
+    print('CASH STATUS', c.process())
 
-    # Cash
-    dfc = df[df.type == 'RECEIVE_AND_DELIVER']
-    # Transfer is a sell of USD med inngangsverdi
-    # Match up with sale?
-    # A sale should have added up to the cash account
-    # A manual match iup with what has been received.
-    print('TRANSFERS\n', dft)
 
-    print('CASH\n', dfc['transactionItem.amount'])
-    
     ### 56330.26 => 483006.11NOK
     
-def annual_report(year, td):
+def annual_tax(year, td):
     tax_deductions = td.trades()[['tax_deduction', 'idx']].set_index('idx')
 
     # Dividends
     d, tax_deductions = dividends(td.trades(), td.dividends(), td.tax(), tax_deductions)
-    if d is not None:
-        print('\nDIVIDENDS:\n==========')
-        print(tabulate(d, headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
-        print(tabulate(d.groupby(['symbol'])[['dividend', 'divnok', 'adjdivnok', 'tax', 'taxnok']].sum(), headers='keys',tablefmt='pretty'))
 
     # Gains
     s = sales(td.trades())
     if not s.empty:
-        print('\nSALES:\n======')
-        print(tabulate(s, headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
-
-        print('\nGAINS:\n======')
         g, tax_deductions = gains(s, tax_deductions)
-        if g is not None:
-            print(tabulate(g, headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
         
     b = balance(td.trades())
 
-    # TODO: Make this configurable
-    # Must be called after dividends and sales are done
-    # Add tax deductions for next year
-    h = holdings_to_file(b, tax_deductions, f'data/holdings-{str(year)}.json', year)
-    
-    pd.options.display.float_format = '{:.2f}'.format
-    print(f'HOLDINGS {year}:\n==========')
-    print(tabulate(h, headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
-
     # Wealth
     r = holdings(b, year)
+
+    # Cash transfers, exchange rate gains/losses
+    c = cash(td.cash())
+
+    return {'dividends': d, 'sales': s, 'gains': g, 'wealth': r,
+            'tax_deductions': tax_deductions,
+            'balance': b}
+
+def save_holdings_to_file(balance):
+    h = holdings_to_file(balance, tax_deductions, f'data/holdings-{str(year)}.json', year)
+    
+
+def annual_report(r):
+    if r['dividends'] is not None:
+        print('\nDIVIDENDS:\n==========')
+        print(tabulate(r['dividends'], headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
+        print(tabulate(r['dividends'].groupby(['symbol'])[['dividend', 'divnok', 'adjdivnok', 'tax', 'taxnok']].sum(), headers='keys',tablefmt='pretty'))
+
+    # Gains
+    if not r['sales'].empty:
+        print('\nSALES:\n======')
+        print(tabulate(r['sales'], headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
+
+        print('\nGAINS:\n======')
+        if r['gains'] is not None:
+            print(tabulate(r['gains'], headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
+        
+    # print(f'BALANCE:\n==========')
+    # print(tabulate(r['balance'], headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
+
+    # Wealth
     print('\nWEALTH:\n========')
-    print(tabulate(r, headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
+    print(tabulate(r['wealth'], headers='keys', tablefmt='pretty', showindex='False', floatfmt='.2f'))
 
     '''
     # # Cash transfers, exchange rate gains/losses
@@ -247,39 +324,64 @@ def annual_report(year, td):
     '''
 
 def get_arguments():
-    parser = argparse.ArgumentParser(description='Tax Calculator.')
+    parser = argparse.ArgumentParser(description='ESPP 2Tax Calculator.')
     parser.add_argument('year', type=str,
                         help='Which year(s) to calculate tax for')
-    parser.add_argument('-t', '--transactions', help='Per trader transaction file-prefix')
+    parser.add_argument('--transactions', help='Per trader transaction file-prefix')
     parser.add_argument('--report', type=str, help='Report type')
+    parser.add_argument('--generate-holdings', type=str, help='Holdings file for range of years')
+    parser.add_argument('--holdings', type=str, help='Holdings file for selected year')
 
     return parser.parse_args()
+
+###
+### Command line interface
+### Tax report, one year at the time.
+###    Input: transaction files, previous year holdings
+### Generate holdings files. Range of years.
+
+### Prefix files with {format}
+### Support glob?
 
 
 def main():
     # Get arguments
     args = get_arguments()
-
     years = args.year.split('-')
-    start = int(years[0])
-    if len(years ) == 1:
-        end = start
+
+    if args.generate_holdings:
+        start = int(years[0])
+        if len(years ) == 1:
+            end = start
+        else:
+            end = int(years[1])
+        for year in range(start, end+1):
+            print(f'{year} TAX REPORT')
+            # Get holdings from previous year
+            prev_holdings = f'data/holdings-{str(year - 1)}.json'    
+            # Read in transaction file and concatenate with previous year
     else:
-        end = int(years[1])
-    for year in range(start, end+1):
-        print(f'{year} TAX REPORT')
-        # Get holdings from previous year
-        prev_holdings = f'data/holdings-{str(year - 1)}.json'    
-        # Read in transaction file and concatenate with previous year
-        td = TDTransactionsJSON(args.transactions+f'-{year}.json', prev_holdings, year)
+        year = int(years[0])
+        try:
+            f, n = args.transactions.split(':')
+        except ValueError:
+            sys.exit('Specify format of transaction file <format>:<transactionfile>')
+        print('F N', f, n)
+        t = read_transactions(f, n, args.holdings, year)
 
         # Calculate this year's taxes
-        annual_report(year, td)
+        r = annual_tax(year, t)
+
+        # Print report
+        annual_report(r)
+        
+        
+        c = Cash()
+        print('CASH HOLDINGS:\n', c.df)
 
 
 if __name__ == '__main__':
     main()
-
 
 
 #################################################
@@ -289,7 +391,11 @@ if __name__ == '__main__':
 ### TODO set inngangsveriden i NOK for nye assets, manual inngangsverdi
 ### TODO Schwab reporter
 ### TODO Cash. Treat cash like any other symbol. A class that maintains the balance dataframe???
-### TODO Specify which importer to use with which file
+### TODO Specify which importer to use with which file, TD JSON, TD CSV, Schwab CSV
 ### TODO Support reading from multiple transactions in one go?
 ###      --transactions=td-json:<filename> --transactions=schwab:<filename> --holdings=data/holdings-2021.json --year=2021 
 ### TODO Sell: should result in a cash buy transaction
+
+### TODO: Separate "generate holdings argument"
+### TODO: "Reset holdings". Go through all transactions, write holdings file
+### TODO: Previous holdings file as cli argument
