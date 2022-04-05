@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import pandas as pd
 import numpy as np
 import json
@@ -14,15 +15,16 @@ class TDTransactionsJSON():
         self.df_trades = None
         self.df_dividend = None
         self.df_tax = None
+        self.df_cash = None
         self.year = year
 
         # Get holdings from previous year
         dfprevh = None
-        if os.path.isfile(prev_holdings):
+        if prev_holdings and os.path.isfile(prev_holdings):
             dfprevh = pd.read_json(prev_holdings)
             dfprevh['date'] = pd.to_datetime(dfprevh['date'])
         else:
-            print('**** NO PREVIOUS HOLDINGS IS THIS REALLY FIRST YEAR? ****')
+            print('*** NO PREVIOUS HOLDINGS IS THIS REALLY FIRST YEAR? ***', file=sys.stderr)
         self.dfprevh = dfprevh
 
     def trades(self):
@@ -39,11 +41,12 @@ class TDTransactionsJSON():
             return self.dfprevh
         df = pd.DataFrame()
         df[['type', 'symbol', 'date',
-                'qty', 'price', 'amount']] = tmp[['transactionItem.instruction',
+                'qty', 'price', 'cost', 'amount']] = tmp[['transactionItem.instruction',
                                                                             'transactionItem.instrument.symbol',
                                                                             'transactionDate',
                                                                             'transactionItem.amount',
                                                                             'transactionItem.price',
+                                                                            'transactionItem.cost',
                                                                             'netAmount']]
         df['qty'] = np.where(df['type'] == 'SELL', -1 * df['qty'], df['qty'])
 
@@ -98,6 +101,25 @@ class TDTransactionsJSON():
         df = df[df['date'].dt.year == self.year]
 
         self.df_tax = df
+        return df
+
+    def cash(self):
+        '''
+        Create cash transaction dataframe.
+        Dividends, tax, interest and wire transfers. Sales and buys are handled separately.
+        '''
+        if self.df_cash is not None:
+            return self.df_cash
+
+        tmp = self.df[self.df.type == 'ELECTRONIC_FUND']
+        df = pd.DataFrame()
+        df[['date', 'cash']] = tmp[['transactionDate', 'netAmount']]
+
+        # Filter out transactions for given year
+        df['date'] = pd.to_datetime(df['date'])
+        df = df[df['date'].dt.year == self.year]
+
+        self.df_cash = df
         return df
 
 def description_to_type(value):
@@ -199,6 +221,9 @@ class TDTransactionsCSV():
         self.df_tax = df
         return df
 
+class SchwabTransactionsCSV():
+    def __init__(self, csv_file, prev_holdings, year) -> None:
+        pass
 
 # year=2021
 # csv_file = f'data/tdameritrade-{year}.csv'
@@ -206,3 +231,11 @@ class TDTransactionsCSV():
 # td = TDTransactionsCSV(csv_file, prev_holdings, year)  
 # df = td.trades()
 
+def read_transactions(format: str, transactions: str, holdings: str, year: int) -> object:
+    if format == 'td-json':
+        return TDTransactionsJSON(transactions, holdings, year)
+    if format == 'td-csv':
+        return TDTransactionsCSV(transactions, holdings, year)
+    if format == 'schwab-csv':
+        return SchwabTransactionsCSV(transactions, holdings, year)
+    
