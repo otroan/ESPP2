@@ -10,13 +10,13 @@ import json
 from datetime import date, datetime, timedelta
 from typing import Union, Tuple
 import numpy as np
+import logging
 
 class FMV():
     _instance = None
 
     def __new__(cls):
         if cls._instance is None:
-            print('Creating the object')
             cls._instance = super(FMV, cls).__new__(cls)
             # Put any initialization here.
             cls.symbols = {}
@@ -55,7 +55,7 @@ class FMV():
         return cur
 
     def get_filename(self, symbol):
-        return f'data/{symbol}.json'
+        return f'cache/{symbol}.json'
 
     def load(self, symbol):
         filename = self.get_filename(symbol)
@@ -88,11 +88,10 @@ class FMV():
 
         if currency:
             data = self.fetch_currency(symbol)
-            print('DATA', data)
         else:
             data = self.fetch_stock(symbol)
 
-        print(f'Writing to {filename}')
+        logging.info(f'Cachhing data for {symbol} to {filename}')
         data['fetched'] = str(date.today())
         with open(filename, 'w') as f:
             json.dump(data, f)
