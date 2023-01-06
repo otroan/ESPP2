@@ -11,6 +11,7 @@ from datetime import date, datetime, timedelta
 from typing import Union, Tuple
 import numpy as np
 import logging
+from decimal import Decimal
 
 class FMV():
     _instance = None
@@ -27,7 +28,7 @@ class FMV():
         apikey='LN6PYRQ0I5LKDY51'
         http = urllib3.PoolManager()
         # The REST api is described here: https://www.alphavantage.co/documentation/
-        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&outputsize=full&' \
+        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&outputsize=full&' \
                 'apikey={apikey}'
         r = http.request('GET', url)
         if r.status != 200:
@@ -91,7 +92,7 @@ class FMV():
         else:
             data = self.fetch_stock(symbol)
 
-        logging.info(f'Cachhing data for {symbol} to {filename}')
+        logging.info(f'Caching data for {symbol} to {filename}')
         data['fetched'] = str(date.today())
         with open(filename, 'w') as f:
             json.dump(data, f)
@@ -114,7 +115,7 @@ class FMV():
         self.refresh(symbol, date, False)
         for i in range(5):
             try:
-                return self.symbols[symbol][date_str]
+                return Decimal(self.symbols[symbol][date_str])
             except KeyError:
                 # Might be a holiday, iterate backwards
                 date -= timedelta(days=1)
@@ -126,7 +127,7 @@ class FMV():
         self.refresh(currency, date, True)
         for i in range(5):
             try:
-                return self.symbols[currency][date_str]
+                return Decimal(self.symbols[currency][date_str])
             except KeyError:
                 # Might be a holiday, iterate backwards
                 date -= timedelta(days=1)
