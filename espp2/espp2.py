@@ -2,19 +2,16 @@
 ESPPv2
 '''
 
-import importlib
 import argparse
-import simplejson as json
 import logging
-import pandas as pd
-import numpy as np
-import IPython
-import pprint
-from espp2.fmv import FMV
 from itertools import groupby
 from copy import deepcopy
 from datetime import datetime
 from decimal import Decimal, getcontext
+from importlib.resources import files
+import simplejson as json
+from espp2.fmv import FMV
+
 getcontext().prec = 6
 
 logger = logging.getLogger(__name__)
@@ -106,7 +103,7 @@ class Positions():
             if todate(posview[posidx]['date']) > date:
                 raise Exception('Trying to sell stock from the future')
             qty_to_sell = abs(s['qty'])
-            assert(qty_to_sell > 0)
+            assert qty_to_sell > 0
             while qty_to_sell > 0:
                 if posview[posidx]['qty'] == 0:
                     posidx += 1
@@ -461,8 +458,6 @@ def main():
     '''Main function'''
     args, logger = get_arguments()
 
-
-    from importlib.resources import files
     taxdata_file = files('espp2').joinpath('taxdata.json')
     with open(taxdata_file, 'r') as jf:
         taxdata = json.load(jf)

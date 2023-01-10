@@ -11,8 +11,8 @@ Supported importers:
 
 import importlib
 import argparse
-import simplejson as json
 import logging
+import simplejson as json
 
 def get_arguments():
     '''Get command line arguments'''
