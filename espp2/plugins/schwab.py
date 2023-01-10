@@ -5,7 +5,7 @@ Schwab CSB normalizer.
 import csv
 import pandas as pd
 from decimal import Decimal
-from fmv import FMV
+from espp2.fmv import FMV
 
 def schwab_csv_import(csv_file):
     '''Parse Schwab CSV file.'''
@@ -42,7 +42,7 @@ def schwab_csv_import(csv_file):
             pass
         return data
 
-def action_to_type(value):
+def action_to_type(value, description):
     '''Normalize transaction type.'''
     action = {'Wire Transfer': 'WIRE',
          'Service Fee': 'FEE',
@@ -50,10 +50,12 @@ def action_to_type(value):
          'Dividend': 'DIVIDEND',
          'Tax Withholding': 'TAX',
          'Tax Reversal': 'TAXSUB',
-         'Dividend Reinvested': 'CASH',
+         'Dividend Reinvested': 'DIVIDEND_REINV',
          'Sale': 'SELL',
          'Journal': 'WIRE',
          }
+    # if value == 'Deposit' and description == 'Div Reinv':
+    #     return 'BUY'
     if value in action:
         return action[value]
     raise Exception(f'Unknown transaction entry {value}')
@@ -66,9 +68,11 @@ def fixup_date(datastr):
         return datastr
 
 currency_converter = FMV()
-def fixup_price(datestr, currency, pricestr):
+def fixup_price(datestr, currency, pricestr, change_sign=False):
     '''Fixup price.'''
-    price = Decimal(pd.to_numeric(pricestr.replace('$', '').replace(',', '')))
+    price = Decimal(pricestr.replace('$', '').replace(',', ''))
+    if change_sign:
+        price = price * -1
     exchange_rate = currency_converter.get_currency(currency, datestr)
     return {'currency': currency, "value": price, 'nok_exchange_rate': exchange_rate, 'nok_value': price * exchange_rate }
 
@@ -177,7 +181,7 @@ def read(csv_file, logger):
     newlist = []
     for csv_item in csv_data:
         newv = {}
-        action = action_to_type(csv_item['ACTION'])
+        action = action_to_type(csv_item['ACTION'], csv_item['DESCRIPTION'])
         description = csv_item['DESCRIPTION']
         for k,data_item in csv_item.items():
             newkey = key_conv.get(k, k)
@@ -190,7 +194,7 @@ def read(csv_file, logger):
             elif newkey in numberfields:
                 newv[newkey] = fixup_number(data_item)
             elif newkey == 'type':
-                newv[newkey] = action_to_type(data_item)
+                newv[newkey] = action_to_type(data_item, description)
             else:
                 newv[newkey] = data_item
         if 'subdata' in newv:
@@ -202,7 +206,10 @@ def read(csv_file, logger):
 
         for price in pricefields:
             if price in newv:
-                newv[price] = fixup_price(newv['date'], 'USD', newv[price])
+                if action == 'SELL' and price == 'fee':
+                    newv[price] = fixup_price(newv['date'], 'USD', newv[price], change_sign=True)
+                else:
+                    newv[price] = fixup_price(newv['date'], 'USD', newv[price])
         if action == 'SELL':
             newv['qty'] = newv['qty'] * -1
         newlist.append(newv)
