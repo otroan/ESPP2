@@ -41,14 +41,18 @@ class Positions():
     '''
     _instance = None
 
-    def __new__(cls, year=None, taxdata=None, prev_holdings=None, transactions=None):
+    def __new__(cls, year=None, taxdata=None, prev_holdings=None, transactions=None, validate_year = 'exact'):
         if cls._instance is None:
             cls._instance = super(Positions, cls).__new__(cls)
 
             # Put any initialization here.
-            validate_year = [t for t in transactions if todate(t['date']).year != year]
-            if len(validate_year):
-                raise Exception('Limit transactions to this year only', len(validate_year))
+            if validate_year == 'exact':
+                other_transactions = [t for t in transactions if todate(t['date']).year != year]
+                if len(other_transactions):
+                    raise Exception('Limit transactions to this year only', len(other_transactions))
+            elif validate_year == 'filter':
+                transactions = [t for t in transactions if todate(t['date']).year <= year]
+
             cls.new_holdings = [t for t in transactions if t['type'] == 'BUY' or t['type'] == 'DEPOSIT']
             if prev_holdings and 'stocks' in prev_holdings:
                 cls.positions = prev_holdings['stocks'] + cls.new_holdings
