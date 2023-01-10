@@ -1,5 +1,5 @@
 '''
-ESPPv2
+ESPPv2 Generate holdings file
 '''
 
 import argparse
@@ -20,14 +20,10 @@ def get_arguments():
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--transaction-file',
                         type=argparse.FileType('r'), required=True)
-    parser.add_argument('--wire-file',
-                        type=argparse.FileType('r'))
     parser.add_argument('--inholdings-file',
                         type=argparse.FileType('r'))
     parser.add_argument('--outholdings-file',
-                        type=argparse.FileType('w'))
-    parser.add_argument(
-        '--output-file', type=argparse.FileType('w'), required=True)
+                        type=argparse.FileType('w'), required=True)
     parser.add_argument('--year', type=int, required=True)
     parser.add_argument(
         "-log",
@@ -67,50 +63,40 @@ def main():
     '''Main function'''
     args, logger = get_arguments()
 
-    taxdata_file = files('espp2').joinpath('taxdata.json')
-    with open(taxdata_file, 'r') as jf:
-        taxdata = json.load(jf)
-
     transactions = json_load(args.transaction_file)
-    #transactions = json.load(args.transaction_file, parse_float=Decimal)
-    wires = {}
-    if args.wire_file:
-        wires = json_load(args.wire_file)
 
     if args.inholdings_file:
         prev_holdings = json_load(args.inholdings_file)
     else:
         prev_holdings = None
 
-    # t = Transactions(int(args.year), prev_holdings, transactions)
+    taxdata_file = files('espp2').joinpath('taxdata.json')
+    with open(taxdata_file, 'r') as jf:
+        taxdata = json.load(jf)
 
     # TODO: Pre-calculate holdings if required
-    p = Positions(args.year, taxdata, prev_holdings, transactions)
-    c = Cash(args.year, transactions, wires)
+    p = Positions(args.year, taxdata, prev_holdings, transactions, validate_year='filter')
+    c = Cash(args.year, transactions, None)
 
     report = {}
 
     # End of Year Balance (formueskatt)
     prev_year_eoy = p.eoy_balance(args.year-1)
     this_year_eoy = p.eoy_balance(args.year)
-    report['eoy_balance'] = {args.year - 1: prev_year_eoy,
-                             args.year: this_year_eoy}
+    # report['eoy_balance'] = {args.year - 1: prev_year_eoy,
+    #                          args.year: this_year_eoy}
 
-    report['dividends'] = p.dividends()
-    report['buys'] = p.buys()
-    report['sales'] = p.sales()
+    # report['dividends'] = p.dividends()
+    # report['buys'] = p.buys()
+    # report['sales'] = p.sales()
 
     # Cash and wires
-    c.wire()
-    report['cash'] = c.process()
+    # c.wire()
+    # report['cash'] = c.process()
 
     # New holdings
-    if args.outholdings_file:
-        holdings = p.holdings(args.year, 'schwab')
-        json.dump(holdings, args.outholdings_file, indent=4)
-
-    # Tax report (in JSON)
-    json.dump(report, args.output_file, indent=4)
+    holdings = p.holdings(args.year, 'schwab')
+    json.dump(holdings, args.outholdings_file, indent=4)
 
 if __name__ == '__main__':
     main()
