@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
 
+'''
+The "Fair Market Value" module downloads and stock prices and exchange rates and
+caches them in a set of JSON files.
+'''
+
 import os
-from ast import AugAssign
 import datetime
-from typing import IO
-import urllib3
-from urllib3 import request
-import certifi
 import json
 from datetime import date, datetime, timedelta
 from typing import Union, Tuple
-import numpy as np
 import logging
-from decimal import Decimal, getcontext
+from decimal import Decimal
+import numpy as np
+import urllib3
 
 # Store downloaded files in cache directory under current directory
 CACHE_DIR='cache'
 class FMV():
+    '''Class implementing the Fair Market Value module. Singleton'''
     _instance = None
 
     def __new__(cls):
@@ -27,7 +29,7 @@ class FMV():
             if not os.path.exists(CACHE_DIR):
                 os.makedirs(CACHE_DIR)
         return cls._instance
-    
+
     def fetch_stock(self, symbol):
         '''Returns a dictionary of date and closing value'''
         apikey='LN6PYRQ0I5LKDY51'
@@ -97,7 +99,7 @@ class FMV():
         else:
             data = self.fetch_stock(symbol)
 
-        logging.info(f'Caching data for {symbol} to {filename}')
+        logging.info('Caching data for %s to %s', symbol, filename)
         data['fetched'] = str(date.today())
         with open(filename, 'w') as f:
             json.dump(data, f)
@@ -106,7 +108,7 @@ class FMV():
 
     def parse_date(self, date: Union[str, datetime]) -> Tuple[datetime.date, str]:
         '''Parse date/timestamp'''
-        if type(date) is str:
+        if isinstance(date, str):
             date = datetime.strptime(date, '%Y-%m-%d').date()
         else:
             date = date.date()
@@ -118,7 +120,7 @@ class FMV():
         symbol, date = item
         date, date_str = self.parse_date(date)
         self.refresh(symbol, date, False)
-        for i in range(5):
+        for _ in range(5):
             try:
                 return Decimal(str(self.symbols[symbol][date_str]))
             except KeyError:
@@ -127,10 +129,10 @@ class FMV():
                 date_str = str(date)
         return np.nan
 
-    def get_currency(self, currency:str, date: Union[str, datetime]) -> float:
-        date, date_str = self.parse_date(date)
+    def get_currency(self, currency:str, date_union: Union[str, datetime]) -> float:
+        date, date_str = self.parse_date(date_union)
         self.refresh(currency, date, True)
-        for i in range(5):
+        for _ in range(5):
             try:
                 return Decimal(str(self.symbols[currency][date_str]))
             except KeyError:
@@ -144,10 +146,7 @@ if __name__ == '__main__':
 
     f = FMV()
     print('LOOKING UP DATA', f['CSCO', '2021-12-31'])
-
     #print('LOOKING UP DATA', f['CSCO', '2022-12-31'])
-
     print('LOOKING UP DATA', f['SLT', '2021-12-31'])
-
     #f.fetch_currency('USD')
     print('LOOKING UP DATA USD2NOK', f.get_currency('USD', '2021-12-31'))
