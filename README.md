@@ -42,3 +42,14 @@ espp2_transnorm --transaction-file <schwab-2022.csv> --format schwab --output-fi
 espp2 --year=2022 --transaction-file <schwab-transactions-2022.json> --inholdings-file=<schwab-holdings-2021.json> --output-file <schwab-tax-report-2022.json --log=debug --wire-file=<schwab-wires-2022.json>
 
 ```
+
+## TODO
+- [ ] ESPPv1 pickle holdings export
+- [ ] Holdings export from complete transaction history
+- [ ] Manual JSON transaction history importer
+- [ ] TD Ameritrade CSV transaction history importer
+- [ ] JSON schema and validation for transaction, holdings, and wire formats
+- [ ] Windows, OSX packaging through Github actions
+- [ ] Unit tests
+
+
