@@ -52,6 +52,7 @@ def action_to_type(value, description):
          'Tax Reversal': 'TAXSUB',
          'Dividend Reinvested': 'DIVIDEND_REINV',
          'Sale': 'SELL',
+         'Quick Sale': 'SELL',
          'Journal': 'WIRE',
          }
     # if value == 'Deposit' and description == 'Div Reinv':
@@ -116,7 +117,7 @@ def subdata(action, description, date, value):
                 'AWARD ID': 'award_id',
                 'VEST DATE': 'vest_date',
                 'VEST FMV': 'purchase_price',
-                'TYPE': 'type',
+                'TYPE': 'subtype',
                 'SHARES': 'shares',
                 'SALE PRICE': 'sale_price',
                 'GROSS PROCEEDS': 'gross_proceeds',

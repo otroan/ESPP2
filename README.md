@@ -57,7 +57,7 @@ espp2_genholdings --year 2021 --transaction-file <schwab-complete-transactions.j
 
 ## TODO
 - [ ] ESPPv1 pickle holdings export
-- [ ] Holdings export from complete transaction history
+- [x] Holdings export from complete transaction history
 - [ ] Manual JSON transaction history importer
 - [ ] TD Ameritrade CSV transaction history importer
 - [ ] JSON schema and validation for transaction, holdings, and wire formats
