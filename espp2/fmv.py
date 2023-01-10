@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta
 from typing import Union, Tuple
 import numpy as np
 import logging
-from decimal import Decimal
+from decimal import Decimal, getcontext
 
 class FMV():
     _instance = None
@@ -115,7 +115,7 @@ class FMV():
         self.refresh(symbol, date, False)
         for i in range(5):
             try:
-                return Decimal(self.symbols[symbol][date_str])
+                return Decimal(str(self.symbols[symbol][date_str]))
             except KeyError:
                 # Might be a holiday, iterate backwards
                 date -= timedelta(days=1)
@@ -127,7 +127,7 @@ class FMV():
         self.refresh(currency, date, True)
         for i in range(5):
             try:
-                return Decimal(self.symbols[currency][date_str])
+                return Decimal(str(self.symbols[currency][date_str]))
             except KeyError:
                 # Might be a holiday, iterate backwards
                 date -= timedelta(days=1)

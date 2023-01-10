@@ -61,7 +61,7 @@ def main():
     '''Main function'''
 
     args, logger = get_arguments()
-    args.format = 'plugins.' + args.format
+    args.format = 'espp2.plugins.' + args.format
     plugin = importlib.import_module(args.format, package='espp2')
     transactions = plugin.read(args.transaction_file.name, logger)
     json.dump(transactions, args.output_file, use_decimal=True, indent=4)
