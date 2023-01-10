@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 from ast import AugAssign
 import datetime
 from typing import IO
@@ -13,6 +14,8 @@ import numpy as np
 import logging
 from decimal import Decimal, getcontext
 
+# Store downloaded files in cache directory under current directory
+CACHE_DIR='cache'
 class FMV():
     _instance = None
 
@@ -21,6 +24,8 @@ class FMV():
             cls._instance = super(FMV, cls).__new__(cls)
             # Put any initialization here.
             cls.symbols = {}
+            if not os.path.exists(CACHE_DIR):
+                os.makedirs(CACHE_DIR)
         return cls._instance
     
     def fetch_stock(self, symbol):
@@ -56,7 +61,7 @@ class FMV():
         return cur
 
     def get_filename(self, symbol):
-        return f'cache/{symbol}.json'
+        return f'{CACHE_DIR}/{symbol}.json'
 
     def load(self, symbol):
         filename = self.get_filename(symbol)
