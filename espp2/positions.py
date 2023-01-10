@@ -99,23 +99,24 @@ class Positions():
         # Copy positions
         posview = deepcopy(self.positions_by_symbols[symbol])
         posidx = 0
-        for s in self.sale_by_symbols[symbol]:
-            if todate(s['date']) > date:
-                break
-            if todate(posview[posidx]['date']) > date:
-                raise Exception('Trying to sell stock from the future')
-            qty_to_sell = abs(s['qty'])
-            assert qty_to_sell > 0
-            while qty_to_sell > 0:
-                if posview[posidx]['qty'] == 0:
-                    posidx += 1
-                if qty_to_sell >= posview[posidx]['qty']:
-                    qty_to_sell -= posview[posidx]['qty']
-                    posview[posidx]['qty'] = 0
-                    posidx += 1
-                else:
-                    posview[posidx]['qty'] -= qty_to_sell
-                    qty_to_sell = 0
+        if symbol in self.sale_by_symbols:
+            for s in self.sale_by_symbols[symbol]:
+                if todate(s['date']) > date:
+                    break
+                if todate(posview[posidx]['date']) > date:
+                    raise Exception('Trying to sell stock from the future')
+                qty_to_sell = abs(s['qty'])
+                assert qty_to_sell > 0
+                while qty_to_sell > 0:
+                    if posview[posidx]['qty'] == 0:
+                        posidx += 1
+                    if qty_to_sell >= posview[posidx]['qty']:
+                        qty_to_sell -= posview[posidx]['qty']
+                        posview[posidx]['qty'] = 0
+                        posidx += 1
+                    else:
+                        posview[posidx]['qty'] -= qty_to_sell
+                        qty_to_sell = 0
         return posview
 
     def __getitem__(self, val):
@@ -381,6 +382,8 @@ class Cash():
             if is_transfer:
                 total_received_price_nok += abs(e['amount']['nok_value'])
             while amount_to_sell > 0:
+                if posidx >= len(debit):
+                    raise Exception(f'Transferring more money that is in cash account {amount_to_sell}')
                 amount = debit[posidx]['amount']['value']
                 if amount == 0:
                     posidx += 1
