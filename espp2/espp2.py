@@ -72,7 +72,6 @@ def main():
         taxdata = json.load(jf)
 
     transactions = json_load(args.transaction_file)
-    #transactions = json.load(args.transaction_file, parse_float=Decimal)
     wires = {}
     if args.wire_file:
         wires = json_load(args.wire_file)
@@ -81,8 +80,6 @@ def main():
         prev_holdings = json_load(args.inholdings_file)
     else:
         prev_holdings = None
-
-    # t = Transactions(int(args.year), prev_holdings, transactions)
 
     # TODO: Pre-calculate holdings if required
     p = Positions(args.year, taxdata, prev_holdings, transactions)

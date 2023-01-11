@@ -43,6 +43,15 @@ class Positions():
     '''
     _instance = None
 
+    def _fixup_tax_deductions(self):
+        '''ESPP purchased last year but accounted this year deserves tax deduction'''
+        for p in self.new_holdings:
+            if p['type'] == 'DEPOSIT' and p['description'] == 'ESPP':
+                if todate(p['date']).year - 1 == todate(p['purchase_date']).year:
+                    year = todate(p['purchase_date']).year
+                    p['tax_deduction'] = (self.tax_deduction_rate[str(year)] * p['purchase_price']['nok_value'])/100
+                    logger.debug('Adding tax deduction for ESPP from last year %s', p)
+
     def __new__(cls, year=None, taxdata=None, prev_holdings=None, transactions=None, validate_year = 'exact'):
         if cls._instance is None:
             cls._instance = super(Positions, cls).__new__(cls)
@@ -55,12 +64,17 @@ class Positions():
             elif validate_year == 'filter':
                 transactions = [t for t in transactions if todate(t['date']).year <= year]
 
+            cls.tax_deduction_rate = {year: Decimal(str(i[0])) for year, i in taxdata['tax_deduction_rates'].items()}
+
             cls.new_holdings = [t for t in transactions if t['type'] == 'BUY' or t['type'] == 'DEPOSIT']
+            cls._fixup_tax_deductions(cls)
+
             if prev_holdings and 'stocks' in prev_holdings:
                 cls.positions = prev_holdings['stocks'] + cls.new_holdings
             else:
                 logger.warning("No stocks in holding file?")
                 cls.positions = cls.new_holdings
+
             cls.tax_deduction = []
             for i,p in enumerate(cls.positions):
                 p['idx'] = i
@@ -87,7 +101,6 @@ class Positions():
             cls.db_taxsub = [t for t in transactions if t['type'] == 'TAXSUB']
             cls.tax_by_symbols = position_groupby(cls.db_tax)
             # cls.tax_deduction_rate = taxdata['tax_deduction_rates']
-            cls.tax_deduction_rate = {year: Decimal(str(i[0])) for year, i in taxdata['tax_deduction_rates'].items()}
 
             # # Wires
             # cls.db_wires = [t for t in transactions if t['type'] == 'WIRE']
@@ -256,11 +269,6 @@ class Positions():
             totals = {}
             positions = deepcopy(p.positions_by_symbols[symbol])
             r = self.process_sale_for_symbol(symbol, p.sale_by_symbols[symbol], positions)
-            # total_gain = sum(item['total_gain_nok'] for item in r)
-            # total_tax_ded = sum(item['total_tax_deduction'] for item in r)
-            # total_sold = sum(item['qty'] for item in r)
-            # sale_report[symbol] = {'sales': r, 'gain': total_gain,
-            #                        'qty': total_sold, 'tax_deduction_used': total_tax_ded}
             sale_report[symbol] = r
 
             totals['gain'] = sum(item['totals']['gain'] for item in sale_report[symbol])
