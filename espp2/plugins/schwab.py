@@ -3,9 +3,9 @@ Schwab CSB normalizer.
 '''
 
 import csv
-import pandas as pd
 from decimal import Decimal
 from espp2.fmv import FMV
+import dateutil.parser as dt
 
 def schwab_csv_import(csv_file):
     '''Parse Schwab CSV file.'''
@@ -61,12 +61,11 @@ def action_to_type(value, description):
         return action[value]
     raise Exception(f'Unknown transaction entry {value}')
 
-def fixup_date(datastr):
+
+def fixup_date(datestr):
     '''Fixup date'''
-    try:
-        return pd.to_datetime(datastr, utc=True).strftime('%Y-%m-%d')
-    except ValueError:
-        return datastr
+    d =  dt.parse(datestr)
+    return d.strftime('%Y-%m-%d')
 
 currency_converter = FMV()
 def fixup_price(datestr, currency, pricestr, change_sign=False):

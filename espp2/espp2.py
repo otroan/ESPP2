@@ -101,7 +101,8 @@ def main():
     report['sales'] = p.sales()
 
     # Cash and wires
-    c.wire()
+    nomatch = c.wire()
+    report['unmatched_wires'] = nomatch
     report['cash'] = c.process()
 
     # New holdings

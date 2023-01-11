@@ -1,89 +1,121 @@
-class TDTransactionsCSV(Transactions):
-    @staticmethod
-    def description_to_type(value):
-        if value.startswith('Bought') or value.startswith('TRANSFER OF SECURITY'):
-            return 'BUY'
-        if value.startswith('Sold'):
-            return 'SELL'
-        if value.startswith('ORDINARY DIVIDEND'):
-            return 'DIVIDEND'
-        if value.startswith('W-8 WITHHOLDING'):
-            return 'TAX'
-        if value.startswith('CLIENT REQUESTED ELECTRONIC FUNDING DISBURSEMENT'):
-            return 'WIRE'
-        if value.startswith('FREE BALANCE INTEREST'):
-            return 'INTEREST'
-        if value.startswith('REBATE'):
-            return 'REBATE'
-        if value.startswith('WIRE INCOMING'):
-            return 'DEPOSIT'
-        if value.startswith('OFF-CYCLE INTEREST'):
-            return 'INTEREST'
-        raise Exception(f'Unknown transaction entry {value}')
-        return value
+import csv
+from decimal import Decimal
+from espp2.fmv import FMV
+import dateutil.parser as dt
 
-    def __init__(self, csv_file, prev_holdings, year) -> None:
-        logging.info(f'Reading transactions from {csv_file}')
-        df = pd.read_csv(csv_file, converters={'DESCRIPTION': self.description_to_type})
-        self.df_trades = None
-        self.df_dividend = None
-        self.df_tax = None
-        self.year = year
+def fixup_date(datestr):
+    '''Fixup date'''
+    d =  dt.parse(datestr)
+    return d.strftime('%Y-%m-%d')
 
-        df = df.rename(columns={'DATE': 'date',
-                                'TRANSACTION ID': 'transaction_id',
-                                'DESCRIPTION': 'type',
-                                'SYMBOL': 'symbol',
-                                'QUANTITY': 'qty',
-                                'PRICE': 'price',
-                                'FUND REDEMPTION FEE': 'fee1',
-                                'SHORT-TERM RDM FEE': 'rdm',
-                                ' DEFERRED SALES CHARGE': 'fee2',
-                                'COMMISSION': 'fee3',
-                                'AMOUNT': 'amount',
-                                })
-        print('READ:', df)
-        
-        ### TODO: Merge Fee columns. Drop other columns
-        df['fees'] = df[['fee1', 'fee2', 'fee3']].sum(axis=1)
-        
-        df['date'] = pd.to_datetime(df['date'], utc=True)
-        l = len(df)
-        df = df[df['date'].dt.year == self.year]
-        if l != len(df):
-            logging.warning(f'Filtered out transaction entries from another year. {l} {len(df)}')
-            
-        df['qty'] = np.where(df['type'] == 'SELL', -1 * df['qty'], df['qty'])
-        df['tax_deduction'] = 0
+currency_converter = FMV()
+def fixup_price(datestr, currency, pricestr, change_sign=False):
+    '''Fixup price.'''
+    price = Decimal(pricestr)
+    # price = Decimal(pricestr.replace('$', '').replace(',', ''))
+    if change_sign:
+        price = price * -1
+    exchange_rate = currency_converter.get_currency(currency, datestr)
+    return {'currency': currency, "value": price, 'nok_exchange_rate': exchange_rate, 'nok_value': price * exchange_rate }
 
-        # Get holdings from previous year
-        self.dfprevh = None
-        if prev_holdings and os.path.isfile(prev_holdings):
-            logging.info(f'Reading previous holdings from {prev_holdings}')
-            with open (prev_holdings) as f:
-                data = json.load(f)
-            #dfprevh = pd.from_dict(data['shares'])
-            dfprevh = pd.DataFrame(data['stocks'])
-            dfprevh['type'] = 'BUY'
-            dfprevh['date'] = pd.to_datetime(dfprevh['date'], utc=True)
-            self.dfprevh = dfprevh
-            df = pd.concat([dfprevh, df], ignore_index=True)
+def fixup_number(numberstr):
+    '''Convert string to number.'''
+    try:
+        return float(numberstr)
+    except ValueError:
+        return ""
 
-            dfprevh_cash = pd.DataFrame(data['cash'])
+def td_csv_import(csv_file):
+    '''Parse TD Ameritrade CSV file.'''
 
-            if not dfprevh_cash.empty:
-                dfprevh_cash['date'] = pd.to_datetime(dfprevh_cash['date'], utc=True)
-            self.dfprevh_cash = dfprevh_cash
-        else:
-            logging.error('No previous year holdings, is this really the first year?')
+    data = []
 
-        df = df.sort_values(by='date')
-        df['idx'] = pd.Index(range(len(df.index)))
-        self.df = df
-        
-        self.df_trades = self.df[self.df.type.isin(['BUY', 'SELL'])]
-        self.df_dividend = self.df[self.df.type == 'DIVIDEND']
-        self.df_tax = self.df[self.df.type == 'TAX']
-        self.df_cash = self.df[self.df.type == 'WIRE']
-        self.df_fees = self.df[self.df.type == 'FEE'] ### TODO: FIX FIX
+    with open(csv_file, encoding='utf-8') as csv_fd:
+        reader = csv.reader(csv_fd)
+        header = next(reader)
+        assert header == ['DATE', 'TRANSACTION ID', 'DESCRIPTION', 'QUANTITY', 'SYMBOL', 'PRICE', 'COMMISSION', 'AMOUNT', 'REG FEE', 'SHORT-TERM RDM FEE', 'FUND REDEMPTION FEE', ' DEFERRED SALES CHARGE']
+        field = lambda x: header.index(x)
+        data = []
+        try:
+            while True:
+                row = next(reader)
+                if row[0] == '***END OF FILE***':
+                    break
+                data.append({header[v].upper(): k for v, k in enumerate(row)})
+        except StopIteration:
+            pass
+        return data
 
+def action_to_type(value):
+    if value.startswith('Bought') or value.startswith('TRANSFER OF SECURITY'):
+        return 'BUY'
+    if value.startswith('Sold'):
+        return 'SELL'
+    if value.startswith('ORDINARY DIVIDEND'):
+        return 'DIVIDEND'
+    if value.startswith('W-8 WITHHOLDING'):
+        return 'TAX'
+    if value.startswith('CLIENT REQUESTED ELECTRONIC FUNDING DISBURSEMENT'):
+        return 'WIRE'
+    if value.startswith('FREE BALANCE INTEREST'):
+        return 'INTEREST'
+    if value.startswith('REBATE'):
+        return 'REBATE'
+    if value.startswith('WIRE INCOMING'):
+        return 'DEPOSIT'
+    if value.startswith('OFF-CYCLE INTEREST'):
+        return 'INTEREST'
+    raise Exception(f'Unknown transaction entry {value}')
+    return value
+
+def read(csv_file, logger):
+    '''Main entry point of plugin. Return normalized Python data structure.'''
+
+    key_conv = {'DATE': 'date',
+                'SYMBOL': 'symbol',
+                'QUANTITY': 'qty',
+                'PRICE': 'price',
+                'COMMISSION': 'fee',
+                'AMOUNT': 'amount',
+                'DESCRIPTION': 'type',
+                'TRANSACTION ID': 'transaction_id'
+                }
+
+    pricefields = ['amount', 'fee', 'price']
+    numberfields = ['qty']
+
+    csv_data = td_csv_import(csv_file)
+    newlist = []
+    for csv_item in csv_data:
+        newv = {}
+        action = action_to_type(csv_item['DESCRIPTION'])
+        for k,data_item in csv_item.items():
+            newkey = key_conv.get(k, k)
+            if not data_item:
+                continue
+            if newkey == 'date':
+                newv[newkey] = fixup_date(data_item)
+            # elif newkey in pricefields:
+            #     newv[newkey] = fixup_price(data_item)
+            elif newkey in numberfields:
+                newv[newkey] = fixup_number(data_item)
+            elif newkey == 'type':
+                 newv[newkey] = action_to_type(data_item)
+                 newv['description'] = data_item
+            else:
+                newv[newkey] = data_item
+
+        for pricefield in pricefields:
+            if pricefield in newv:
+                if action == 'SELL' and pricefield == 'fee':
+                    newv[pricefield] = fixup_price(newv['date'], 'USD', newv[pricefield], change_sign=True)
+                else:
+                    newv[pricefield] = fixup_price(newv['date'], 'USD', newv[pricefield])
+        if action == 'SELL':
+            newv['qty'] = newv['qty'] * -1
+        elif action == 'BUY':
+            newv['purchase_price'] = newv.pop('price')
+            # newv.pop('amount')
+
+        newlist.append(newv)
+    return sorted(newlist, key=lambda d: d['date'])
