@@ -7,6 +7,8 @@ import logging
 from itertools import groupby
 from copy import deepcopy
 from datetime import datetime
+from math import isclose
+import IPython
 from decimal import Decimal, getcontext
 from espp2.fmv import FMV
 
@@ -57,6 +59,7 @@ class Positions():
             if prev_holdings and 'stocks' in prev_holdings:
                 cls.positions = prev_holdings['stocks'] + cls.new_holdings
             else:
+                logger.warning("No stocks in holding file?")
                 cls.positions = cls.new_holdings
             cls.tax_deduction = []
             for i,p in enumerate(cls.positions):
@@ -108,6 +111,8 @@ class Positions():
                 qty_to_sell = abs(s['qty'])
                 assert qty_to_sell > 0
                 while qty_to_sell > 0:
+                    if posidx >= len(posview):
+                        raise Exception('Selling more shares than we hold', s, posview)
                     if posview[posidx]['qty'] == 0:
                         posidx += 1
                     if qty_to_sell >= posview[posidx]['qty']:
@@ -277,7 +282,12 @@ class Positions():
             price_sum_nok = 0
             for item in self.new_holdings_by_symbols[symbol]:
                 if item['type'] == 'BUY':
-                    c.credit(item['date'], item['purchase_price']['value'] * item['qty'])
+                    if 'amount' in item:
+                        c.credit(item['date'], item['amount'])
+                    else:
+                        raise NotImplementedError
+                        # item['purchase_price']['value'] * item['qty']
+                        # c.credit(item['date'], item['purchase_price']['value'] * item['qty'])
                 bought += item['qty']
                 price_sum += item['purchase_price']['value']
                 price_sum_nok += item['purchase_price']['nok_value']
@@ -348,23 +358,39 @@ class Cash():
         self.cash = sorted(self.cash, key=lambda d: d['date']) 
 
     def debit(self, date, amount,):
+        logger.debug('Cash debit: %s: %s', date, amount['value'])
         self.cash.append({'date': date, 'amount': amount})
         self.sort()
 
     def credit(self, date, amount, transfer=False):
         ''' TODO: Return usdnok rate for the item credited '''
+        logger.debug('Cash credit: %s: %s', date, amount['value'])
         self.cash.append({'date': date, 'amount': amount, 'transfer': transfer})
         self.sort()
 
+    def _wire_match(self, wire):
+        for v in self.db_received:
+            if v['date'] == wire['date'] and isclose(v['usd_sent'], abs(wire['amount']['value']), abs_tol = 0.05):
+                return v
+
     def wire(self):
         '''Process wires from sent and received (manual) records'''
-
+        unmatched = []
         for w in self.db_wires:
-            #self.credit(w['date'], w['amount'])
-            self.credit(w['date'], w['fee'])
-        for transfers in self.db_received:
-            amount = {'value': -transfers['usd_sent'], 'nok_value': -transfers['nok_received']}
-            self.credit(transfers['date'], amount, transfer=True)
+            match = self._wire_match(w)
+            if match:
+                amount = {'value': -match['usd_sent'], 'nok_value': -match['nok_received']}
+                self.credit(match['date'], amount, transfer=True)
+            else:
+                unmatched.append(w)
+                self.credit(w['date'], w['amount'], transfer=True)
+
+            if 'fee' in w:
+                self.credit(w['date'], w['fee'])
+
+        if unmatched:
+            logger.warning('Wire Transfer missing corresponding received record: %s', unmatched)
+        return unmatched
 
 
     def process(self):
@@ -373,6 +399,7 @@ class Cash():
         posidx = 0
         total_received_price_nok = 0
         total_paid_price_nok = 0
+
         debit = [e for e in self.cash if e['amount']['value'] > 0]
         credit = [e for e in self.cash if e['amount']['value'] < 0]
         for e in credit:
