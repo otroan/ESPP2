@@ -1,0 +1,29 @@
+on: push
+jobs:
+
+  build:
+    # Windows is currently the only platform this action supports
+    runs-on: windows-latest
+
+    steps:
+    
+      # Check-out repository
+      - uses: actions/checkout@v3
+
+      # Setup Python
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
+
+      # Build python script into a stand-alone exe
+      - uses: Nuitka/Nuitka-Action@v0.4
+        with:
+          script-name: espp2/espp2.py
+
+      # Uploads artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: exe
+          path: build/espp2.exe
