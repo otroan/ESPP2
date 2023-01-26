@@ -7,6 +7,7 @@ Supported importers:
  - Schwab Equity Awards CSV
  - TD Ameritrade CSV
  - Manual input
+ - Old pickle-file format (With caveats)
 '''
 
 import importlib
@@ -22,7 +23,8 @@ def get_arguments():
     '''
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--format', type=str, help='Which broker format',
-                        choices=['schwab', 'td', 'manual'], required=True)
+                        choices=['schwab', 'td', 'manual', 'pickle'],
+                        required=True)
     parser.add_argument('--transaction-file',
                         type=argparse.FileType('r'), required=True)
     parser.add_argument(
