@@ -5,6 +5,26 @@ The ESPP2 tool is a command line tool built to help calculate Norwegian taxes on
 
 The tool is built as a pipeline of small utilities.
 
+```mermaid
+graph LR;
+    Holdings-2021-->ESPP{{ESPP}}
+    Transactions-2022-->ESPP
+    ESPP-->Tax-Report
+    ESPP-->Holdings-2022
+    Schwab-Transaction-History-2022-->TransNorm{{TransNorm}}
+    Morgan-Transaction-History-2022-->TransNorm-->Transactions-2022
+```
+
+In case you are transitioning from the old tool or having not used a tool at all, see the section "if you have no holdings file" below. The pipeline for that looks like:
+
+```mermaid
+graph LR;
+    ESPPv1-Pickle-.->ESPP-GenHoldings{{ESPP-GenHoldings}};
+    Schwab-Complete-Transaction-History-->TransNorm{{TransNorm}}-->ESPP-GenHoldings;
+    ESPP-GenHoldings-->Holdings-2021;
+    Schwab-Incomplete-Transaction-History-->TransNorm
+    Manually-Generated-OlderHoldings-.->ESPP-GenHoldings;
+```
 
 ### Transaction History Normalizer
 A transaction history normaliser that uses per-broker plugins to normalize a transaction history into a JSON format, following the expected ESPP2 transaction history data model.

@@ -65,7 +65,6 @@ class Positions():
                 transactions = [t for t in transactions if todate(t['date']).year <= year]
 
             cls.tax_deduction_rate = {year: Decimal(str(i[0])) for year, i in taxdata['tax_deduction_rates'].items()}
-
             cls.new_holdings = [t for t in transactions if t['type'] == 'BUY' or t['type'] == 'DEPOSIT']
             cls._fixup_tax_deductions(cls)
 

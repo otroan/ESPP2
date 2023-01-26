@@ -83,6 +83,7 @@ def main():
     # End of Year Balance (formueskatt)
     prev_year_eoy = p.eoy_balance(args.year-1)
     this_year_eoy = p.eoy_balance(args.year)
+    
     # report['eoy_balance'] = {args.year - 1: prev_year_eoy,
     #                          args.year: this_year_eoy}
 
