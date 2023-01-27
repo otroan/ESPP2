@@ -19,11 +19,11 @@ In case you are transitioning from the old tool or having not used a tool at all
 
 ```mermaid
 graph LR;
-    ESPPv1-Pickle-.->ESPP-GenHoldings{{ESPP-GenHoldings}};
-    Schwab-Complete-Transaction-History-->TransNorm{{TransNorm}}-->ESPP-GenHoldings;
-    ESPP-GenHoldings-->Holdings-2021;
+    ESPPv1-Pickle-.->TransNorm
+    Schwab-Complete-Transaction-History-->TransNorm{{TransNorm}}-->ESPP-GenHoldings{{ESPP-GenHoldings}}
+    ESPP-GenHoldings-->Holdings-2021
     Schwab-Incomplete-Transaction-History-->TransNorm
-    Manually-Generated-OlderHoldings-.->ESPP-GenHoldings;
+    Manually-Generated-OlderHoldings-.->ESPP-GenHoldings
 ```
 
 ### Transaction History Normalizer
