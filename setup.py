@@ -22,6 +22,7 @@ setup(
     entry_points={
         "console_scripts": [
             ['espp2=espp2.espp2:main',
+            'espp2_wrapper=espp2.espp2_wrapper:main',
             'espp2_transnorm=espp2.transnorm:main',
             'espp2_genholdings=espp2.genholdings:main'],
         ],

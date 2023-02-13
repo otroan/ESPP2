@@ -21,30 +21,29 @@ def fixup_price(datestr, currency, pricestr, change_sign=False):
 def fixup_number(numberstr):
     '''Convert string to number.'''
     try:
-        return float(numberstr)
+        return Decimal(numberstr)
     except ValueError:
         return ""
 
-def td_csv_import(csv_file):
+def td_csv_import(raw_data):
     '''Parse TD Ameritrade CSV file.'''
 
     data = []
 
-    with open(csv_file, encoding='utf-8') as csv_fd:
-        reader = csv.reader(csv_fd)
-        header = next(reader)
-        assert header == ['DATE', 'TRANSACTION ID', 'DESCRIPTION', 'QUANTITY', 'SYMBOL', 'PRICE', 'COMMISSION', 'AMOUNT', 'REG FEE', 'SHORT-TERM RDM FEE', 'FUND REDEMPTION FEE', ' DEFERRED SALES CHARGE']
-        field = lambda x: header.index(x)
-        data = []
-        try:
-            while True:
-                row = next(reader)
-                if row[0] == '***END OF FILE***':
-                    break
-                data.append({header[v].upper(): k for v, k in enumerate(row)})
-        except StopIteration:
-            pass
-        return data
+    reader = csv.reader(raw_data)
+    header = next(reader)
+    assert header == ['DATE', 'TRANSACTION ID', 'DESCRIPTION', 'QUANTITY', 'SYMBOL', 'PRICE', 'COMMISSION', 'AMOUNT', 'REG FEE', 'SHORT-TERM RDM FEE', 'FUND REDEMPTION FEE', ' DEFERRED SALES CHARGE']
+    field = lambda x: header.index(x)
+    data = []
+    try:
+        while True:
+            row = next(reader)
+            if row[0] == '***END OF FILE***':
+                break
+            data.append({header[v].upper(): k for v, k in enumerate(row)})
+    except StopIteration:
+        pass
+    return data
 
 def action_to_type(value):
     if value.startswith('Bought') or value.startswith('TRANSFER OF SECURITY'):
@@ -68,7 +67,7 @@ def action_to_type(value):
     raise Exception(f'Unknown transaction entry {value}')
     return value
 
-def read(csv_file, logger):
+def read(raw_data, logger):
     '''Main entry point of plugin. Return normalized Python data structure.'''
 
     key_conv = {'DATE': 'date',
@@ -84,7 +83,7 @@ def read(csv_file, logger):
     pricefields = ['amount', 'fee', 'price']
     numberfields = ['qty']
 
-    csv_data = td_csv_import(csv_file)
+    csv_data = td_csv_import(raw_data)
     newlist = []
     for csv_item in csv_data:
         newv = {}
