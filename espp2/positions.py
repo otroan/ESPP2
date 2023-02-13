@@ -2,16 +2,16 @@
 ESPPv2 Positions module
 '''
 
-import argparse
 import logging
 from itertools import groupby
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, date
 from math import isclose
-import IPython
 from decimal import Decimal, getcontext
+from typing import List, Literal, Annotated, Union, Optional, Any
+from pydantic import BaseModel, ValidationError, validator, Field
 from espp2.fmv import FMV
-
+import IPython
 getcontext().prec = 6
 
 logger = logging.getLogger(__name__)
@@ -25,24 +25,13 @@ def position_groupby(data):
     return by_symbols
 
 def todate(datestr: str) -> datetime:
+    '''Convert string to datetime'''
     return datetime.strptime(datestr, '%Y-%m-%d')
 
-# TODO:
-#
-# - Check for duplicates or overlapping positions.
-# - Validate against data model schema (transactions and holdings)
-# - Two gains calculation options.
-#   - Tie sales to received money. No via USD calculation.
-#   - Via cash account
-# - Dump report in JSON
-#
 class Positions():
     '''
     Keep track of stock positions. Expect transactions for this year and holdings from previous year.
-    This is a singleton.
     '''
-    _instance = None
-
     def _fixup_tax_deductions(self):
         '''ESPP purchased last year but accounted this year deserves tax deduction'''
         for p in self.new_holdings:
@@ -52,59 +41,51 @@ class Positions():
                     p['tax_deduction'] = (self.tax_deduction_rate[str(year)] * p['purchase_price']['nok_value'])/100
                     logger.debug('Adding tax deduction for ESPP from last year %s', p)
 
-    def __new__(cls, year=None, taxdata=None, prev_holdings=None, transactions=None, validate_year = 'exact'):
-        if cls._instance is None:
-            cls._instance = super(Positions, cls).__new__(cls)
+    def __init__(self, year, taxdata, prev_holdings, transactions, validate_year = 'exact', log=None):
+        # Put any initialization here.
+        if validate_year == 'exact':
+            transactions = [t for t in transactions if todate(t['date']).year == year]
+        elif validate_year == 'filter':
+            transactions = [t for t in transactions if todate(t['date']).year <= year]
+        self.tax_deduction_rate = {year: Decimal(str(i[0])) for year, i in taxdata['tax_deduction_rates'].items()}
+        self.new_holdings = [t for t in transactions if t['type'] == 'BUY' or t['type'] == 'DEPOSIT']
+        self._fixup_tax_deductions()
 
-            # Put any initialization here.
-            if validate_year == 'exact':
-                other_transactions = [t for t in transactions if todate(t['date']).year != year]
-                if len(other_transactions):
-                    raise Exception('Limit transactions to this year only', len(other_transactions))
-            elif validate_year == 'filter':
-                transactions = [t for t in transactions if todate(t['date']).year <= year]
+        if prev_holdings and 'stocks' in prev_holdings:
+            self.positions = prev_holdings['stocks'] + self.new_holdings
+        else:
+            logger.warning("No stocks in holding file?")
+            self.positions = self.new_holdings
 
-            cls.tax_deduction_rate = {year: Decimal(str(i[0])) for year, i in taxdata['tax_deduction_rates'].items()}
-            cls.new_holdings = [t for t in transactions if t['type'] == 'BUY' or t['type'] == 'DEPOSIT']
-            cls._fixup_tax_deductions(cls)
+        self.tax_deduction = []
+        for i,p in enumerate(self.positions):
+            p['idx'] = i
+            tax_deduction = p.get('tax_deduction', 0)
+            self.tax_deduction.insert(i, tax_deduction)
 
-            if prev_holdings and 'stocks' in prev_holdings:
-                cls.positions = prev_holdings['stocks'] + cls.new_holdings
-            else:
-                logger.warning("No stocks in holding file?")
-                cls.positions = cls.new_holdings
+        self.positions_by_symbols = position_groupby(self.positions)
+        self.new_holdings_by_symbols = position_groupby(self.new_holdings)
+        self.symbols = self.positions_by_symbols.keys()
 
-            cls.tax_deduction = []
-            for i,p in enumerate(cls.positions):
-                p['idx'] = i
-                tax_deduction = p.get('tax_deduction', 0)
-                cls.tax_deduction.insert(i, tax_deduction)
+        # Sort sales
+        sales = [t for t in transactions if t['type'] == 'SELL']
+        self.sale_by_symbols = position_groupby(sales)
 
-            cls.positions_by_symbols = position_groupby(cls.positions)
-            cls.new_holdings_by_symbols = position_groupby(cls.new_holdings)
-            cls.symbols = cls.positions_by_symbols.keys()
+        # Dividends
+        self.db_dividends = [t for t in transactions if t['type'] == 'DIVIDEND']
+        self.dividend_by_symbols = position_groupby(self.db_dividends)
 
-            # Sort sales
-            sales = [t for t in transactions if t['type'] == 'SELL']
-            cls.sale_by_symbols = position_groupby(sales)
+        self.db_dividend_reinv = [t for t in transactions if t['type'] == 'DIVIDEND_REINV']
+        self.dividend_reinv_by_symbols = position_groupby(self.db_dividend_reinv)
 
-            # Dividends
-            cls.db_dividends = [t for t in transactions if t['type'] == 'DIVIDEND']
-            cls.dividend_by_symbols = position_groupby(cls.db_dividends)
+        # Tax
+        self.db_tax = [t for t in transactions if t['type'] == 'TAX']
+        self.db_taxsub = [t for t in transactions if t['type'] == 'TAXSUB']
+        self.tax_by_symbols = position_groupby(self.db_tax)
+        # cls.tax_deduction_rate = taxdata['tax_deduction_rates']
 
-            cls.db_dividend_reinv = [t for t in transactions if t['type'] == 'DIVIDEND_REINV']
-            cls.dividend_reinv_by_symbols = position_groupby(cls.db_dividend_reinv)
-
-            # Tax
-            cls.db_tax = [t for t in transactions if t['type'] == 'TAX']
-            cls.db_taxsub = [t for t in transactions if t['type'] == 'TAXSUB']
-            cls.tax_by_symbols = position_groupby(cls.db_tax)
-            # cls.tax_deduction_rate = taxdata['tax_deduction_rates']
-
-            # # Wires
-            # cls.db_wires = [t for t in transactions if t['type'] == 'WIRE']
-
-        return cls._instance
+        # # Wires
+        # cls.db_wires = [t for t in transactions if t['type'] == 'WIRE']
 
     def _balance(self, symbol, date):
         '''
@@ -120,7 +101,7 @@ class Positions():
                     break
                 if todate(posview[posidx]['date']) > date:
                     raise Exception('Trying to sell stock from the future')
-                qty_to_sell = abs(s['qty'])
+                qty_to_sell = s['qty'].copy_abs()
                 assert qty_to_sell > 0
                 while qty_to_sell > 0:
                     if posidx >= len(posview):
@@ -161,6 +142,7 @@ class Positions():
         return total
 
     def dividends(self):
+        '''Process Dividends'''
         c = Cash()
         tax_deduction_used = 0
 
@@ -226,7 +208,7 @@ class Positions():
         posidx = 0
         sales_report = []
         c = Cash()
-        p = Positions()
+        p = self.positions
 
         for s in sales:
             s_record = {'date': s['date'], 'qty': s['qty'], 'fee': s['fee'], 'amount': s['amount']}
@@ -260,14 +242,14 @@ class Positions():
         return sales_report
 
     def sales(self):
-        p = Positions()
+        '''Process all sales.'''
 
         # Walk through all sales from transactions. Deducting from balance.
         sale_report = {}
-        for symbol in p.sale_by_symbols:
+        for symbol, record in self.sale_by_symbols.items():
             totals = {}
-            positions = deepcopy(p.positions_by_symbols[symbol])
-            r = self.process_sale_for_symbol(symbol, p.sale_by_symbols[symbol], positions)
+            positions = deepcopy(self.positions_by_symbols[symbol])
+            r = self.process_sale_for_symbol(symbol, record, positions)
             sale_report[symbol] = r
 
             totals['gain'] = sum(item['totals']['gain'] for item in sale_report[symbol])
@@ -343,6 +325,7 @@ class Positions():
         return holdings
 
 
+# TODO: Cannot be a singleton
 class Cash():
     ''' Cash balance.
     1) Cash USD Brokerage (per valuta)
@@ -354,6 +337,7 @@ class Cash():
     def __new__(cls, year=None, transactions=None, wires=None):
         if cls._instance is None:
             cls._instance = super(Cash, cls).__new__(cls)
+            transactions = [t for t in transactions if todate(t['date']).year == year]
 
             # Put any initialization here.
             cls.db_wires = [t for t in transactions if t['type'] == 'WIRE']
@@ -376,13 +360,14 @@ class Cash():
         self.sort()
 
     def _wire_match(self, wire):
-        for v in self.db_received:
-            if v['date'] == wire['date'] and isclose(v['usd_sent'], abs(wire['amount']['value']), abs_tol = 0.05):
+        for v in self.db_received.wires:
+            if v.date == wire['date'] and isclose(v.value, abs(wire['amount']['value']), abs_tol = 0.05):
                 return v
 
     def wire(self):
         '''Process wires from sent and received (manual) records'''
         unmatched = []
+
         for w in self.db_wires:
             match = self._wire_match(w)
             if match:
@@ -440,3 +425,14 @@ class Cash():
                        'total_received_nok': total_received_price_nok, 'remaining_cash': remaining_cash,
                        'gain': total_received_price_nok - total_paid_price_nok}
         return cash_report
+
+# Wires data model
+class WireAmount(BaseModel):
+    currency: str
+    nok_value: Decimal
+    value: Decimal
+class Wire(BaseModel):
+    date: date
+    wire: WireAmount
+class Wires(BaseModel):
+    wires: list[Wire]

@@ -86,10 +86,10 @@ def add_amount(rec, name, date, currency, amount):
 
 def do_deposit(record):
     date = record['date']
-    n = record['n']
+    n = Decimal(record['n'])
     price = Decimal(f"{record['price']}")
     vpd = Decimal(f"{record['vpd']}")
-    fee = record['fee']
+    fee = Decimal(record['fee'])
 
     newrec = dict()
 
@@ -108,8 +108,8 @@ def do_deposit(record):
 
 def do_trans(record):
     date = record['date']
-    fee = record['fee']
-    n = record['n']
+    fee = Decimal(f"{record['fee']}")
+    n = Decimal(f"{record['n']}")
     price = Decimal(f"{record['price']}")
 
     newrec = dict()
@@ -118,14 +118,16 @@ def do_trans(record):
     add_string(newrec, 'type', 'SELL')
     add_string(newrec, 'symbol', 'CSCO')
     add_value(newrec, 'qty', n)
-    add_amount(newrec, 'purchase_price', date, 'USD', price)
+    add_value(newrec, 'description', '')
+    add_amount(newrec, 'fee', date, 'USD', fee)
+    add_amount(newrec, 'amount', date, 'USD', price)
 
     records.append(newrec)
 
 def do_transfer(record):
     date = record['date']
-    fee = record['fee']
-    n = record['n']
+    fee = Decimal(f"{record['fee']}")
+    n = Decimal(record['n'])
     price = record['price']
 
 def do_dividend(record):
@@ -161,8 +163,8 @@ def do_tax(record):
 
 def do_rsu(record):
     date = record['date']
-    fee = record['fee']
-    n = record['n']
+    fee = Decimal(record['fee'])
+    n = Decimal(record['n'])
     price = Decimal(f"{record['price']}")
     vpd = Decimal(f"{record['vpd']}")
 
@@ -195,10 +197,10 @@ def read(pickle_file, logger):
     records = []
 
     # Read the pickle-file
-    p = UnpicklerESPP(open(pickle_file, 'rb')).load()
+    p = UnpicklerESPP(pickle_file).load()
 
     # Print the data of the raw pickle-file data for debugging
-    if True:
+    if False:
         print('Pickle-file dump:')
         pprint(p.__dict__)
 
@@ -243,5 +245,4 @@ def read(pickle_file, logger):
             continue
 
         print(f'Error: Unexpected pickle-file record: {rectype}')
-
     return records

@@ -6,41 +6,41 @@ import csv
 from decimal import Decimal
 from espp2.fmv import FMV
 import dateutil.parser as dt
+import codecs
 
-def schwab_csv_import(csv_file):
+def schwab_csv_import(csv_fd):
     '''Parse Schwab CSV file.'''
 
     data = []
 
-    with open(csv_file, encoding='utf-8') as csv_fd:
-        reader = csv.reader(csv_fd)
-
+    reader = csv.reader(codecs.iterdecode(csv_fd,'utf-8'))
+    try:
         next(reader)
         header = next(reader)
         assert header == ['Date', 'Action', 'Symbol', 'Description',
                           'Quantity', 'Fees & Commissions', 'Disbursement Election', 'Amount']
-        field = lambda x: header.index(x)
-        data = []
-        try:
-            while True:
-                row = next(reader)
-                if len(row) == 1:
-                    continue
-                subheader = None
 
-                while row[field('Date')] == '':
-                    if not subheader:
-                        subheader = row
-                        row = next(reader)
-                    if 'subdata' not in data[-1]:
-                        data[-1]['subdata'] = []
-                    data[-1]['subdata'].append({subheader[v].upper(): k for v, k in enumerate(row) if v != 0})
+        def field(x): return header.index(x)
+        data = []
+        while True:
+            row = next(reader)
+            if len(row) == 1:
+                continue
+            subheader = None
+
+            while row[field('Date')] == '':
+                if not subheader:
+                    subheader = row
                     row = next(reader)
-                    subheader = None
-                data.append({header[v].upper(): k for v, k in enumerate(row)})
-        except StopIteration:
-            pass
-        return data
+                if 'subdata' not in data[-1]:
+                    data[-1]['subdata'] = []
+                data[-1]['subdata'].append({subheader[v].upper(): k for v, k in enumerate(row) if v != 0})
+                row = next(reader)
+                subheader = None
+            data.append({header[v].upper(): k for v, k in enumerate(row)})
+    except StopIteration:
+        pass
+    return data
 
 def action_to_type(value, description):
     '''Normalize transaction type.'''
@@ -79,7 +79,7 @@ def fixup_price(datestr, currency, pricestr, change_sign=False):
 def fixup_number(numberstr):
     '''Convert string to number.'''
     try:
-        return float(numberstr)
+        return Decimal(numberstr)
     except ValueError:
         return ""
 
@@ -153,7 +153,7 @@ def subdata(action, description, date, value):
             exchange_rate = get_espp_exchange_rate(newv['purchase_date'])
             newv['purchase_price']['nok_exchange_rate'] = exchange_rate
             newv['purchase_price']['nok_value'] = exchange_rate * newv['purchase_price']['value']
-
+        newv['broker'] = 'schwab'
         # for price in pricefields:
         #     if price in newv:
         #         newv[price] = fixup_price(date, 'USD', newv[price])

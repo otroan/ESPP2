@@ -11,8 +11,9 @@ graph LR;
     Transactions-2022-->ESPP
     ESPP-->Tax-Report
     ESPP-->Holdings-2022
-    Schwab-Transaction-History-2022-->TransNorm{{TransNorm}}
-    Morgan-Transaction-History-2022-->TransNorm-->Transactions-2022
+    Schwab["schwab-transactions-2022.csv"]-->TransNorm{{TransNorm}}
+    TD["td-ameritrade-transactions-2022.csv"]-->TransNorm{{TransNorm}}
+    Morgan["morgan-transactions-2022.htmltable"]-->TransNorm-->Transactions-2022
 ```
 
 In case you are transitioning from the old tool or having not used a tool at all, see the section "if you have no holdings file" below. The pipeline for that looks like:
@@ -51,7 +52,7 @@ pip install git+https://github.com/otroan/ESPP2.git#egg=espp2
 ```
 espp2_transnorm --transaction-file <schwab-2022.csv> --format schwab --output-file <schwab-transactions-2022.json>
 
-espp2 --year=2022 --transaction-file <schwab-transactions-2022.json> --inholdings-file=<schwab-holdings-2021.json> --output-file <schwab-tax-report-2022.json --outholdings-file <schwab-holdings-2022.json> --log=debug --wire-file=<schwab-wires-2022.json>
+espp2 --year=2022 --transaction-file <schwab-transactions-2022.json> --inholdings-file=<schwab-holdings-2021.json> --output-file <schwab-tax-report-2022.json> --outholdings-file <schwab-holdings-2022.json> --wire-file=<schwab-wires-2022.json>
 
 ```
 
