@@ -15,89 +15,15 @@ import importlib
 import argparse
 import logging
 import simplejson as json
-from pydantic import BaseModel, ValidationError, validator, Field
-from datetime import datetime, date
+from datetime import date
 from typing import List, Literal, Annotated, Union, Optional, Any
 from enum import Enum
-from devtools import debug
+# from devtools import debug
 from decimal import Decimal
+from espp2.datamodels import Transactions
 
+logger = logging.getLogger(__name__)
 
-'''
-Transactions data model
-'''
-class EntryTypeEnum(str, Enum):
-    BUY = 'BUY'
-    DEPOSIT = 'DEPOSIT'
-    TAX = 'TAX'
-    TAXSUB = 'TAXSUB'
-    DIVIDEND = 'DIVIDEND'
-    DIVIDEND_REINV = 'DIVIDEND_REINV'
-    WIRE = 'WIRE'
-    SELL = 'SELL'
-
-class Amount(BaseModel):
-    currency: str
-    nok_exchange_rate: Decimal
-    nok_value: Decimal
-    value: Decimal
-class Buy(BaseModel):
-    type: Literal[EntryTypeEnum.BUY]
-    date: date
-    symbol: str
-    qty: Decimal
-
-class Deposit(BaseModel):
-    type: Literal[EntryTypeEnum.DEPOSIT]
-    date: date
-    qty: Decimal
-    symbol: str
-    description: str
-    purchase_price: Amount
-    purchase_date: date = None
-
-class Tax(BaseModel):
-    type: Literal[EntryTypeEnum.TAX]
-    date: date
-    symbol: str
-    description: str
-    amount: Amount
-
-class Taxsub(BaseModel):
-    type: Literal[EntryTypeEnum.TAXSUB]
-    date: date
-    symbol: str
-    description: str
-    amount: Amount
-
-class Dividend(BaseModel):
-    type: Literal[EntryTypeEnum.DIVIDEND]
-    date: date
-class Dividend_Reinv(BaseModel):
-    type: Literal[EntryTypeEnum.DIVIDEND_REINV]
-    date: date
-    symbol: str
-    amount: Amount
-    description: str
-class Wire(BaseModel):
-    type: Literal[EntryTypeEnum.WIRE]
-    date: date
-    amount: Amount
-    description: str
-    fee: Optional[Amount]
-class Sell(BaseModel):
-    type: Literal[EntryTypeEnum.SELL]
-    date: date
-    symbol: str
-    qty: Decimal
-    fee: Optional[Amount]
-    amount: Amount
-    description: str
-
-# Deposits = Annotated[Union[ESPP, RS], Field(discriminator="description")] | Deposit
-Entry = Annotated[Union[Buy, Deposit, Tax, Taxsub, Dividend, Dividend_Reinv, Wire, Sell], Field(discriminator="type")]
-class Transactions(BaseModel):
-    transactions: list[Entry]
 
 def get_arguments():
     '''Get command line arguments'''
@@ -114,9 +40,8 @@ def get_arguments():
     parser.add_argument(
         '--output-file', type=argparse.FileType('w'), required=True)
     parser.add_argument(
-        "-log",
         "--log",
-        default="warning",
+        default="debug",
         help=(
             "Provide logging level. "
             "Example --log debug', default='warning'"),
@@ -143,25 +68,29 @@ def get_arguments():
 
     return parser.parse_args(), logger
 
-def transnorm(format, transactions_file, logger):
-    format = 'espp2.plugins.' + format
-    plugin = importlib.import_module(format, package='espp2')
-    transactions = plugin.read(transactions_file, logger)
-    return transactions
-
-def normalize(format, data, logger):
-    format = 'espp2.plugins.' + format
-    plugin = importlib.import_module(format, package='espp2')
+def normalize(trans_format, data):
+    '''Normalize transactions'''
+    trans_format = 'espp2.plugins.' + trans_format
+    plugin = importlib.import_module(trans_format, package='espp2')
+    logger.info(f'Importing transactions with importer {trans_format} {data.name}')
     transactions = plugin.read(data, logger)
     sorted_transactions = sorted(transactions, key=lambda d: d['date'])
-    # print('TRANSA BEFORE VALIDATION', sorted_transactions)
+    logger.info(
+        f'Imported {len(sorted_transactions)} transactions, starting {sorted_transactions[0]["date"]}, ending {sorted_transactions[-1]["date"]}.''')
+    # Validate transactions
     return Transactions(transactions=sorted_transactions), sorted_transactions
 
 def main():
     '''Main function'''
     args, logger = get_arguments()
-    transactions = transnorm(args.format, args.transaction_file, logger)
-    json.dump(transactions, args.output_file, use_decimal=True, indent=4)
+    logger.debug('Arguments: %s', args)
+    trans_obj, _ = normalize(args.format, args.transaction_file, logger)
+    logger.info('Converting to JSON')
+    j = trans_obj.json(indent=4)
+
+    logger.info(f'Writing transaction file to: {args.output_file.name}')
+    with args.output_file as f:
+        f.write(j)
 
 if __name__ == '__main__':
     main()

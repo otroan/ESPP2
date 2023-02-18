@@ -7,11 +7,12 @@ import logging
 from decimal import Decimal
 from importlib.resources import files
 import simplejson as json
-from espp2.positions import Positions, Cash, Wires
+from espp2.positions import Positions, Cash, Wires, Holdings
 from espp2.transnorm import normalize
-from espp2.main import tax_report, do_taxes, Log
+from espp2.main import tax_report, do_taxes
+from espp2.datamodels import TaxReport, Transactions, Wires, Holdings
 import sys
-import IPython
+# import IPython
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ def get_arguments():
     parser.add_argument(
         '--output-file', type=argparse.FileType('w'), required=True)
     parser.add_argument('--year', type=int, required=True)
+    parser.add_argument('--broker', type=str, required=True)
     parser.add_argument(
         "-log",
         "--log",
@@ -95,7 +97,7 @@ def main():
 
         print(f'Reading transactions from {format}:{transaction_file}')
         with open(transaction_file, 'rb') as fd:
-            trans_object, trans = normalize(format, fd, logger)
+            trans_object, trans = normalize(format, fd)
         
         transactions += trans
 
@@ -107,20 +109,28 @@ def main():
         print(f'Wires: {wires}')
 
     if args.inholdings_file:
-        print(f'Reading previous holdings from {args.wire_file.name}')
+        print(f'Reading previous holdings from {args.inholdings_file.name}')
         prev_holdings = json_load(args.inholdings_file)
+        print('Holdings: ', prev_holdings)
+        prev_holdings = Holdings(**prev_holdings)
     else:
         prev_holdings = None
-    log = Log()
 
-    report, holdings = tax_report(args.year, transactions, wires, prev_holdings, taxdata, log)
+    report, holdings = tax_report(
+        args.year, args.broker, trans_object, wires, prev_holdings, taxdata)
 
     # New holdings
     if args.outholdings_file:
-        json.dump(holdings, args.outholdings_file, indent=4)
+        logger.info('Writing new holdings to %s', args.outholdings_file.name)
+        j = holdings.json(indent=4)
+        with args.outholdings_file as f:
+            f.write(j)
 
     # Tax report (in JSON)
-    json.dump(report, args.output_file, indent=4)
+    j = report.json(indent=4)
+    logger.info('Writing tax report to %s', args.output_file.name)
+    with args.output_file as f:
+        f.write(j)
 
 if __name__ == '__main__':
     main()

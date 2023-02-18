@@ -15,7 +15,7 @@ setup(
     author_email="otroan@employees.org",
     packages=find_packages(),
     python_requires=">=3.9, <4",
-    install_requires=["simplejson", "numpy"],
+    install_requires=["simplejson", "numpy", "pydantic", "urllib3", "python-dateutil"],
     package_data={
         "espp2": ["*.json"],
     },
