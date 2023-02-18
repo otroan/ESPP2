@@ -6,7 +6,7 @@ import logging
 from decimal import Decimal
 from importlib.resources import files
 import simplejson as json
-from espp2.positions import Positions, Cash, Wires, InvalidPositionException, Holdings
+from espp2.positions import Positions, Cash, InvalidPositionException, Holdings
 from espp2.transactions import normalize
 from espp2.datamodels import TaxReport, Transactions, Wires, Holdings
 
