@@ -146,6 +146,6 @@ class CashEntry(BaseModel):
 class CashModel(BaseModel):
     cash: List[CashEntry] = []
 
-class ESPPRespone(BaseModel):
+class ESPPResponse(BaseModel):
     holdings: Holdings
     tax_report: TaxReport
