@@ -137,7 +137,7 @@ class TaxReport(BaseModel):
     buys: list
     sales: dict
     cash: dict
-    unmatched_wires: dict
+    unmatched_wires: list
 
 class CashEntry(BaseModel):
     date: date
@@ -145,3 +145,7 @@ class CashEntry(BaseModel):
     transfer: Optional[bool] = False
 class CashModel(BaseModel):
     cash: List[CashEntry] = []
+
+class ESPPRespone(BaseModel):
+    holdings: Holdings
+    tax_report: TaxReport

@@ -8,7 +8,12 @@ from typing import Optional
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.responses import HTMLResponse
-from espp2.main import do_taxes, Log
+from espp2.main import do_taxes
+from espp2.datamodels import ESPPRespone
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -27,7 +32,8 @@ class PrettyJSONResponse(Response):
             separators=(", ", ": "),
         ).encode("utf-8")
 
-@app.post("/files/", response_class=PrettyJSONResponse)
+# @app.post("/files/", response_class=PrettyJSONResponse)
+@app.post("/files/", response_model=ESPPRespone)
 async def create_files(
         transfile: UploadFile,
         transformat: str = Form(...),
@@ -35,13 +41,13 @@ async def create_files(
         wirefile: UploadFile = File(None),
         year: int = Form(...)):
     '''File upload endpoint'''
-    log = Log()
     try:
         report, holdings = do_taxes(
-            transfile, transformat, holdfile, wirefile, year, log)
+            transfile, transformat, holdfile, wirefile, year)
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return {"report": report, "holdings": holdings}
+    return report, holdings
 
 
 @app.get("/")

@@ -1,21 +1,13 @@
 '''
 ESPPv2 Wrapper
 '''
-
+import sys
 import argparse
 import logging
-from decimal import Decimal
-from importlib.resources import files
-import simplejson as json
-from espp2.positions import Positions, Cash, Wires, Holdings
-from espp2.transactions import normalize
-from espp2.main import tax_report, do_taxes
-from espp2.datamodels import TaxReport, Transactions, Wires, Holdings
-import sys
-# import IPython
+from espp2.main import do_taxes
+# from espp2.datamodels import TaxReport, Holdings
 
-logger = logging.getLogger(__name__)
-
+# pylint: disable=invalid-name
 def get_arguments():
     '''Get command line arguments'''
 
@@ -66,58 +58,37 @@ def get_arguments():
 
     return parser.parse_args(), logger
 
-def json_load(fp):
-    data = json.load(fp, parse_float=Decimal)
-    return data
-
 supported_formats = ['schwab', 'td', 'morgan', 'norm', 'pickle']
 
 def main():
     '''Main function'''
     args, logger = get_arguments()
 
-    taxdata_file = files('espp2').joinpath('taxdata.json')
-    with open(taxdata_file, 'r', encoding='utf-8') as jf:
-        taxdata = json.load(jf)
-
     # Read and validate transaction files
-    transactions = []
+    transaction_files = []
     for t in args.transaction_file:
         try:
-            format, transaction_file = t.split(':')
+            transformat, transaction_file = t.split(':')
         except ValueError:
             print(f'Invalid transaction file format {t} <format>:<file> required.')
             print(f'Supported formats: {supported_formats}')
             return
 
-        if format not in supported_formats:
-            print(f'Unsupported transaction file format: {format}')
+        if transformat not in supported_formats:
+            print(f'Unsupported transaction file format: {transformat}')
             print(f'Supported formats: {supported_formats}')
             return
 
-        print(f'Reading transactions from {format}:{transaction_file}')
-        with open(transaction_file, 'rb') as fd:
-            trans_object, trans = normalize(format, fd)
-        
-        transactions += trans
+        print(f'Reading transactions from {transformat}:{transaction_file}')
+        try:
+            fd = open(transaction_file, 'rb')
+            transaction_files.append({'fd': fd, 'name': transaction_file, 'format': transformat})
+        except FileNotFoundError:
+            logger.exception('Could not open transaction file: %s', transaction_file)
+            sys.exit(1)
 
-    wires = {}
-    if args.wire_file:
-        print(f'Reading wire transactions from {args.wire_file.name}')
-        wires = json_load(args.wire_file)
-        wires = Wires(wires=wires)
-        print(f'Wires: {wires}')
-
-    if args.inholdings_file:
-        print(f'Reading previous holdings from {args.inholdings_file.name}')
-        prev_holdings = json_load(args.inholdings_file)
-        print('Holdings: ', prev_holdings)
-        prev_holdings = Holdings(**prev_holdings)
-    else:
-        prev_holdings = None
-
-    report, holdings = tax_report(
-        args.year, args.broker, trans_object, wires, prev_holdings, taxdata)
+    report, holdings = do_taxes(
+        args.broker, transaction_files, args.inholdings_file, args.wire_file, args.year)
 
     # New holdings
     if args.outholdings_file:

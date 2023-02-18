@@ -19,8 +19,9 @@ def json_load(fp):
 
 # Initialize the taxdata
 taxdata_file = files('espp2').joinpath('taxdata.json')
-with open(taxdata_file, 'r') as jf:
+with open(taxdata_file, 'r', encoding='utf-8') as jf:
     taxdata = json.load(jf)
+
 
 def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires, prev_holdings: Holdings, taxdata) -> (dict, Holdings):
     '''Generate tax report'''
@@ -48,9 +49,11 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
         logger.error(err)
         return {}, {}
 
+    # Move these to different part of report. "Buys" and "Sales" in period
+    # Position changes?
     report['buys'] = p.buys()
     report['sales'] = p.sales()
-    print('BUYS', report['buys'])
+
     # Cash and wires
     nomatch = c.wire()
     report['unmatched_wires'] = nomatch
@@ -59,33 +62,34 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     return TaxReport(**report), p.holdings(year, broker)
 
 # TODO: Also include broker?
-def do_taxes(transfile, transformat, holdfile, wirefile, year):
+def do_taxes(broker, transaction_files: list, holdfile, wirefile, year) -> (TaxReport, Holdings):
     '''Do taxes'''
     trans = []
     report = []
     wires = []
     prev_holdings = []
-    logger.info(f'Doing taxes: {year} {format}')
-    logger.info(f'Transactions: {transfile.filename}')
-    logger.info(f'Holdings: {holdfile.filename}')
-    logger.info(f'Wires: {wirefile.filename}')
+    # logger.info(f'Doing taxes: {year} {format}')
+    # logger.info(f'Transactions: {transfile.name}')
+    # logger.info(f'Holdings: {holdfile.filename}')
+    # logger.info(f'Wires: {wirefile.filename}')
+    for t in transaction_files:
+        try:
+            trans.append(normalize(t['format'], t['fd']))
+        except Exception as e:
+            raise Exception(f'{t["name"]}: {e}')
 
-    try:
-        trans_object, trans = normalize(transformat, transfile.file)
-    except Exception as e:
-        raise Exception(f'{transfile.filename}: {e}')
+    transactions = trans[0]
+    for t in trans[1:]:
+        transactions.transactions += t.transactions
 
-    logger.info('Transactions: {len(trans_object)} read')
-
-    if wirefile.filename:
-        wires = json_load(wirefile.file)
+    if wirefile:
+        wires = json_load(wirefile)
         wires = Wires(wires=wires)
-        logger.info(f'Wires: read')
+        logger.info('Wires: read')
 
-    if holdfile.filename:
-        prev_holdings = json_load(holdfile.file)
-        prev_holdings = Holdings(holdings=prev_holdings)
+    if holdfile:
+        prev_holdings = json_load(holdfile)
+        prev_holdings = Holdings(**prev_holdings)
         logger.info(f'Holdings file read')
-    broker = transformat ## TODO: This is not quite right
-    report, holdings = tax_report(year, broker, trans_object, wires, prev_holdings, taxdata)
+    report, holdings = tax_report(year, broker, transactions, wires, prev_holdings, taxdata)
     return report, holdings
