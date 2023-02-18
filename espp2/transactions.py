@@ -14,16 +14,9 @@ Supported importers:
 import importlib
 import argparse
 import logging
-import simplejson as json
-from datetime import date
-from typing import List, Literal, Annotated, Union, Optional, Any
-from enum import Enum
-# from devtools import debug
-from decimal import Decimal
 from espp2.datamodels import Transactions
 
 logger = logging.getLogger(__name__)
-
 
 def get_arguments():
     '''Get command line arguments'''
@@ -78,7 +71,7 @@ def normalize(trans_format, data):
     logger.info(
         f'Imported {len(sorted_transactions)} transactions, starting {sorted_transactions[0]["date"]}, ending {sorted_transactions[-1]["date"]}.''')
     # Validate transactions
-    return Transactions(transactions=sorted_transactions), sorted_transactions
+    return Transactions(transactions=sorted_transactions)
 
 def main():
     '''Main function'''
