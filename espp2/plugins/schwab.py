@@ -7,16 +7,18 @@ from decimal import Decimal
 from espp2.fmv import FMV
 import dateutil.parser as dt
 import codecs
+import io
 
-def schwab_csv_import(csv_fd):
+def schwab_csv_import(fd):
     '''Parse Schwab CSV file.'''
 
     data = []
 
-    reader = csv.reader(csv_fd)
-    # reader = csv.reader(codecs.iterdecode(csv_fd,'utf-8'))
-    # import IPython
-    # IPython.embed()
+    # Fastapi passes in binary file and CLI passes in a TextIOWrapper
+    if isinstance(fd, io.TextIOWrapper):
+        reader = csv.reader(fd)
+    else:
+        reader = csv.reader(codecs.iterdecode(fd,'utf-8'))
 
     try:
         next(reader)
