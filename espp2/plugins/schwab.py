@@ -1,5 +1,5 @@
 '''
-Schwab CSB normalizer.
+Schwab CSV normalizer.
 '''
 
 import csv
@@ -13,7 +13,11 @@ def schwab_csv_import(csv_fd):
 
     data = []
 
-    reader = csv.reader(codecs.iterdecode(csv_fd,'utf-8'))
+    reader = csv.reader(csv_fd)
+    # reader = csv.reader(codecs.iterdecode(csv_fd,'utf-8'))
+    # import IPython
+    # IPython.embed()
+
     try:
         next(reader)
         header = next(reader)
@@ -173,7 +177,6 @@ def read(csv_file, logger):
                 'AMOUNT': 'amount',
                 'DESCRIPTION': 'description',
                 }
-
     pricefields = ['amount', 'fee']
     numberfields = ['qty']
 

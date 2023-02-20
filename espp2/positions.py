@@ -170,7 +170,7 @@ class Positions():
                     break
                 if posview[posidx].date > balancedate:
                     raise InvalidPositionException(
-                        f'Trying to sell stock from the future {todate(posview[posidx]["date"])} > {balancedate}')
+                        f'Trying to sell stock from the future {posview[posidx].date} > {balancedate}')
                 qty_to_sell = s.qty.copy_abs()
 
                 assert qty_to_sell > 0
