@@ -10,8 +10,12 @@ import simplejson as json
 from espp2.positions import Positions, Cash, InvalidPositionException, Holdings, Ledger
 from espp2.transactions import normalize
 from espp2.datamodels import TaxReport, Transactions, Wires, Holdings
+from typing import Tuple
 
 logger = logging.getLogger(__name__)
+
+class ESPPErrorException(Exception):
+    '''ESPP Error Exception'''
 
 def json_load(fp):
     '''Load json file'''
@@ -41,7 +45,7 @@ def validate_holdings(year, prev_holdings, transactions):
 
 
 def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
-               prev_holdings: Holdings, taxdata) -> (dict, Holdings):
+               prev_holdings: Holdings, taxdata) -> Tuple[TaxReport, Holdings]:
     '''Generate tax report'''
 
     l = Ledger(prev_holdings, transactions.transactions)
@@ -88,7 +92,10 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     return TaxReport(**report), p.holdings(year, broker)
 
 # TODO: Also include broker?
-def do_taxes(broker, transaction_files: list, holdfile, wirefile, year) -> (TaxReport, Holdings):
+
+
+def do_taxes(broker, transaction_files: list, holdfile,
+             wirefile, year) -> Tuple[TaxReport, Holdings]:
     '''Do taxes'''
     trans = []
     report = []
@@ -102,7 +109,7 @@ def do_taxes(broker, transaction_files: list, holdfile, wirefile, year) -> (TaxR
         try:
             trans.append(normalize(t['format'], t['fd']))
         except Exception as e:
-            raise Exception(f'{t["name"]}: {e}')
+            raise ESPPErrorException(f'{t["name"]}: {e}') from e
 
     transactions = trans[0]
     for t in trans[1:]:
@@ -117,6 +124,6 @@ def do_taxes(broker, transaction_files: list, holdfile, wirefile, year) -> (TaxR
     if holdfile:
         prev_holdings = json_load(holdfile)
         prev_holdings = Holdings(**prev_holdings)
-        logger.info(f'Holdings file read')
+        logger.info('Holdings file read')
     report, holdings = tax_report(year, broker, transactions, wires, prev_holdings, taxdata)
     return report, holdings

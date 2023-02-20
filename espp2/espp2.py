@@ -5,7 +5,7 @@ import sys
 import argparse
 import logging
 from espp2.main import do_taxes
-# from espp2.datamodels import TaxReport, Holdings
+from espp2.datamodels import TaxReport, Holdings
 
 # pylint: disable=invalid-name
 def get_arguments():
@@ -91,6 +91,8 @@ def main():
             logger.exception('Could not open transaction file: %s', transaction_file)
             sys.exit(1)
 
+    report: TaxReport
+    holdings: Holdings
     report, holdings = do_taxes(
         args.broker, transaction_files, args.inholdings_file, args.wire_file, args.year)
 
