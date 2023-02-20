@@ -1,13 +1,13 @@
-from setuptools import setup, find_packages
 import pathlib
+from setuptools import setup, find_packages
 
 here = pathlib.Path(__file__).parent.resolve()
 long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="espp2",
-    version="0.0.1",
-    description="A tax tool for ESPP/RSU amd foreign held shares",
+    version="0.0.2",
+    description="A tax tool for ESPP/RSU and foreignly held shares",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/otroan/ESPP2",
