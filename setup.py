@@ -23,7 +23,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            ['espp2=espp2.espp2:main',
+            ['espp2=espp2.espp2:app',
             'espp2_transactions=espp2.transactions:main']
         ],
     },

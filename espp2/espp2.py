@@ -1,113 +1,81 @@
 '''
 ESPPv2 Wrapper
 '''
+
+# pylint: disable=invalid-name
 import sys
 import argparse
 import logging
+import typer
+from pathlib import Path
+from enum import Enum
 from espp2.main import do_taxes
 from espp2.datamodels import TaxReport, Holdings
 
-# pylint: disable=invalid-name
-def get_arguments():
-    '''Get command line arguments'''
+app = typer.Typer()
 
-    description='''
-    ESPP 2 Main Wrapper Program.
-    '''
-    parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('--transaction-file',
-                        help='List of transactions file in <format>:<file> format',
-                        nargs='+', required=True)
-    parser.add_argument('--wire-file',
-                        type=argparse.FileType('r'))
-    parser.add_argument('--inholdings-file',
-                        type=argparse.FileType('r'))
-    parser.add_argument('--outholdings-file',
-                        type=argparse.FileType('w'))
-    parser.add_argument(
-        '--output-file', type=argparse.FileType('w'), required=True)
-    parser.add_argument('--year', type=int, required=True)
-    parser.add_argument('--broker', type=str, required=True)
-    parser.add_argument(
-        "-log",
-        "--log",
-        default="warning",
-        help=(
-            "Provide logging level. "
-            "Example --log debug', default='warning'"),
-    )
+class BrokerEnum(str, Enum):
+    '''BrokerEnum'''
+    schwab = 'schwab'
+    td = 'td'
+    morgan = 'morgan'
+class TFormatEnum(str, Enum):
+    '''Transaction Format Enum'''
+    schwab = 'schwab'
+    td = 'td'
+    morgan = 'morgan'
+    pickle = 'pickle'
 
-    options = parser.parse_args()
-    levels = {
-        'critical': logging.CRITICAL,
-        'error': logging.ERROR,
-        'warn': logging.WARNING,
-        'warning': logging.WARNING,
-        'info': logging.INFO,
-        'debug': logging.DEBUG
-    }
-    level = levels.get(options.log.lower())
+logger = logging.getLogger(__name__)
 
-    if level is None:
-        raise ValueError(
-        f"log level given: {options.log}"
-        f" -- must be one of: {' | '.join(levels.keys())}")
-
-    logging.basicConfig(level=level)
-    logger = logging.getLogger(__name__)
-
-    return parser.parse_args(), logger
-
-supported_formats = ['schwab', 'td', 'morgan', 'norm', 'pickle']
-
-def main():
-    '''Main function'''
-    args, logger = get_arguments()
-
-    # Read and validate transaction files
-    transaction_files = []
-    for t in args.transaction_file:
+def parse_option(values: list[str]) -> list[dict]:
+    '''Parse transaction files option'''
+    result = []
+    for e in values:
+        tformat, tfile = e.split(':')
         try:
-            transformat, transaction_file = t.split(':')
-        except ValueError:
-            print(f'Invalid transaction file format {t} <format>:<file> required.')
-            print(f'Supported formats: {supported_formats}')
-            return
-
-        if transformat not in supported_formats:
-            print(f'Unsupported transaction file format: {transformat}')
-            print(f'Supported formats: {supported_formats}')
-            return
-
-        print(f'Reading transactions from {transformat}:{transaction_file}')
-        if transformat == 'pickle':
-            fdmode = 'rb'
+            tformat_enum = TFormatEnum(tformat)
+        except ValueError as e:
+            raise typer.BadParameter(f'Invalid format: {tformat}') from e
+        if tformat_enum == TFormatEnum.pickle:
+            fd = open(tfile, 'rb')
         else:
-            fdmode = 'r'
-        try:
-            fd = open(transaction_file, fdmode)
-            transaction_files.append({'fd': fd, 'name': transaction_file, 'format': transformat})
-        except FileNotFoundError:
-            logger.exception('Could not open transaction file: %s', transaction_file)
-            sys.exit(1)
+            fd = open(tfile, 'r', encoding='utf-8')
+        result.append({'fd': fd, 'format': tformat, 'name': tfile})
+    return result
+
+@app.command()
+def main(transactions: list[str] = typer.Argument(..., help='List of transactions file in <format>:<file> format', callback=parse_option),
+         output: typer.FileTextWrite = typer.Argument(..., help='Output file',),
+         year: int = 2022,
+         broker: BrokerEnum = BrokerEnum.schwab,
+         wires: typer.FileText = None,
+         inholdings: typer.FileText = None,
+         outholdings: typer.FileTextWrite = None,
+         loglevel: str = typer.Option("WARNING", help='Logging level')):
+
+    '''ESPPv2 tax reporting tool'''
+    lognames = logging.getLevelNamesMapping()
+    if loglevel not in lognames:
+        raise typer.BadParameter(f'Invalid loglevel: {loglevel}')
+    logging.basicConfig(level=lognames[loglevel])
 
     report: TaxReport
     holdings: Holdings
-    report, holdings = do_taxes(
-        args.broker, transaction_files, args.inholdings_file, args.wire_file, args.year)
+    report, holdings = do_taxes(broker, transactions, inholdings, wires, year)
 
     # New holdings
-    if args.outholdings_file:
-        logger.info('Writing new holdings to %s', args.outholdings_file.name)
+    if outholdings:
+        logger.info('Writing new holdings to %s', outholdings.name)
         j = holdings.json(indent=4)
-        with args.outholdings_file as f:
+        with outholdings as f:
             f.write(j)
 
     # Tax report (in JSON)
     j = report.json(indent=4)
-    logger.info('Writing tax report to %s', args.output_file.name)
-    with args.output_file as f:
+    logger.info('Writing tax report to: %s', output.name)
+    with output as f:
         f.write(j)
 
 if __name__ == '__main__':
-    main()
+    app()
