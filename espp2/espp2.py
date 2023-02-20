@@ -80,8 +80,12 @@ def main():
             return
 
         print(f'Reading transactions from {transformat}:{transaction_file}')
+        if transformat == 'pickle':
+            fdmode = 'rb'
+        else:
+            fdmode = 'r'
         try:
-            fd = open(transaction_file, 'rb')
+            fd = open(transaction_file, fdmode)
             transaction_files.append({'fd': fd, 'name': transaction_file, 'format': transformat})
         except FileNotFoundError:
             logger.exception('Could not open transaction file: %s', transaction_file)

@@ -26,7 +26,7 @@ def get_arguments():
     '''
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--format', type=str, help='Which broker format',
-                        choices=['schwab', 'td', 'manual', 'pickle'],
+                        choices=['schwab', 'td', 'morgan', 'pickle'],
                         required=True)
     parser.add_argument('--transaction-file',
                         type=argparse.FileType('rb'), required=True)
@@ -67,6 +67,8 @@ def normalize(trans_format, data):
     plugin = importlib.import_module(trans_format, package='espp2')
     logger.info(f'Importing transactions with importer {trans_format} {data.name}')
     transactions = plugin.read(data, logger)
+    if isinstance(transactions, Transactions):
+        return transactions
     sorted_transactions = sorted(transactions, key=lambda d: d['date'])
     logger.info(
         f'Imported {len(sorted_transactions)} transactions, starting {sorted_transactions[0]["date"]}, ending {sorted_transactions[-1]["date"]}.''')
@@ -77,7 +79,7 @@ def main():
     '''Main function'''
     args, logger = get_arguments()
     logger.debug('Arguments: %s', args)
-    trans_obj, _ = normalize(args.format, args.transaction_file, logger)
+    trans_obj, _ = normalize(args.format, args.transaction_file)
     logger.info('Converting to JSON')
     j = trans_obj.json(indent=4)
 

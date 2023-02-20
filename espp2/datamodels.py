@@ -24,12 +24,24 @@ class Amount(BaseModel):
     nok_exchange_rate: Decimal
     nok_value: Decimal
     value: Decimal
+
 class Buy(BaseModel):
     '''Buy transaction'''
     type: Literal[EntryTypeEnum.BUY]
     date: date
     symbol: str
     qty: Decimal
+    purchase_price: Amount
+
+    @validator('purchase_price')
+    def purchase_price_validator(cls, v, values):
+        '''Validate purchase price'''
+        if v.nok_value < 0 or v.value < 0:
+            raise ValueError('Negative values for purchase price', v, values)
+        return v
+
+    class Config:
+        extra = Extra.allow
 
 class Deposit(BaseModel):
     '''Deposit transaction'''
@@ -40,6 +52,13 @@ class Deposit(BaseModel):
     description: str
     purchase_price: Amount
     purchase_date: date = None
+
+    @validator('purchase_price')
+    def purchase_price_validator(cls, v, values):
+        '''Validate purchase price'''
+        if v.nok_value < 0 or v.value < 0:
+            raise ValueError('Negative values for purchase price', values)
+        return v
     class Config:
         extra = Extra.allow
 

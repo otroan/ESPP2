@@ -11,7 +11,7 @@ from datetime import datetime, date
 from math import isclose
 from decimal import Decimal, getcontext
 from espp2.fmv import FMV
-from espp2.datamodels import Amount, Holdings, CashModel, CashEntry, Stock
+from espp2.datamodels import Amount, Holdings, CashModel, CashEntry, Stock, EntryTypeEnum
 
 getcontext().prec = 6
 
@@ -39,6 +39,46 @@ def todate(datestr: str) -> date:
     '''Convert string to datetime'''
     return datetime.strptime(datestr, '%Y-%m-%d').date()
 
+class Ledger():
+    def __init__(self, holdings, transactions):
+        self.entries = {}
+        if holdings:
+            h = holdings.stocks
+            for e in h:
+                e.type = EntryTypeEnum.DEPOSIT
+            # TODO: Should not be needed
+            transactions = [t for t in transactions if t.date.year > holdings.year]
+        else:
+            h = []
+        transactions_sorted = sorted(transactions + h, key=lambda d: d.date)
+        
+        for t in transactions_sorted:
+            if t.type in (EntryTypeEnum.DEPOSIT, EntryTypeEnum.BUY, EntryTypeEnum.SELL):
+                self.add(t.symbol, t.date, t.qty)
+
+    def add(self, symbol, date, qty):
+        if symbol not in self.entries:
+            self.entries[symbol] = []
+        total = sum([e[1] for e in self.entries[symbol]])
+        self.entries[symbol].append((date, qty, total+qty))
+
+    def report(self):
+        for symbol, entries in self.entries.items():
+            print(symbol)
+            for e in entries:
+                print(f'{e[0]} {e[1]:6} {e[2]:6}')
+
+    def total_shares(self, symbol, date, until=True):
+        last = 0
+        if symbol not in self.entries:
+            return 0
+        for i, e in enumerate(self.entries[symbol]):
+            if e[0] >= date:
+                if until:
+                    return self.entries[symbol][i-1][2]
+                return e[2]
+            last = e[2]
+        return last
 
 class Positions():
     '''
@@ -56,29 +96,33 @@ class Positions():
                     logger.debug(
                         'Adding tax deduction for ESPP from last year %s', p)
 
-    def __init__(self, year, taxdata, prev_holdings: Holdings, transactions, cash, validate_year='exact'):
-        if validate_year == 'exact':
-            transactions = [t for t in transactions if t.date.year == year]
-        elif validate_year == 'filter':
-            transactions = [t for t in transactions if todate(
-                t['date']).year <= year]
+    def __init__(self, year, taxdata, prev_holdings: Holdings, transactions, cash, validate_year='exact', ledger=None):
+        # if validate_year == 'exact':
+        #     transactions = [t for t in transactions if t.date.year == year]
+        # elif validate_year == 'filter':
+        #     transactions = [t for t in transactions if todate(
+        #         t['date']).year <= year]
+        # wrong_year = [t for t in transactions if t.date.year != year]
+        # assert(len(wrong_year) == 0)
+
         self.tax_deduction_rate = {year: Decimal(
             str(i[0])) for year, i in taxdata['tax_deduction_rates'].items()}
         self.new_holdings = [
             t for t in transactions if t.type in ('BUY', 'DEPOSIT')]
         self._fixup_tax_deductions()
         self.cash = cash
+        self.ledger = ledger
         if prev_holdings and prev_holdings.stocks:
             logger.info('Adding %d new holdings to %d previous holdings', len(
                 self.new_holdings), len(prev_holdings.stocks))
             logger.info(
                 f'Previous holdings from: {prev_holdings.year} {validate_year}')
             self.positions = prev_holdings.stocks + self.new_holdings
+            transactions = [t for t in transactions if t.date.year > prev_holdings.year]
         else:
             logger.warning(
                 "No previous holdings or stocks in holding file. Requires the complete transaction history.")
             self.positions = self.new_holdings
-
         self.tax_deduction = []
         for i, p in enumerate(self.positions):
             p.idx = i
@@ -86,6 +130,7 @@ class Positions():
             self.tax_deduction.insert(i, tax_deduction)
 
         self.positions_by_symbols = position_groupby(self.positions)
+
         self.new_holdings_by_symbols = position_groupby(self.new_holdings)
         self.symbols = self.positions_by_symbols.keys()
 
@@ -127,6 +172,7 @@ class Positions():
                     raise InvalidPositionException(
                         f'Trying to sell stock from the future {todate(posview[posidx]["date"])} > {balancedate}')
                 qty_to_sell = s.qty.copy_abs()
+
                 assert qty_to_sell > 0
                 while qty_to_sell > 0:
                     if posidx >= len(posview):
@@ -193,6 +239,8 @@ class Positions():
 
         for d in self.db_dividends:
             total_shares = self.total_shares(self[:d.date, d.symbol])
+            ledger_shares = self.ledger.total_shares(d.symbol, d.date)
+            print('TOTAL SHARES', total_shares, ledger_shares, d.symbol, d.date)
             if total_shares == 0:
                 raise InvalidPositionException(
                     f'Dividends: Total shares at dividend date is zero: {d}')
@@ -229,8 +277,11 @@ class Positions():
                 gain = 0
         if tax_deduction > 0:
             logger.info("Unused tax deduction: %s %d", buy_entry, gain)
-        return {'qty': qty, "sale_price_nok": sale_price_nok, "purchase_price_nok": buy_entry.purchase_price.nok_value, 'gain': gain, 'tax_deduction_used': tax_deduction_used,
-                'total_gain_nok': gain * qty, 'total_tax_deduction': tax_deduction_used * qty, 'total_purchase_price': buy_entry.purchase_price.nok_value * qty}
+        return {'qty': qty, "sale_price_nok": sale_price_nok,
+                "purchase_price_nok": buy_entry.purchase_price.nok_value,
+                'gain': gain, 'tax_deduction_used': tax_deduction_used,
+                'total_gain_nok': gain * qty, 
+                'total_tax_deduction': tax_deduction_used * qty, 'total_purchase_price': buy_entry.purchase_price.nok_value * qty}
 
     def process_sale_for_symbol(self, symbol, sales, positions):
         '''Process sales for a symbol'''
@@ -242,8 +293,7 @@ class Positions():
                         'fee': s.fee, 'amount': s.amount}
             s_record['from_positions'] = []
             qty_to_sell = abs(s.qty)
-            self.cash.debit(s.date, s.amount)
-
+            self.cash.debit(s.date, s.amount.copy())
             while qty_to_sell > 0:
                 if positions[posidx].qty == 0:
                     posidx += 1
@@ -267,11 +317,13 @@ class Positions():
                              for item in s_record['from_positions'])
             total_purchase_price = sum(
                 item['total_purchase_price'] for item in s_record['from_positions'])
-            total_purchase_price += s.fee.nok_value
+            if s.fee:
+                total_purchase_price += s.fee.nok_value
             totals = {'gain': total_gain, 'sold_qty': total_sold, 'purchase_price': total_purchase_price, 'tax_ded': total_tax_ded,
                       'sell_price': s.amount.nok_value}
             s_record['totals'] = totals
             sales_report.append(s_record)
+
         return sales_report
 
     def sales(self):
@@ -306,14 +358,18 @@ class Positions():
             bought = 0
             price_sum = 0
             price_sum_nok = 0
+            if symbol not in self.new_holdings_by_symbols:
+                continue
             for item in self.new_holdings_by_symbols[symbol]:
                 if item.type == 'BUY':
                     if 'amount' in item:
                         self.cash.credit(item['date'], item['amount'])
                     else:
-                        raise NotImplementedError
-                        # item['purchase_price']['value'] * item['qty']
-                        # c.credit(item['date'], item['purchase_price']['value'] * item['qty'])
+                        # print('ITEM', item)
+                        amount = Amount(value=item.purchase_price.value * item.qty, currency=item.purchase_price.currency,
+                                        nok_exchange_rate=item.purchase_price.nok_exchange_rate,
+                                        nok_value=item.purchase_price.nok_value * item.qty)
+                        self.cash.credit(item.date, amount)
                 bought += item.qty
                 price_sum += item.purchase_price.value
                 price_sum_nok += item.purchase_price.nok_value

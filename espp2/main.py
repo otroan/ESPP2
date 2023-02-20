@@ -2,11 +2,12 @@
 ESPPv2 main entry point
 '''
 
+# pylint: disable=invalid-name
 import logging
 from decimal import Decimal
 from importlib.resources import files
 import simplejson as json
-from espp2.positions import Positions, Cash, InvalidPositionException, Holdings
+from espp2.positions import Positions, Cash, InvalidPositionException, Holdings, Ledger
 from espp2.transactions import normalize
 from espp2.datamodels import TaxReport, Transactions, Wires, Holdings
 
@@ -22,12 +23,36 @@ taxdata_file = files('espp2').joinpath('taxdata.json')
 with open(taxdata_file, 'r', encoding='utf-8') as jf:
     taxdata = json.load(jf)
 
+# TODO: Include cash
+def validate_holdings(year, prev_holdings, transactions):
+    '''Validate holdings and filter transactions'''
+    if prev_holdings and prev_holdings.stocks and prev_holdings.year == year - 1:
+        # Filter out transactions from previous year
+        transactions = [t for t in transactions if t.date.year == year]
+        return prev_holdings, transactions
 
-def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires, prev_holdings: Holdings, taxdata) -> (dict, Holdings):
+    # No holdings, or holdings are from wrong year
+    c = Cash(year-1, transactions, None)
+    p = Positions(year-1, taxdata, prev_holdings, transactions, c)
+    holdings = p.holdings(year-1, 'dummy')
+    transactions = [t for t in transactions if t.date.year == year]
+
+    return holdings, transactions
+
+
+def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
+               prev_holdings: Holdings, taxdata) -> (dict, Holdings):
     '''Generate tax report'''
 
-    c = Cash(year, transactions.transactions, wires)
-    p = Positions(year, taxdata, prev_holdings, transactions.transactions, c)
+    l = Ledger(prev_holdings, transactions.transactions)
+    l.report()
+
+    holdings, transactions = validate_holdings(year, prev_holdings, transactions.transactions)
+    l = Ledger(holdings, transactions)
+    l.report()
+
+    c = Cash(year, transactions, wires)
+    p = Positions(year, taxdata, holdings, transactions, c, ledger=l)
 
     report = {}
 
@@ -56,6 +81,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
 
     # Cash and wires
     nomatch = c.wire()
+
     report['unmatched_wires'] = nomatch
     report['cash'] = c.process()
 
@@ -81,6 +107,7 @@ def do_taxes(broker, transaction_files: list, holdfile, wirefile, year) -> (TaxR
     transactions = trans[0]
     for t in trans[1:]:
         transactions.transactions += t.transactions
+    transactions.transactions= sorted(transactions.transactions, key=lambda d: d.date)
 
     if wirefile:
         wires = json_load(wirefile)
