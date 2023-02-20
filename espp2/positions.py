@@ -117,8 +117,9 @@ class Positions():
                 self.new_holdings), len(prev_holdings.stocks))
             logger.info(
                 f'Previous holdings from: {prev_holdings.year} {validate_year}')
-            self.positions = prev_holdings.stocks + self.new_holdings
             transactions = [t for t in transactions if t.date.year > prev_holdings.year]
+            self.new_holdings = [t for t in transactions if t.type in ('BUY', 'DEPOSIT')]
+            self.positions = prev_holdings.stocks + self.new_holdings
         else:
             logger.warning(
                 "No previous holdings or stocks in holding file. Requires the complete transaction history.")
