@@ -5,6 +5,8 @@ The "Fair Market Value" module downloads and stock prices and exchange rates and
 caches them in a set of JSON files.
 '''
 
+# pylint: disable=invalid-name,line-too-long
+
 import os
 import datetime
 import json
@@ -16,10 +18,13 @@ import numpy as np
 import urllib3
 
 # Store downloaded files in cache directory under current directory
-CACHE_DIR='cache'
+CACHE_DIR = 'cache'
+
 
 class FMVException(Exception):
-    pass
+    '''Exception class for FMV module'''
+
+
 class FMV():
     '''Class implementing the Fair Market Value module. Singleton'''
     _instance = None
@@ -35,17 +40,18 @@ class FMV():
 
     def fetch_stock(self, symbol):
         '''Returns a dictionary of date and closing value'''
-        apikey='LN6PYRQ0I5LKDY51'
+        # apikey = 'LN6PYRQ0I5LKDY51'
         http = urllib3.PoolManager()
         # The REST api is described here: https://www.alphavantage.co/documentation/
         url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&outputsize=full&' \
-                'apikey={apikey}'
+            'apikey={apikey}'
         r = http.request('GET', url)
         if r.status != 200:
-            raise Exception(f'Fetching stock data for {symbol} failed {r.status}')
+            raise FMVException(
+                f'Fetching stock data for {symbol} failed {r.status}')
         raw = json.loads(r.data.decode('utf-8'))
         return {k: float(v['4. close'])
-               for k, v in raw['Time Series (Daily)'].items()}
+                for k, v in raw['Time Series (Daily)'].items()}
 
     def fetch_currency(self, currency):
         '''Returns a dictionary of date and closing value'''
@@ -55,10 +61,12 @@ class FMV():
         url = f'https://data.norges-bank.no/api/data/EXR/B.{currency}.NOK.SP?startPeriod=2000&format=csv-:-comma-false-y'
         r = http.request('GET', url)
         if r.status != 200:
-            raise Exception(f'Fetching currency data for {currency} failed {r.status}')
+            raise FMVException(
+                f'Fetching currency data for {currency} failed {r.status}')
         cur = {}
         for i, line in enumerate(r.data.decode('utf-8').split('\n')):
-            if i == 0 or ',' not in line: continue  # Skip header and blank lines
+            if i == 0 or ',' not in line:
+                continue  # Skip header and blank lines
             d, exr = line.strip().split(',')
             c = float(exr.strip('"'))
             d = d.strip('"')
@@ -66,14 +74,17 @@ class FMV():
         return cur
 
     def get_filename(self, symbol):
+        '''Get filename for symbol'''
         return f'{CACHE_DIR}/{symbol}.json'
 
     def load(self, symbol):
+        '''Load data for symbol'''
         filename = self.get_filename(symbol)
-        with open(filename, 'r') as f:
+        with open(filename, 'r', encoding='utf-8') as f:
             self.symbols[symbol] = json.load(f)
 
     def need_refresh(self, symbol, d: datetime.date):
+        '''Check if we need to refresh data for symbol'''
         if symbol not in self.symbols:
             return True
         fetched = self.symbols[symbol]['fetched']
@@ -83,6 +94,7 @@ class FMV():
         return False
 
     def refresh(self, symbol, d: datetime.date, currency):
+        '''Refresh data for symbol if needed'''
         if not self.need_refresh(symbol, d):
             return
 
@@ -90,7 +102,7 @@ class FMV():
 
         # Try loading from cache
         try:
-            with open(filename, 'r') as f:
+            with open(filename, 'r', encoding='utf-8') as f:
                 self.symbols[symbol] = json.load(f)
                 if not self.need_refresh(symbol, d):
                     return
@@ -104,52 +116,52 @@ class FMV():
 
         logging.info('Caching data for %s to %s', symbol, filename)
         data['fetched'] = str(date.today())
-        with open(filename, 'w') as f:
+        with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f)
 
         self.symbols[symbol] = data
 
-    def parse_date(self, date: Union[str, datetime]) -> Tuple[datetime.date, str]:
+    def parse_date(self, itemdate: Union[str, datetime]) -> Tuple[datetime.date, str]:
         '''Parse date/timestamp'''
-        if isinstance(date, str):
-            date = datetime.strptime(date, '%Y-%m-%d').date()
+        if isinstance(itemdate, str):
+            itemdate = datetime.strptime(itemdate, '%Y-%m-%d').date()
         else:
-            date = date.date()
-        date_str = str(date)
-        return date, date_str
-
+            itemdate = itemdate.date()
+        date_str = str(itemdate)
+        return itemdate, date_str
 
     def __getitem__(self, item):
-        symbol, date = item
-        date, date_str = self.parse_date(date)
-        self.refresh(symbol, date, False)
+        symbol, itemdate = item
+        itemdate, date_str = self.parse_date(itemdate)
+        self.refresh(symbol, itemdate, False)
         for _ in range(5):
             try:
                 return Decimal(str(self.symbols[symbol][date_str]))
             except KeyError:
                 # Might be a holiday, iterate backwards
-                date -= timedelta(days=1)
-                date_str = str(date)
+                itemdate -= timedelta(days=1)
+                date_str = str(itemdate)
         return np.nan
 
-    def get_currency(self, currency:str, date_union: Union[str, datetime]) -> float:
-        date, date_str = self.parse_date(date_union)
-        self.refresh(currency, date, True)
+    def get_currency(self, currency: str, date_union: Union[str, datetime]) -> float:
+        '''Get currency value. If not found, iterate backwards until found.'''
+        itemdate, date_str = self.parse_date(date_union)
+        self.refresh(currency, itemdate, True)
         for _ in range(6):
             try:
                 return Decimal(str(self.symbols[currency][date_str]))
             except KeyError:
                 # Might be a holiday, iterate backwards
-                date -= timedelta(days=1)
-                date_str = str(date)
+                itemdate -= timedelta(days=1)
+                date_str = str(itemdate)
         raise FMVException(f'No currency data for {currency} on {date_str}')
 
 
 if __name__ == '__main__':
 
-    f = FMV()
-    print('LOOKING UP DATA', f['CSCO', '2021-12-31'])
-    #print('LOOKING UP DATA', f['CSCO', '2022-12-31'])
-    print('LOOKING UP DATA', f['SLT', '2021-12-31'])
-    #f.fetch_currency('USD')
-    print('LOOKING UP DATA USD2NOK', f.get_currency('USD', '2021-12-31'))
+    fmv = FMV()
+    print('LOOKING UP DATA', fmv['CSCO', '2021-12-31'])
+    # print('LOOKING UP DATA', f['CSCO', '2022-12-31'])
+    print('LOOKING UP DATA', fmv['SLT', '2021-12-31'])
+    # f.fetch_currency('USD')
+    print('LOOKING UP DATA USD2NOK', fmv.get_currency('USD', '2021-12-31'))
