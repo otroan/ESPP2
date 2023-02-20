@@ -17,6 +17,9 @@ import urllib3
 
 # Store downloaded files in cache directory under current directory
 CACHE_DIR='cache'
+
+class FMVException(Exception):
+    pass
 class FMV():
     '''Class implementing the Fair Market Value module. Singleton'''
     _instance = None
@@ -132,14 +135,14 @@ class FMV():
     def get_currency(self, currency:str, date_union: Union[str, datetime]) -> float:
         date, date_str = self.parse_date(date_union)
         self.refresh(currency, date, True)
-        for _ in range(5):
+        for _ in range(6):
             try:
                 return Decimal(str(self.symbols[currency][date_str]))
             except KeyError:
                 # Might be a holiday, iterate backwards
                 date -= timedelta(days=1)
                 date_str = str(date)
-        return np.nan
+        raise FMVException(f'No currency data for {currency} on {date_str}')
 
 
 if __name__ == '__main__':

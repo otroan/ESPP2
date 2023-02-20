@@ -16,15 +16,15 @@ setup(
     packages=find_packages(),
     python_requires=">=3.9, <4",
     install_requires=["simplejson", "numpy", "pydantic",
-                      "urllib3", "python-dateutil", "uvicorn", "fastapi", "python-multipart"],
+                      "urllib3", "python-dateutil", "uvicorn", "fastapi",
+                      "python-multipart", "tabulate", "pandas", "lxml"],
     package_data={
         "espp2": ["*.json"],
     },
     entry_points={
         "console_scripts": [
             ['espp2=espp2.espp2:main',
-            'espp2_transactions=espp2.transactions:main',
-            'espp2_genholdings=espp2.genholdings:main'],
+            'espp2_transactions=espp2.transactions:main']
         ],
     },
 )
