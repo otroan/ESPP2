@@ -1,4 +1,6 @@
 import csv
+import io
+import codecs
 from decimal import Decimal
 import dateutil.parser as dt
 from pydantic import parse_obj_as
@@ -27,12 +29,17 @@ def fixup_number(numberstr):
     except ValueError:
         return ""
 
-def td_csv_import(raw_data):
+def td_csv_import(fd):
     '''Parse TD Ameritrade CSV file.'''
-
+    print('TD CSV Import', type(fd))
     data = []
 
-    reader = csv.reader(raw_data)
+    # Fastapi passes in binary file and CLI passes in a TextIOWrapper
+    if isinstance(fd, io.TextIOWrapper):
+        reader = csv.reader(fd)
+    else:
+        reader = csv.reader(codecs.iterdecode(fd,'utf-8'))
+
     header = next(reader)
     assert header == ['DATE', 'TRANSACTION ID', 'DESCRIPTION', 'QUANTITY', 'SYMBOL', 'PRICE', 'COMMISSION', 'AMOUNT', 'REG FEE', 'SHORT-TERM RDM FEE', 'FUND REDEMPTION FEE', ' DEFERRED SALES CHARGE']
     field = lambda x: header.index(x)
