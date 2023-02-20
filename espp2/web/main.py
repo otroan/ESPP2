@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+
 @app.post("/files/", response_model=ESPPResponse)
 async def create_files(
         broker: str = Form(...),
@@ -32,12 +33,12 @@ async def create_files(
     transaction_files = [
         {'name': transfile1.filename, 'format': transformat1, 'fd': transfile1.file}]
 
-    if transfile2.filename != '':
+    if transfile2 and transfile2.filename != '':
         transaction_files.append(
             {'name': transfile2.filename, 'format': transformat2, 'fd': transfile2.file})
-    if wirefile.filename == '':
+    if wirefile and wirefile.filename == '':
         wirefile = None
-    if holdfile.filename == '':
+    if holdfile and holdfile.filename == '':
         holdfile = None
     try:
         report, holdings = do_taxes(
