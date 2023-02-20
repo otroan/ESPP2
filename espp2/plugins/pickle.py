@@ -117,7 +117,7 @@ def do_trans(record):
     add_date(newrec, 'date', date)
     add_string(newrec, 'type', 'SELL')
     add_string(newrec, 'symbol', 'CSCO')
-    add_value(newrec, 'qty', n)
+    add_value(newrec, 'qty', -n)
     add_value(newrec, 'description', '')
     add_amount(newrec, 'fee', date, 'USD', fee)
     add_amount(newrec, 'amount', date, 'USD', price)
