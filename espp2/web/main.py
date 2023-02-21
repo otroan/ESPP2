@@ -38,8 +38,12 @@ async def create_files(
             {'name': transfile2.filename, 'format': transformat2, 'fd': transfile2.file})
     if wirefile and wirefile.filename == '':
         wirefile = None
+    else:
+        wirefile = wirefile.file
     if holdfile and holdfile.filename == '':
         holdfile = None
+    else:
+        holdfile = holdfile.file
     try:
         report, holdings = do_taxes(
             broker, transaction_files, holdfile, wirefile, year)
