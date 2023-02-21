@@ -87,8 +87,8 @@ def morgan_html_import(html_fd):
             r = {'type': t, 'date': d, 'amount': amount, 'symbol': symbol}
 
         elif e['Activity'] == 'Sale':
-            qty = Decimal(e['Number of Shares'])
             t = EntryTypeEnum.SELL
+            qty = Decimal(e['Number of Shares'])
             amount = fixup_price(d, "USD", e['Cash'])
             r = {'type': t, 'date': d, 'qty': qty, 'amount': amount, 'symbol': symbol, 'description': e['Activity']}
 
