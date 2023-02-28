@@ -9,7 +9,7 @@ import logging
 from typing import Optional
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from espp2.main import do_taxes
 from espp2.datamodels import ESPPResponse
 
@@ -38,11 +38,11 @@ async def create_files(
             {'name': transfile2.filename, 'format': transformat2, 'fd': transfile2.file})
     if wirefile and wirefile.filename == '':
         wirefile = None
-    else:
+    elif wirefile:
         wirefile = wirefile.file
     if holdfile and holdfile.filename == '':
         holdfile = None
-    else:
+    elif holdfile:
         holdfile = holdfile.file
     try:
         report, holdings = do_taxes(
@@ -53,55 +53,7 @@ async def create_files(
     return ESPPResponse(tax_report=report, holdings=holdings)
 
 
-@app.get("/")
-async def main():
-    '''Main page'''
-    content = """
-<body>
-<form action="/files/" enctype="multipart/form-data" method="post">
-<label for="transfile1">Transactions:</label>
-<input type="file" id="transfile1" name="transfile1">
-<label for="transformat1">Format:</label>
-<select id="transformat1" name="transformat1">
-  <option value="schwab" selected>schwab</option>
-  <option value="td">td</option>
-  <option value="pickle">pickle</option>
-  <option value="morgan">morgan</option>
-</select>
-<br>
-<label for="transfile2">Transactions #2:</label>
-<input type="file" id="transfile2" name="transfile2">
-<label for="transformat2">Format:</label>
-<select id="transformat2" name="transformat2">
-  <option value="schwab" selected>schwab</option>
-  <option value="td">td</option>
-  <option value="pickle">pickle</option>
-  <option value="morgan">morgan</option>
-</select>
-<br>
-<label for="holdfile">Previous year holdings:</label>
-<input type="file" id="holdfile" name="holdfile">
-<br>
-<label for="wirefile">Wires:</label>
-<input type="file" id="wirefile" name="wirefile">
-<br>
-
-<label for="year">Year:</label>
-<select id="year" name="year">
-  <option value="2021">2021</option>
-  <option value="2022" selected>2022</option>
-</select>
-<select id="broker" name="broker">
-  <option value="schwab" selected>schwab</option>
-  <option value="td">td</option>
-  <option value="morgan">morgan</option>
-</select>
-
-<input type="submit">
-</form>
-</body>
-    """
-    return HTMLResponse(content=content)
+app.mount("/", StaticFiles(directory='public', html=True), name='public')
 
 
 if __name__ == "__main__":
