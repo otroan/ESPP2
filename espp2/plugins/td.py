@@ -201,7 +201,7 @@ def read(raw_data, logger=None):
             # return None
             continue
         else:
-            raise Exception(f'Unknown transaction entry {value}')
+            raise Exception(f'Unknown transaction entry {e}')
 
         trans.append(parse_obj_as(Entry, r))
 
