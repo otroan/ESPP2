@@ -13,7 +13,6 @@ commonmark==0.9.1
 decorator==5.1.1
 dill==0.3.6
 docopt==0.6.2
--e git+ssh://git@github.com/otroan/ESPP2.git@d6af8c23639d80d9c8c2086e828cee3e5164ac02#egg=espp2
 executing==1.2.0
 fastapi==0.92.0
 h11==0.14.0
