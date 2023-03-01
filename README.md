@@ -1,5 +1,7 @@
 # ESPP 2
 
+[![pytest](https://github.com/otroan/ESPP2/actions/workflows/main.yml/badge.svg)](https://github.com/otroan/ESPP2/actions/workflows/main.yml)
+
 ## Introduction
 The ESPP2 tool is a command line tool built to help calculate Norwegian taxes on ESPP (Employee Stock Purchase Plan) and RSU (Restricted Stock Unit) shares.
 
