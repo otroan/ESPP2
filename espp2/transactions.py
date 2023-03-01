@@ -61,19 +61,12 @@ def get_arguments():
 
     return parser.parse_args(), logger
 
-def normalize(trans_format, data):
+def normalize(trans_format, data) -> Transactions:
     '''Normalize transactions'''
     trans_format = 'espp2.plugins.' + trans_format
     plugin = importlib.import_module(trans_format, package='espp2')
     logger.info(f'Importing transactions with importer {trans_format} {data.name}')
-    transactions = plugin.read(data, logger)
-    if isinstance(transactions, Transactions):
-        return transactions
-    sorted_transactions = sorted(transactions, key=lambda d: d['date'])
-    logger.info(
-        f'Imported {len(sorted_transactions)} transactions, starting {sorted_transactions[0]["date"]}, ending {sorted_transactions[-1]["date"]}.''')
-    # Validate transactions
-    return Transactions(transactions=sorted_transactions)
+    return plugin.read(data, logger)
 
 def main():
     '''Main function'''
