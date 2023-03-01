@@ -85,7 +85,7 @@ def action_to_type(value):
         return None
     raise Exception(f'Unknown transaction entry {value}')
 
-def read(raw_data, logger):
+def read(raw_data, logger=None):
     '''Main entry point of plugin. Return normalized Python data structure.'''
 
     key_conv = {'DATE': 'date',

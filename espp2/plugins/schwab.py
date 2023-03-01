@@ -8,6 +8,7 @@ from espp2.fmv import FMV
 import dateutil.parser as dt
 import codecs
 import io
+from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
 
 def schwab_csv_import(fd):
     '''Parse Schwab CSV file.'''
@@ -167,7 +168,7 @@ def subdata(action, description, date, value):
         newlist.append(newv)
     return newlist
 
-def read(csv_file, logger):
+def read(csv_file, logger=None) -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
 
     key_conv = {'DATE': 'date',
@@ -218,17 +219,5 @@ def read(csv_file, logger):
         if action == 'SELL':
             newv['qty'] = newv['qty'] * -1
         newlist.append(newv)
-    return sorted(newlist, key=lambda d: d['date'])
-
-
-    # for i, r in df.iterrows():
-    #     if r.type == 'SELL':
-    #         df.loc[i, 'price'] = r.amount / r.qty
-    #     if r.type == 'DEPOSIT' and r.description == 'RS':
-    #         assert(len(r.subdata) == 1)
-    #         df.loc[i, 'price'] = r.subdata[0]['VEST FMV']
-    #     if r.type == 'DEPOSIT' and r.description == 'ESPP':
-    #         df.loc[i, 'price'] = r.subdata[0]['PURCHASE FMV']
-    #     if r.type == 'DEPOSIT' and r.description == 'Div Reinv':
-    #         df.loc[i, 'price'] = r.subdata[0]['PURCHASE PRICE']
-    # df['qty'] = np.where(df['type'] == 'SELL', -1 * df['qty'], df['qty'])
+    sorted_transactions = sorted(newlist, key=lambda d: d['date'])
+    return Transactions(transactions=sorted_transactions)

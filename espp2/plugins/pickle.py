@@ -7,6 +7,7 @@ import pickle
 import simplejson as json
 from decimal import Decimal
 from pprint import pprint    # Pretty-print objects for debugging
+from espp2.datamodels import Transactions
 
 # These are needed when unpickling 'espp.pickle' files, as such objects
 # are present in pickle file, and needs to be created during loading.
@@ -190,7 +191,7 @@ def do_wire(record):
     pass
 
 
-def read(pickle_file, logger):
+def read(pickle_file, logger=None) -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
     global records
 
@@ -245,4 +246,7 @@ def read(pickle_file, logger):
             continue
 
         print(f'Error: Unexpected pickle-file record: {rectype}')
-    return records
+
+    sorted_transactions = sorted(records, key=lambda d: d['date'])
+    return Transactions(transactions=sorted_transactions)
+
