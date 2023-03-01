@@ -7,6 +7,7 @@ ESPP2 web server
 
 import logging
 from typing import Optional
+from os.path import realpath
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -53,8 +54,8 @@ async def create_files(
     return ESPPResponse(tax_report=report, holdings=holdings)
 
 
-app.mount("/", StaticFiles(directory='public', html=True), name='public')
-
+app.mount("/", StaticFiles(directory=realpath(
+    f'{realpath(__file__)}/../public'), html=True), name='public')
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
