@@ -2,7 +2,7 @@
 ESPPv2 Positions module
 '''
 
-# pylint: disable=too-many-instance-attributes, line-too-long, invalid-name
+# pylint: disable=too-many-instance-attributes, line-too-long, invalid-name, logging-fstring-interpolation
 
 import logging
 from itertools import groupby
@@ -11,7 +11,7 @@ from datetime import datetime, date
 from math import isclose
 from decimal import Decimal, getcontext
 from espp2.fmv import FMV
-from espp2.datamodels import Amount, Holdings, CashModel, CashEntry, Stock, EntryTypeEnum
+from espp2.datamodels import *
 
 getcontext().prec = 6
 
@@ -40,35 +40,31 @@ def todate(datestr: str) -> date:
     return datetime.strptime(datestr, '%Y-%m-%d').date()
 
 class Ledger():
+    '''Ledger of transactions and holdings'''
     def __init__(self, holdings, transactions):
         self.entries = {}
         if holdings:
             h = holdings.stocks
             for e in h:
                 e.type = EntryTypeEnum.DEPOSIT
-            # TODO: Should not be needed
             transactions = [t for t in transactions if t.date.year > holdings.year]
         else:
             h = []
         transactions_sorted = sorted(transactions + h, key=lambda d: d.date)
-        
+
         for t in transactions_sorted:
             if t.type in (EntryTypeEnum.DEPOSIT, EntryTypeEnum.BUY, EntryTypeEnum.SELL):
                 self.add(t.symbol, t.date, t.qty)
 
     def add(self, symbol, date, qty):
+        '''Add entry to ledger'''
         if symbol not in self.entries:
             self.entries[symbol] = []
         total = sum([e[1] for e in self.entries[symbol]])
         self.entries[symbol].append((date, qty, total+qty))
 
-    def report(self):
-        for symbol, entries in self.entries.items():
-            print(symbol)
-            for e in entries:
-                print(f'{e[0]} {e[1]:6} {e[2]:6}')
-
     def total_shares(self, symbol, date, until=True):
+        '''Return total shares for symbol at date'''
         last = 0
         if symbol not in self.entries:
             return 0
@@ -220,51 +216,59 @@ class Positions():
         '''Process Dividends'''
         tax_deduction_used = 0
 
-        # TODO: By symbol?
-        dividend_usd = sum(item.amount.value for item in self.db_dividends)
-        dividend_nok = sum(item.amount.nok_value for item in self.db_dividends)
-        tax_usd = sum(item.amount.value for item in self.db_tax)
-        tax_nok = sum(item.amount.nok_value for item in self.db_tax)
-        taxsub = sum(item.amount.value for item in self.db_taxsub)
-        taxsub_nok = sum(item.amount.nok_value for item in self.db_taxsub)
-        tax_usd -= taxsub
-        tax_nok -= taxsub_nok
-
         # Deal with dividends and cash account
         for d in self.db_dividends:
             self.cash.debit(d.date, d.amount)
         for t in self.db_tax:
             self.cash.credit(t.date, t.amount)
+        for t in self.db_taxsub:
+            self.cash.debut(t.date, t.amount)
         for i in self.db_dividend_reinv:
             self.cash.credit(i.date, i.amount)
 
-        for d in self.db_dividends:
-            total_shares = self.total_shares(self[:d.date, d.symbol])
-            ledger_shares = self.ledger.total_shares(d.symbol, d.date)
-            print('TOTAL SHARES', total_shares, ledger_shares, d.symbol, d.date)
-            if total_shares == 0:
-                raise InvalidPositionException(
-                    f'Dividends: Total shares at dividend date is zero: {d}')
-            dps = d.amount.value / total_shares
-            for entry in self[:d.date, d.symbol]:  # Creates a view
-                entry.dps = dps if 'dps' not in entry else entry.dps + dps
-                tax_deduction = self.tax_deduction[entry.idx]
-                if tax_deduction > entry.dps:
-                    tax_deduction_used += (entry.dps * entry.qty)
-                    self.tax_deduction[entry.idx] -= entry.dps
-                elif tax_deduction > 0:
-                    tax_deduction_used += (tax_deduction * entry.qty)
-                    self.tax_deduction[entry.idx] = 0
-                self.update(entry.idx, 'dps', entry.dps)
-
-        return {'dividend': {'value': dividend_usd, 'nok_value': dividend_nok},
-                'tax': {'value': tax_usd, 'nok_value': tax_nok}, 'tax_deduction_used': tax_deduction_used}
+        r=[]
+        for symbol, dividends in self.dividend_by_symbols.items():
+            logger.debug('Processing dividends for %s', symbol)
+            dividend_usd = sum(item.amount.value for item in dividends)
+            dividend_nok = sum(item.amount.nok_value for item in dividends)
+            tax_usd = sum(item.amount.value for item in self.tax_by_symbols[symbol])
+            tax_nok = sum(item.amount.nok_value for item in self.tax_by_symbols[symbol])
+            for d in dividends:
+                total_shares = self.total_shares(self[:d.date, symbol])
+                ledger_shares = self.ledger.total_shares(symbol, d.date)
+                assert isclose(total_shares, ledger_shares, abs_tol=10**-2 ), f"Total shares don't match {total_shares} != {ledger_shares}"
+                if total_shares == 0:
+                    raise InvalidPositionException(
+                        f'Dividends: Total shares at dividend date is zero: {d}')
+                dps = d.amount.value / total_shares
+                for entry in self[:d.date, symbol]:  # Creates a view
+                    entry.dps = dps if 'dps' not in entry else entry.dps + dps
+                    tax_deduction = self.tax_deduction[entry.idx]
+                    if tax_deduction > entry.dps:
+                        tax_deduction_used += (entry.dps * entry.qty)
+                        self.tax_deduction[entry.idx] -= entry.dps
+                    elif tax_deduction > 0:
+                        tax_deduction_used += (tax_deduction * entry.qty)
+                        self.tax_deduction[entry.idx] = 0
+                    self.update(entry.idx, 'dps', entry.dps)
+            r.append(EOYDividend(symbol=symbol,
+                                 amount=Amount(currency="USD",
+                                               value=dividend_usd,
+                                               nok_value=dividend_nok,
+                                               nok_exchange_rate=0),
+                                 tax=Amount(currency="USD",
+                                            value=tax_usd,
+                                            nok_value=tax_nok,
+                                            nok_exchange_rate=0),
+                                 tax_deduction_used=tax_deduction_used))
+        return r
 
     def individual_sale(self, sale_entry, buy_entry, qty):
         '''Calculate gain. Currently using total amount that includes fees.'''
         sale_price = sale_entry.amount.value / abs(sale_entry.qty)
         sale_price_nok = sale_price * sale_entry.amount.nok_exchange_rate
         gain = sale_price_nok - buy_entry.purchase_price.nok_value
+        gain_usd = sale_price - buy_entry.purchase_price.value
         tax_deduction_used = 0
         tax_deduction = self.tax_deduction[buy_entry.idx]
         if gain > 0:
@@ -278,11 +282,21 @@ class Positions():
                 gain = 0
         if tax_deduction > 0:
             logger.info("Unused tax deduction: %s %d", buy_entry, gain)
-        return {'qty': qty, "sale_price_nok": sale_price_nok,
-                "purchase_price_nok": buy_entry.purchase_price.nok_value,
-                'gain': gain, 'tax_deduction_used': tax_deduction_used,
-                'total_gain_nok': gain * qty, 
-                'total_tax_deduction': tax_deduction_used * qty, 'total_purchase_price': buy_entry.purchase_price.nok_value * qty}
+
+        return SalesPosition(symbol=buy_entry.symbol,
+                             qty=qty,
+                             purchase_date=buy_entry.date,
+                             sale_price=Amount(currency="USD",
+                                               value=sale_price,
+                                               nok_value=sale_price_nok,
+                                               nok_exchange_rate=sale_entry.amount.nok_exchange_rate),
+                             purchase_price=buy_entry.purchase_price,
+                             gain_ps=Amount(currency="USD",
+                                            value=gain_usd,
+                                            nok_value=gain,
+                                            nok_exchange_rate=1),
+                             tax_deduction_used=tax_deduction_used,
+                             )
 
     def process_sale_for_symbol(self, symbol, sales, positions):
         '''Process sales for a symbol'''
@@ -290,9 +304,8 @@ class Positions():
         sales_report = []
 
         for s in sales:
-            s_record = {'date': s.date, 'qty': s.qty,
-                        'fee': s.fee, 'amount': s.amount}
-            s_record['from_positions'] = []
+            s_record = EOYSales(date=s.date, symbol=symbol, qty=s.qty,
+                        fee=s.fee, amount=s.amount, from_positions=[])
             qty_to_sell = abs(s.qty)
             self.cash.debit(s.date, s.amount.copy())
             while qty_to_sell > 0:
@@ -308,21 +321,19 @@ class Positions():
                     r = self.individual_sale(s, positions[posidx], qty_to_sell)
                     positions[posidx].qty -= qty_to_sell
                     qty_to_sell = 0
-                s_record['from_positions'].append(r)
+                s_record.from_positions.append(r)
 
-            total_gain = sum(item['total_gain_nok']
-                             for item in s_record['from_positions'])
-            total_tax_ded = sum(item['total_tax_deduction']
-                                for item in s_record['from_positions'])
-            total_sold = sum(item['qty']
-                             for item in s_record['from_positions'])
+            total_gain = sum(item.gain_ps * item.qty
+                             for item in s_record.from_positions)
+            total_tax_ded = sum(item.tax_deduction_used
+                                for item in s_record.from_positions)
             total_purchase_price = sum(
-                item['total_purchase_price'] for item in s_record['from_positions'])
+                item.purchase_price * item.qty for item in s_record.from_positions)
             if s.fee:
-                total_purchase_price += s.fee.nok_value
-            totals = {'gain': total_gain, 'sold_qty': total_sold, 'purchase_price': total_purchase_price, 'tax_ded': total_tax_ded,
-                      'sell_price': s.amount.nok_value}
-            s_record['totals'] = totals
+                total_purchase_price += s.fee
+            totals = {'gain': total_gain, 'purchase_price': total_purchase_price, 'tax_ded_used': total_tax_ded,
+                      }
+            s_record.totals = totals
             sales_report.append(s_record)
 
         return sales_report
@@ -333,23 +344,12 @@ class Positions():
         # Walk through all sales from transactions. Deducting from balance.
         sale_report = {}
         for symbol, record in self.sale_by_symbols.items():
-            totals = {}
+            # totals = {}
             positions = deepcopy(self.positions_by_symbols[symbol])
             r = self.process_sale_for_symbol(symbol, record, positions)
-            sale_report[symbol] = r
-
-            totals['gain'] = sum(item['totals']['gain']
-                                 for item in sale_report[symbol])
-            totals['tax_ded'] = sum(item['totals']['tax_ded']
-                                    for item in sale_report[symbol])
-            totals['sold_qty'] = sum(item['totals']['sold_qty']
-                                     for item in sale_report[symbol])
-            totals['purchase_price'] = sum(
-                item['totals']['purchase_price'] for item in sale_report[symbol])
-            totals['sell_price'] = sum(item['totals']['sell_price']
-                                       for item in sale_report[symbol])
-            sale_report['totals'] = totals
-
+            if symbol not in sale_report:
+                sale_report[symbol] = []
+            sale_report[symbol] += r
         return sale_report
 
     def buys(self):
@@ -366,7 +366,6 @@ class Positions():
                     if 'amount' in item:
                         self.cash.credit(item['date'], item['amount'])
                     else:
-                        # print('ITEM', item)
                         amount = Amount(value=item.purchase_price.value * item.qty, currency=item.purchase_price.currency,
                                         nok_exchange_rate=item.purchase_price.nok_exchange_rate,
                                         nok_value=item.purchase_price.nok_value * item.qty)
@@ -391,8 +390,12 @@ class Positions():
             eoy_balance = self[:end_of_year, symbol]
             total_shares = self.total_shares(eoy_balance)
             fmv = f[symbol, end_of_year]
-            r.append({'symbol': symbol, 'qty': total_shares, 'total_nok': eoy_exchange_rate *
-                     total_shares * fmv, 'nok_exchange_rate': eoy_exchange_rate, 'fmv': fmv})
+
+            r.append(EOYBalanceItem(symbol=symbol, qty=total_shares, amount=Amount(
+                value=total_shares * fmv, currency='USD', 
+                nok_exchange_rate=eoy_exchange_rate, 
+                nok_value=total_shares * fmv * eoy_exchange_rate),
+                fmv=fmv))
         return r
 
     def holdings(self, year, broker):

@@ -28,8 +28,20 @@ with open(taxdata_file, 'r', encoding='utf-8') as jf:
     taxdata = json.load(jf)
 
 # TODO: Include cash
-def validate_holdings(year, prev_holdings, transactions):
+def deduplicate(transactions):
+    '''Remove duplicate transactions'''
+    # Remove duplicate transactions
+    seen = set()
+    transactions = [t for t in transactions if t.id not in seen and not seen.add(t.id)]
+    return transactions
+
+def validate_holdings(broker, year, prev_holdings, transactions):
     '''Validate holdings and filter transactions'''
+    if prev_holdings:
+        if broker != prev_holdings.broker:
+            raise ESPPErrorException(f'Broker mismatch: {broker} != {prev_holdings.broker}')
+    # Remove duplicate transactions
+    transactions = deduplicate(transactions)
     if prev_holdings and prev_holdings.stocks and prev_holdings.year == year - 1:
         # Filter out transactions from previous year
         transactions = [t for t in transactions if t.date.year == year]
@@ -40,7 +52,6 @@ def validate_holdings(year, prev_holdings, transactions):
     p = Positions(year-1, taxdata, prev_holdings, transactions, c)
     holdings = p.holdings(year-1, 'dummy')
     transactions = [t for t in transactions if t.date.year == year]
-
     return holdings, transactions
 
 
@@ -48,25 +59,22 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
                prev_holdings: Holdings, taxdata) -> Tuple[TaxReport, Holdings]:
     '''Generate tax report'''
 
-    l = Ledger(prev_holdings, transactions.transactions)
-    l.report()
-
-    holdings, transactions = validate_holdings(year, prev_holdings, transactions.transactions)
+    holdings, transactions = validate_holdings(broker, year, prev_holdings, transactions.transactions)
     l = Ledger(holdings, transactions)
-    l.report()
 
     c = Cash(year, transactions, wires)
     p = Positions(year, taxdata, holdings, transactions, c, ledger=l)
 
     report = {}
-
+    report['prev_holdings'] = holdings
+    report['ledger'] = l.entries
     # End of Year Balance (formueskatt)
     try:
         prev_year_eoy = p.eoy_balance(year-1)
         this_year_eoy = p.eoy_balance(year)
     except InvalidPositionException as err:
         logger.error(err)
-        return {}, {}
+        raise
     report['eoy_balance'] = {year - 1: prev_year_eoy,
                              year: this_year_eoy}
 
@@ -76,7 +84,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
         report['dividends'] = p.dividends()
     except InvalidPositionException as err:
         logger.error(err)
-        return {}, {}
+        raise
 
     # Move these to different part of report. "Buys" and "Sales" in period
     # Position changes?

@@ -1,12 +1,14 @@
 from pydantic import BaseModel, ValidationError, validator, Field, Extra
 from datetime import date
-from typing import List, Literal, Annotated, Union, Optional, Any
+from typing import List, Literal, Annotated, Union, Optional, Any, Dict
 from enum import Enum
 from decimal import Decimal
 
-'''
-Transactions data model
-'''
+#
+# Transactions data model
+#
+#########################################################################
+
 class EntryTypeEnum(str, Enum):
     '''Entry type'''
     BUY = 'BUY'
@@ -18,6 +20,9 @@ class EntryTypeEnum(str, Enum):
     WIRE = 'WIRE'
     SELL = 'SELL'
 
+    def __str__(self):
+        return self.value
+
 class Amount(BaseModel):
     '''Amount'''
     currency: str
@@ -25,13 +30,45 @@ class Amount(BaseModel):
     nok_value: Decimal
     value: Decimal
 
-class Buy(BaseModel):
+    def __str__(self):
+        if self.currency == 'USD':
+            return f'${self.value}'
+        return f'{self.currency}{self.value}'
+    
+    def __mul__(self, qty: Decimal):
+        result = self.copy()
+        result.value = result.value * qty
+        result.nok_value = result.nok_value * qty
+        return result
+
+    def __add__(self, other):
+        result = self.copy()
+        result.value = result.value + other.value
+        result.nok_value = result.nok_value + other.nok_value
+        return result
+    def __radd__(self, other):
+        if isinstance(other, int) and other == 0:
+            return self
+        result = self.copy()
+        result.value = result.value + other.value
+        result.nok_value = result.nok_value + other.nok_value
+        return result
+
+class TransactionEntry(BaseModel):
+    @validator('id', pre=True, always=True, check_fields=False)
+    def validate_id(cls, v, values):
+        '''Validate id'''
+        v = ''.join([str(t) for t in values.values()])
+        return v
+    
+class Buy(TransactionEntry):
     '''Buy transaction'''
     type: Literal[EntryTypeEnum.BUY]
     date: date
     symbol: str
     qty: Decimal
     purchase_price: Amount
+    id: str = Optional[str]
 
     @validator('purchase_price')
     def purchase_price_validator(cls, v, values):
@@ -43,7 +80,7 @@ class Buy(BaseModel):
     class Config:
         extra = Extra.allow
 
-class Deposit(BaseModel):
+class Deposit(TransactionEntry):
     '''Deposit transaction'''
     type: Literal[EntryTypeEnum.DEPOSIT]
     date: date
@@ -51,7 +88,8 @@ class Deposit(BaseModel):
     symbol: str
     description: str
     purchase_price: Amount
-    purchase_date: date = None
+    purchase_date: Optional[date]
+    id: str = Optional[str]
 
     @validator('purchase_price')
     def purchase_price_validator(cls, v, values):
@@ -62,44 +100,51 @@ class Deposit(BaseModel):
     class Config:
         extra = Extra.allow
 
-class Tax(BaseModel):
+class Tax(TransactionEntry):
     '''Tax withheld transaction'''
     type: Literal[EntryTypeEnum.TAX]
     date: date
     symbol: str
     description: str
     amount: Amount
+    id: str = Optional[str]
 
-class Taxsub(BaseModel):
+class Taxsub(TransactionEntry):
     '''Tax returned transaction'''
     type: Literal[EntryTypeEnum.TAXSUB]
     date: date
     symbol: str
     description: str
     amount: Amount
+    id: str = Optional[str]
 
-class Dividend(BaseModel):
+class Dividend(TransactionEntry):
     '''Dividend transaction'''
     type: Literal[EntryTypeEnum.DIVIDEND]
     date: date
     symbol: str
     amount: Amount
+    id: str = Optional[str]
 
-class Dividend_Reinv(BaseModel):
+class Dividend_Reinv(TransactionEntry):
     '''Dividend reinvestment transaction'''
     type: Literal[EntryTypeEnum.DIVIDEND_REINV]
     date: date
     symbol: str
     amount: Amount
     description: str
-class Wire(BaseModel):
+    id: str = Optional[str]
+
+class Wire(TransactionEntry):
     '''Wire transaction'''
     type: Literal[EntryTypeEnum.WIRE]
     date: date
     amount: Amount
     description: str
     fee: Optional[Amount]
-class Sell(BaseModel):
+    id: str = Optional[str]
+
+class Sell(TransactionEntry):
     '''Sell transaction'''
     type: Literal[EntryTypeEnum.SELL]
     date: date
@@ -108,17 +153,19 @@ class Sell(BaseModel):
     fee: Optional[Amount]
     amount: Amount
     description: str
+    id: str = Optional[str]
 
-
-# Deposits = Annotated[Union[ESPP, RS], Field(discriminator="description")] | Deposit
 Entry = Annotated[Union[Buy, Deposit, Tax, Taxsub, Dividend,
                         Dividend_Reinv, Wire, Sell], Field(discriminator="type")]
 
-
 class Transactions(BaseModel):
+    '''Transactions'''
     transactions: list[Entry]
 
 
+
+
+#########################################################################
 
 # Wires data model
 class WireAmount(BaseModel):
@@ -150,13 +197,52 @@ class Holdings(BaseModel):
     stocks: list[Stock]
     cash: list[Wire]
 
+class EOYBalanceItem(BaseModel):
+    '''EOY balance item'''
+    symbol: str
+    qty: Decimal
+    amount: Amount
+    fmv: Decimal
+    class Config:
+        extra = Extra.allow
+
+class EOYDividend(BaseModel):
+    '''EOY dividend'''
+    symbol: str
+    amount: Amount
+    tax: Amount # Negative
+    tax_deduction_used: Decimal # NOK
+
+class SalesPosition(BaseModel):
+    '''Sales positions'''
+    symbol: str
+    qty: Decimal
+    sale_price: Amount
+    purchase_price: Amount
+    purchase_date: date
+    gain_ps: Amount
+    tax_deduction_used: Decimal
+class EOYSales(BaseModel):
+    '''EOY sales'''
+    symbol: str
+    date: date
+    qty: Decimal
+    amount: Amount
+    fee: Optional[Amount]
+    from_positions: list[SalesPosition]
+    totals: Optional[dict]
+    # total_gain: Amount
+
 class TaxReport(BaseModel):
-    eoy_balance: dict
-    dividends: dict
+    '''Tax report'''
+    eoy_balance: Dict[str, list[EOYBalanceItem]]
+    ledger: dict
+    dividends: list[EOYDividend]
     buys: list
-    sales: dict
+    sales: Dict[str, list[EOYSales]]
     cash: dict
     unmatched_wires: list
+    prev_holdings: Holdings
 
 class CashEntry(BaseModel):
     date: date
