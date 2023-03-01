@@ -11,6 +11,7 @@ from pathlib import Path
 from enum import Enum
 from espp2.main import do_taxes
 from espp2.datamodels import TaxReport, Holdings
+from espp2.report import print_report
 
 app = typer.Typer()
 
@@ -52,6 +53,7 @@ def main(transactions: list[str] = typer.Argument(..., help='List of transaction
          wires: typer.FileText = None,
          inholdings: typer.FileText = None,
          outholdings: typer.FileTextWrite = None,
+         print: bool = False,
          loglevel: str = typer.Option("WARNING", help='Logging level')):
 
     '''ESPPv2 tax reporting tool'''
@@ -63,6 +65,9 @@ def main(transactions: list[str] = typer.Argument(..., help='List of transaction
     report: TaxReport
     holdings: Holdings
     report, holdings = do_taxes(broker, transactions, inholdings, wires, year)
+
+    if print:
+        print_report(report, holdings)
 
     # New holdings
     if outholdings:
