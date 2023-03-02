@@ -69,7 +69,6 @@ def get_arguments():
 
 def guess_format(filename, data) -> str:
     '''Guess format'''
-    print('FILENAME: ', filename, type(data))
     fname, extension = os.path.splitext(filename)
     if extension == '.pickle':
         return 'pickle'
@@ -92,7 +91,6 @@ def guess_format(filename, data) -> str:
 
 def normalize(data: Union[UploadFile, typer.FileText]) -> Transactions:
     '''Normalize transactions'''
-    print('TYPE OF DATA: ', type(data))
     if isinstance(data, starlette.datastructures.UploadFile):
         filename = data.filename
         fd = data.file

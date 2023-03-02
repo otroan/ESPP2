@@ -114,7 +114,6 @@ def do_taxes(broker, transaction_files: list, holdfile,
     # logger.info(f'Holdings: {holdfile.filename}')
     # logger.info(f'Wires: {wirefile.filename}')
     for t in transaction_files:
-        print('TRANSACTION FILE TYPE', type(t))
         try:
             trans.append(normalize(t))
             # trans.append(normalize(t['format'], t['fd']))
