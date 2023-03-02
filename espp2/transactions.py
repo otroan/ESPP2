@@ -11,10 +11,16 @@ Supported importers:
  - Old pickle-file format (With caveats)
 '''
 
+import os
 import importlib
 import argparse
 import logging
+from fastapi import UploadFile
+import starlette
+from typing import Union
 from espp2.datamodels import Transactions
+import typer
+
 
 logger = logging.getLogger(__name__)
 
@@ -61,12 +67,47 @@ def get_arguments():
 
     return parser.parse_args(), logger
 
-def normalize(trans_format, data) -> Transactions:
+def guess_format(filename, data) -> str:
+    '''Guess format'''
+    print('FILENAME: ', filename, type(data))
+    fname, extension = os.path.splitext(filename)
+    if extension == '.pickle':
+        return 'pickle'
+
+    if extension == '.html' and data.read(1) == b'<':
+        data.seek(0)
+        return 'morgan'
+
+    # Assume CSV
+    data.seek(0)
+    if data.read(20) == b'"Transaction Details':
+        data.seek(0)
+        return 'schwab'
+
+    data.seek(0)
+    if data.read(16) == b'DATE,TRANSACTION':
+        data.seek(0)
+        return 'td'
+    raise ValueError('Unable to guess format', fname, extension)
+
+def normalize(data: Union[UploadFile, typer.FileText]) -> Transactions:
     '''Normalize transactions'''
-    trans_format = 'espp2.plugins.' + trans_format
-    plugin = importlib.import_module(trans_format, package='espp2')
-    logger.info(f'Importing transactions with importer {trans_format} {data.name}')
-    return plugin.read(data, logger)
+    print('TYPE OF DATA: ', type(data))
+    if isinstance(data, starlette.datastructures.UploadFile):
+        filename = data.filename
+        fd = data.file
+    else:
+        filename = data.name
+        fd = data
+    trans_format = guess_format(filename, fd)
+
+    plugin_path = 'espp2.plugins.' + trans_format
+    plugin = importlib.import_module(plugin_path, package='espp2')
+    logger.info(f'Importing transactions with importer {trans_format} {filename}')
+    # if trans_format == 'pickle':
+    #     return plugin.read(fd.buffer, logger)
+    # else:
+    return plugin.read(fd, logger)
 
 def main():
     '''Main function'''

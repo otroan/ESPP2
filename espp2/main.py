@@ -114,10 +114,12 @@ def do_taxes(broker, transaction_files: list, holdfile,
     # logger.info(f'Holdings: {holdfile.filename}')
     # logger.info(f'Wires: {wirefile.filename}')
     for t in transaction_files:
+        print('TRANSACTION FILE TYPE', type(t))
         try:
-            trans.append(normalize(t['format'], t['fd']))
+            trans.append(normalize(t))
+            # trans.append(normalize(t['format'], t['fd']))
         except Exception as e:
-            raise ESPPErrorException(f'{t["name"]}: {e}') from e
+            raise ESPPErrorException(f'{t.name}: {e}') from e
 
     transactions = trans[0]
     for t in trans[1:]:

@@ -1,24 +1,7 @@
 <body>
   <form action="/files/" enctype="multipart/form-data" method="post">
-  <label for="transfile1">Transactions:</label>
-  <input type="file" id="transfile1" name="transfile1">
-  <label for="transformat1">Format:</label>
-  <select id="transformat1" name="transformat1">
-    <option value="schwab" selected>schwab</option>
-    <option value="td">td</option>
-    <option value="pickle">pickle</option>
-    <option value="morgan">morgan</option>
-  </select>
-  <br>
-  <label for="transfile2">Transactions #2:</label>
-  <input type="file" id="transfile2" name="transfile2">
-  <label for="transformat2">Format:</label>
-  <select id="transformat2" name="transformat2">
-    <option value="schwab" selected>schwab</option>
-    <option value="td">td</option>
-    <option value="pickle">pickle</option>
-    <option value="morgan">morgan</option>
-  </select>
+  <label for="transaction_filesd">Transactions:</label>
+  <input type="file" multiple id="transaction_files" name="transaction_files">
   <br>
   <label for="holdfile">Previous year holdings:</label>
   <input type="file" id="holdfile" name="holdfile">
