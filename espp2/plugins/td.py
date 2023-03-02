@@ -31,7 +31,6 @@ def fixup_number(numberstr):
 
 def td_csv_import(fd):
     '''Parse TD Ameritrade CSV file.'''
-    print('TD CSV Import', type(fd))
     data = []
 
     # Fastapi passes in binary file and CLI passes in a TextIOWrapper
