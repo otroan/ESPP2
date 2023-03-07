@@ -13,6 +13,7 @@ from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.staticfiles import StaticFiles
 from espp2.main import do_taxes
 from espp2.datamodels import ESPPResponse, Wires
+import json
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -29,7 +30,8 @@ async def create_files(
     '''File upload endpoint'''
 
     if wires:
-        wires = Wires.from_json(wires)
+        wires_list = json.loads(wires)
+        wires = Wires(wires=wires_list)
 
     if holdfile and holdfile.filename == '':
         holdfile = None
