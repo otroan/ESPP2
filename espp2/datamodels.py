@@ -246,6 +246,28 @@ class TaxReport(BaseModel):
     unmatched_wires: list[WireAmount]
     prev_holdings: Holdings
 
+class ForeignShares(BaseModel):
+    symbol: str
+    country: str
+    account: str
+    shares: Decimal
+    wealth: Decimal
+    dividend: Decimal
+    taxable_gain: Decimal
+    tax_deduction_used: Decimal
+
+# Symbol ┃ Country ┃ Income tax ┃ Gross share dividend ┃ Of which tax on gross share dividend 
+class CreditDeduction(BaseModel):
+    symbol: str
+    country: str
+    income_tax: Decimal
+    gross_share_dividend: Decimal
+    tax_on_gross_share_dividend: Decimal
+
+class TaxSummary(BaseModel):
+    foreignshares: list[ForeignShares]
+    credit_deduction: list[CreditDeduction]
+
 class CashEntry(BaseModel):
     date: date
     amount: Amount
@@ -256,3 +278,4 @@ class CashModel(BaseModel):
 class ESPPResponse(BaseModel):
     holdings: Holdings
     tax_report: TaxReport
+    summary: TaxSummary
