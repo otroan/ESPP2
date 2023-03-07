@@ -74,6 +74,15 @@ def print_report_dividends(dividends: list[EOYDividend], console:Console):
                       str(d.tax_deduction_used))
     console.print(table)
 
+def print_cash_ledger(cash: list, console: Console):
+    table = Table(title="Cash Ledger:")
+    table.add_column("Date", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Amount", justify="right", style="black", no_wrap=True)
+    table.add_column("Amount NOK", style="magenta")
+
+    for w in cash:
+        table.add_row(str(w.date), str(w.amount.value), str(w.amount.nok_value))
+    console.print(table)
 
 def print_report_cash(wires: list, cash, console:Console):
 
@@ -88,6 +97,7 @@ def print_report_cash(wires: list, cash, console:Console):
         console.print(table)
 
     if cash:
+
         print('TYPE:', type(cash))
         for k,v in cash.items():
             print('CASH:', k,v)
@@ -180,6 +190,9 @@ def print_report(year: int, report: TaxReport, holdings: Holdings):
     # Print current year holdings
     print_report_holdings(holdings, console)
 
+    print_cash_ledger(report.cash_ledger, console)
+
     print_report_cash(report.unmatched_wires, report.cash, console)
+
 
     print_report_tax_summary(year, report, holdings, console)
