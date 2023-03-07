@@ -24,10 +24,10 @@ async def create_files(
         transaction_files: list[UploadFile],
         broker: str = Form(...),
         holdfile: UploadFile | None = None,
-        wires: list[WireAmount] | None = None,
+        wires: str = Form(...),
         year: int = Form(...)):
-
     '''File upload endpoint'''
+    print('WIRES', wires)
     if holdfile and holdfile.filename == '':
         holdfile = None
     elif holdfile:
