@@ -249,6 +249,8 @@ def read(pickle_file, logger=None) -> Transactions:
             continue
         raise ValueError(f'Error: Unexpected pickle-file record: {rectype}')
 
+    for r in records:
+        r['source'] = 'pickle'
     sorted_transactions = sorted(records, key=lambda d: d['date'])
     return Transactions(transactions=sorted_transactions)
 

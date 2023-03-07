@@ -90,6 +90,7 @@ def fixup_number(numberstr):
     except ValueError:
         return ""
 
+#### TODO
 def get_espp_exchange_rate(date):
     '''Return the 6 month P&L average. Manually maintained for now.'''
     espp = {'2017-06-30':	8.465875,
@@ -218,6 +219,8 @@ def read(csv_file, logger=None) -> Transactions:
                     newv[price] = fixup_price(newv['date'], 'USD', newv[price])
         if action == 'SELL':
             newv['qty'] = newv['qty'] * -1
+        newv['source'] = 'schwab'
         newlist.append(newv)
+
     sorted_transactions = sorted(newlist, key=lambda d: d['date'])
     return Transactions(transactions=sorted_transactions)
