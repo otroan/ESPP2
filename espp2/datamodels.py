@@ -196,7 +196,7 @@ class Holdings(BaseModel):
     year: int
     broker: str
     stocks: list[Stock]
-    cash: list[Wire] ## TODO? Cash
+    cash: list[WireAmount] ## TODO? Cash
 
 class EOYBalanceItem(BaseModel):
     '''EOY balance item'''
@@ -247,6 +247,7 @@ class TaxReport(BaseModel):
     prev_holdings: Holdings
 
 class ForeignShares(BaseModel):
+    '''Foreign shares'''
     symbol: str
     country: str
     account: str
@@ -256,8 +257,8 @@ class ForeignShares(BaseModel):
     taxable_gain: Decimal
     tax_deduction_used: Decimal
 
-# Symbol ┃ Country ┃ Income tax ┃ Gross share dividend ┃ Of which tax on gross share dividend 
 class CreditDeduction(BaseModel):
+    '''Credit deduction'''
     symbol: str
     country: str
     income_tax: Decimal
@@ -265,17 +266,21 @@ class CreditDeduction(BaseModel):
     tax_on_gross_share_dividend: Decimal
 
 class TaxSummary(BaseModel):
+    '''Tax summary'''
     foreignshares: list[ForeignShares]
     credit_deduction: list[CreditDeduction]
 
 class CashEntry(BaseModel):
+    '''Cash entry'''
     date: date
     amount: Amount
     transfer: Optional[bool] = False
 class CashModel(BaseModel):
+    '''Cash model'''
     cash: List[CashEntry] = []
 
 class ESPPResponse(BaseModel):
+    '''ESPP response'''
     holdings: Holdings
     tax_report: TaxReport
     summary: TaxSummary
