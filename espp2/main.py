@@ -154,8 +154,8 @@ def do_taxes(broker, transaction_files: list, holdfile,
         wires = json_load(wirefile)
         wires = Wires(wires=wires)
         logger.info('Wires: read')
-    else:
-        wires = wirefile
+    elif wirefile:
+        wires = Wires(wires=wirefile)
 
     if holdfile:
         prev_holdings = json_load(holdfile)
