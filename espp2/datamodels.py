@@ -54,12 +54,25 @@ class Amount(BaseModel):
         result.nok_value = result.nok_value + other.nok_value
         return result
 
+duplicates = {}
+def get_id(values: Dict[str, Any]):
+    '''Get id'''
+    d = values['source'] + str(values['date'])
+    if d in duplicates:
+        duplicates[d] += 1
+    else:
+        duplicates[d] = 1
+
+    id = f"{values['type']} {str(values['date'])}"
+    if 'qty' in values:
+        id += ' ' + str(values['qty'])
+    return id + ':' + str(duplicates[d])
+
 class TransactionEntry(BaseModel):
     @validator('id', pre=True, always=True, check_fields=False)
     def validate_id(cls, v, values):
         '''Validate id'''
-        v = ''.join([str(t) for t in values.values()])
-        return v
+        return get_id(values)
     
 class Buy(TransactionEntry):
     '''Buy transaction'''
@@ -68,6 +81,7 @@ class Buy(TransactionEntry):
     symbol: str
     qty: Decimal
     purchase_price: Amount
+    source: str
     id: str = Optional[str]
 
     @validator('purchase_price')
@@ -89,6 +103,7 @@ class Deposit(TransactionEntry):
     description: str
     purchase_price: Amount
     purchase_date: Optional[date]
+    source: str
     id: str = Optional[str]
 
     @validator('purchase_price')
@@ -107,6 +122,7 @@ class Tax(TransactionEntry):
     symbol: str
     description: str
     amount: Amount
+    source: str
     id: str = Optional[str]
 
 class Taxsub(TransactionEntry):
@@ -116,6 +132,7 @@ class Taxsub(TransactionEntry):
     symbol: str
     description: str
     amount: Amount
+    source: str
     id: str = Optional[str]
 
 class Dividend(TransactionEntry):
@@ -124,6 +141,7 @@ class Dividend(TransactionEntry):
     date: date
     symbol: str
     amount: Amount
+    source: str
     id: str = Optional[str]
 
 class Dividend_Reinv(TransactionEntry):
@@ -133,6 +151,7 @@ class Dividend_Reinv(TransactionEntry):
     symbol: str
     amount: Amount
     description: str
+    source: str
     id: str = Optional[str]
 
 class Wire(TransactionEntry):
@@ -142,6 +161,7 @@ class Wire(TransactionEntry):
     amount: Amount
     description: str
     fee: Optional[Amount]
+    source: str
     id: str = Optional[str]
 
 class Sell(TransactionEntry):
@@ -153,6 +173,7 @@ class Sell(TransactionEntry):
     fee: Optional[Amount]
     amount: Amount
     description: str
+    source: str
     id: str = Optional[str]
 
 Entry = Annotated[Union[Buy, Deposit, Tax, Taxsub, Dividend,
@@ -161,8 +182,6 @@ Entry = Annotated[Union[Buy, Deposit, Tax, Taxsub, Dividend,
 class Transactions(BaseModel):
     '''Transactions'''
     transactions: list[Entry]
-
-
 
 
 #########################################################################

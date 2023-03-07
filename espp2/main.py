@@ -31,8 +31,16 @@ with open(taxdata_file, 'r', encoding='utf-8') as jf:
 def deduplicate(transactions):
     '''Remove duplicate transactions'''
     # Remove duplicate transactions
+    print(f'Before deduplication: {len(transactions)}')
     seen = set()
+    # for t in transactions:
+    #     if t.id in seen:
+    #         print(f'Duplicate transaction: {t.id}')
+    #     else:
+    #         seen.add(t.id)
+    #         print('New transaction: ', t.id)
     transactions = [t for t in transactions if t.id not in seen and not seen.add(t.id)]
+    print(f'After deduplication: {len(transactions)}')
     return transactions
 
 def validate_holdings(broker, year, prev_holdings, transactions):
@@ -50,7 +58,7 @@ def validate_holdings(broker, year, prev_holdings, transactions):
     # No holdings, or holdings are from wrong year
     c = Cash(year-1, transactions, None)
     p = Positions(year-1, taxdata, prev_holdings, transactions, c)
-    holdings = p.holdings(year-1, 'dummy')
+    holdings = p.holdings(year-1, broker)
     transactions = [t for t in transactions if t.date.year == year]
     return holdings, transactions
 
@@ -58,6 +66,10 @@ def validate_holdings(broker, year, prev_holdings, transactions):
 def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
                prev_holdings: Holdings, taxdata) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Generate tax report'''
+
+    # l = Ledger(prev_holdings, transactions)
+    # for e in l.entries:
+    #     print(e)
 
     holdings, transactions = validate_holdings(broker, year, prev_holdings, transactions.transactions)
     l = Ledger(holdings, transactions)
@@ -141,7 +153,6 @@ def do_taxes(broker, transaction_files: list, holdfile,
     for t in transaction_files:
         try:
             trans.append(normalize(t))
-            # trans.append(normalize(t['format'], t['fd']))
         except Exception as e:
             raise ESPPErrorException(f'{t.name}: {e}') from e
 
@@ -156,6 +167,7 @@ def do_taxes(broker, transaction_files: list, holdfile,
         logger.info('Wires: read')
     elif wirefile:
         wires = Wires(wires=wirefile)
+        print('WIRES WIRES WIRES', wires)
 
     if holdfile:
         prev_holdings = json_load(holdfile)
