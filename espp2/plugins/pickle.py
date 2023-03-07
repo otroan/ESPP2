@@ -44,7 +44,7 @@ class UnpicklerESPP(pickle.Unpickler):
 
     class ESPPData:
         '''The class to hold the old data from a 'espp.pickle' file'''
-        def __init__():
+        def __init__(self):
             pass
 
     def find_class(self, module, name):
@@ -122,7 +122,6 @@ def do_trans(record):
     add_value(newrec, 'description', '')
     add_amount(newrec, 'fee', date, 'USD', fee)
     add_amount(newrec, 'amount', date, 'USD', price)
-
     records.append(newrec)
 
 def do_transfer(record):
@@ -225,7 +224,7 @@ def read(pickle_file, logger=None) -> Transactions:
             do_tax(record)
             continue
 
-        if rectype == 'RSU':
+        if rectype == 'RSU' or rectype == 'PURCHASE':
             do_rsu(record)
             continue
 
@@ -241,11 +240,14 @@ def read(pickle_file, logger=None) -> Transactions:
             do_journal(record)
             continue
 
+        if rectype == 'FEE':
+            # TODO MORTEN
+            continue
+
         if rectype == 'WIRE':
             do_wire(record)
             continue
-
-        print(f'Error: Unexpected pickle-file record: {rectype}')
+        raise ValueError(f'Error: Unexpected pickle-file record: {rectype}')
 
     sorted_transactions = sorted(records, key=lambda d: d['date'])
     return Transactions(transactions=sorted_transactions)
