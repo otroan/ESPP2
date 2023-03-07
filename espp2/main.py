@@ -96,6 +96,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
 
     report['unmatched_wires'] = nomatch
     report['cash'] = c.process()
+    report['cash_ledger'] = c.cash
 
     return TaxReport(**report), p.holdings(year, broker)
 

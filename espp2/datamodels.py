@@ -241,6 +241,7 @@ class TaxReport(BaseModel):
     buys: list
     sales: Dict[str, list[EOYSales]]
     cash: dict
+    cash_ledger: list
     unmatched_wires: list
     prev_holdings: Holdings
 
