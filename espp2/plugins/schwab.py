@@ -66,7 +66,7 @@ def action_to_type(value, description):
     #     return 'BUY'
     if value in action:
         return action[value]
-    raise Exception(f'Unknown transaction entry {value}')
+    raise ValueError(f'Unknown transaction entry {value}')
 
 
 def fixup_date(datestr):

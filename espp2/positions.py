@@ -60,7 +60,7 @@ class Ledger():
         '''Add entry to ledger'''
         if symbol not in self.entries:
             self.entries[symbol] = []
-        total = sum([e[1] for e in self.entries[symbol]])
+        total = sum(e[1] for e in self.entries[symbol])
         self.entries[symbol].append((date, qty, total+qty))
 
     def total_shares(self, symbol, date, until=True):
@@ -169,7 +169,6 @@ class Positions():
                     raise InvalidPositionException(
                         f'Trying to sell stock from the future {posview[posidx].date} > {balancedate}')
                 qty_to_sell = s.qty.copy_abs()
-
                 assert qty_to_sell > 0
                 while qty_to_sell > 0:
                     if posidx >= len(posview):
@@ -222,7 +221,7 @@ class Positions():
         for t in self.db_tax:
             self.cash.credit(t.date, t.amount)
         for t in self.db_taxsub:
-            self.cash.debut(t.date, t.amount)
+            self.cash.debit(t.date, t.amount)
         for i in self.db_dividend_reinv:
             self.cash.credit(i.date, i.amount)
 
@@ -231,8 +230,12 @@ class Positions():
             logger.debug('Processing dividends for %s', symbol)
             dividend_usd = sum(item.amount.value for item in dividends)
             dividend_nok = sum(item.amount.nok_value for item in dividends)
-            tax_usd = sum(item.amount.value for item in self.tax_by_symbols[symbol])
-            tax_nok = sum(item.amount.nok_value for item in self.tax_by_symbols[symbol])
+            # Note, in some cases taxes have not been withheld. E.g. dividends too small
+            try:
+                tax_usd = sum(item.amount.value for item in self.tax_by_symbols[symbol])
+                tax_nok = sum(item.amount.nok_value for item in self.tax_by_symbols[symbol])
+            except KeyError:
+                tax_usd = tax_nok = 0
             for d in dividends:
                 total_shares = self.total_shares(self[:d.date, symbol])
                 ledger_shares = self.ledger.total_shares(symbol, d.date)

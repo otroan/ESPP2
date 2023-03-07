@@ -14,10 +14,11 @@ setup(
     author="O. Troan",
     author_email="otroan@employees.org",
     packages=find_packages(),
-    python_requires=">=3.9, <4",
+    python_requires=">=3.11",
     install_requires=["simplejson", "numpy", "pydantic",
                       "urllib3", "python-dateutil", "uvicorn", "fastapi",
-                      "python-multipart", "tabulate", "pandas", "lxml", "pytest", "httpx"],
+                      "python-multipart", "tabulate", "pandas", "lxml", "pytest", "httpx",
+                      "rich", "typing"],
     package_data={
         "espp2": ["*.json"],
     },
