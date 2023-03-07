@@ -457,7 +457,7 @@ class Cash():
             return None
         try:
             for v in self.db_received.wires:
-                if v.date == wire.date and isclose(v.wire.value, abs(wire.amount.value), abs_tol=0.05):
+                if v.date == wire.date and isclose(v.value, abs(wire.amount.value), abs_tol=0.05):
                     return v
         except AttributeError:
             logger.error(f'No received wires processing failed {v}, {wire}')
@@ -471,12 +471,21 @@ class Cash():
         for w in self.db_wires:
             match = self._wire_match(w)
             if match:
-                nok_exchange_rate = match.wire.nok_value/match.wire.value
-                amount = Amount(currency=match.wire.currency, value=-match.wire.value,
-                                nok_value=-match.wire.nok_value, nok_exchange_rate=nok_exchange_rate)
+                nok_exchange_rate = match.nok_value/match.value
+                amount = Amount(currency=match.currency, value=-match.value,
+                                nok_value=-match.nok_value, nok_exchange_rate=nok_exchange_rate)
                 self.credit(match.date, amount, transfer=True)
             else:
-                unmatched.append(w)
+                # WWW <class 'espp2.datamodels.Wire'> type=<EntryTypeEnum.WIRE: 'WIRE'> 
+                # date=datetime.date(2022, 11, 25) amount=Amount(currency='USD',
+                #  nok_exchange_rate=Decimal('9.9263'), nok_value=Decimal('-243548'),
+                #  value=Decimal('-24535.66')) description='Cash Disbursement'
+                #  fee=Amount(currency='USD', nok_exchange_rate=Decimal('9.9263'),
+                #  nok_value=Decimal('-148.894'), value=Decimal('-15.00')) 
+                # id='WIRE2022-11-25$-24535.66Cash Disbursement$-15.00'
+                unmatched.append(WireAmount(date=w.date, currency=w.amount.currency, nok_value=w.amount.nok_value, value=w.amount.value))
+                print('WWW', type(w), w)
+                print('---')
                 self.credit(w.date, w.amount, transfer=True)
 
             if 'fee' in w:

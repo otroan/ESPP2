@@ -126,10 +126,12 @@ def do_taxes(broker, transaction_files: list, holdfile,
         transactions.transactions += t.transactions
     transactions.transactions= sorted(transactions.transactions, key=lambda d: d.date)
 
-    if wirefile:
+    if wirefile and not isinstance(wirefile, list):
         wires = json_load(wirefile)
         wires = Wires(wires=wires)
         logger.info('Wires: read')
+    else:
+        wires = wirefile
 
     if holdfile:
         prev_holdings = json_load(holdfile)

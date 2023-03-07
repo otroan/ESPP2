@@ -169,14 +169,15 @@ class Transactions(BaseModel):
 
 # Wires data model
 class WireAmount(BaseModel):
+    date: date
     currency: str
     nok_value: Decimal
     value: Decimal
-class Wire(BaseModel):
-    date: date
-    wire: WireAmount
+# class Wire(BaseModel):
+#     date: date
+#     wire: WireAmount
 class Wires(BaseModel):
-    wires: list[Wire]
+    wires: list[WireAmount]
 
 
 # Holdings data model
@@ -195,7 +196,7 @@ class Holdings(BaseModel):
     year: int
     broker: str
     stocks: list[Stock]
-    cash: list[Wire]
+    cash: list[Wire] ## TODO? Cash
 
 class EOYBalanceItem(BaseModel):
     '''EOY balance item'''
@@ -242,7 +243,7 @@ class TaxReport(BaseModel):
     sales: Dict[str, list[EOYSales]]
     cash: dict
     cash_ledger: list
-    unmatched_wires: list
+    unmatched_wires: list[WireAmount]
     prev_holdings: Holdings
 
 class CashEntry(BaseModel):
