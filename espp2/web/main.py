@@ -33,12 +33,12 @@ async def create_files(
     elif holdfile:
         holdfile = holdfile.file
     try:
-        report, holdings = do_taxes(
+        report, holdings, summary = do_taxes(
             broker, transaction_files, holdfile, wires, year)
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return ESPPResponse(tax_report=report, holdings=holdings)
+    return ESPPResponse(tax_report=report, holdings=holdings, summary=s)
 
 
 app.mount("/", StaticFiles(directory=realpath(

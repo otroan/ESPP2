@@ -459,9 +459,9 @@ class Cash():
             for v in self.db_received.wires:
                 if v.date == wire.date and isclose(v.value, abs(wire.amount.value), abs_tol=0.05):
                     return v
-        except AttributeError:
-            logger.error(f'No received wires processing failed {v}, {wire}')
-            raise
+        except AttributeError as e:
+            logger.error(f'No received wires processing failed {wire}')
+            raise ValueError(f'No received wires processing failed {wire}') from e
         return None
 
     def wire(self):

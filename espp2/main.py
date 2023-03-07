@@ -130,8 +130,6 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     summary = TaxSummary(foreignshares=foreignshares, credit_deduction=credit_deductions)
     return TaxReport(**report), p.holdings(year, broker), summary
 
-# TODO: Also include broker?
-
 
 def do_taxes(broker, transaction_files: list, holdfile,
              wirefile, year) -> Tuple[TaxReport, Holdings, TaxSummary]:
@@ -140,10 +138,6 @@ def do_taxes(broker, transaction_files: list, holdfile,
     report = []
     wires = []
     prev_holdings = []
-    # logger.info(f'Doing taxes: {year} {format}')
-    # logger.info(f'Transactions: {transfile.name}')
-    # logger.info(f'Holdings: {holdfile.filename}')
-    # logger.info(f'Wires: {wirefile.filename}')
     for t in transaction_files:
         try:
             trans.append(normalize(t))
