@@ -9,7 +9,7 @@ from importlib.resources import files
 import simplejson as json
 from espp2.positions import Positions, Cash, InvalidPositionException, Holdings, Ledger
 from espp2.transactions import normalize
-from espp2.datamodels import TaxReport, Transactions, Wires, Holdings
+from espp2.datamodels import TaxReport, Transactions, Wires, Holdings, ForeignShares, TaxSummary, CreditDeduction
 from typing import Tuple
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ def validate_holdings(broker, year, prev_holdings, transactions):
 
 
 def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
-               prev_holdings: Holdings, taxdata) -> Tuple[TaxReport, Holdings]:
+               prev_holdings: Holdings, taxdata) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Generate tax report'''
 
     holdings, transactions = validate_holdings(broker, year, prev_holdings, transactions.transactions)
@@ -98,13 +98,43 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     report['cash'] = c.process()
     report['cash_ledger'] = c.cash
 
-    return TaxReport(**report), p.holdings(year, broker)
+    foreignshares = []
+
+    for e in report['eoy_balance'][year]:
+        dividend = [d for d in report['dividends'] if d.symbol == e.symbol]
+        assert len(dividend) == 1
+        tax_deduction_used = dividend[0].tax_deduction_used
+        try:
+            sales = report['sales'][e.symbol]
+        except KeyError:
+            sales = []
+        total_gain_nok = 0
+        for s in sales:
+            total_gain_nok += s.totals['gain'].nok_value
+            tax_deduction_used += s.totals['tax_ded_used']
+        
+        foreignshares.append(ForeignShares(symbol=e.symbol, country='USA', account=broker,
+                                           shares=e.qty, wealth=e.amount.nok_value,
+                                           dividend=dividend[0].amount.nok_value,
+                                           taxable_gain=total_gain_nok,
+                                           tax_deduction_used=tax_deduction_used))
+
+    # Tax paid in the US on dividends
+    credit_deductions = []
+    for e in report['dividends']:
+        credit_deductions.append(CreditDeduction(symbol=e.symbol, country='USA',
+                                                 income_tax=e.tax.nok_value,
+                                                 gross_share_dividend=e.amount.nok_value,
+                                                 tax_on_gross_share_dividend=e.tax.nok_value))
+
+    summary = TaxSummary(foreignshares=foreignshares, credit_deduction=credit_deductions)
+    return TaxReport(**report), p.holdings(year, broker), summary
 
 # TODO: Also include broker?
 
 
 def do_taxes(broker, transaction_files: list, holdfile,
-             wirefile, year) -> Tuple[TaxReport, Holdings]:
+             wirefile, year) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Do taxes'''
     trans = []
     report = []
@@ -137,5 +167,5 @@ def do_taxes(broker, transaction_files: list, holdfile,
         prev_holdings = json_load(holdfile)
         prev_holdings = Holdings(**prev_holdings)
         logger.info('Holdings file read')
-    report, holdings = tax_report(year, broker, transactions, wires, prev_holdings, taxdata)
-    return report, holdings
+    report, holdings, summary = tax_report(year, broker, transactions, wires, prev_holdings, taxdata)
+    return report, holdings, summary
