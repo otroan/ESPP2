@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.staticfiles import StaticFiles
 from espp2.main import do_taxes
-from espp2.datamodels import ESPPResponse, WireAmount
+from espp2.datamodels import ESPPResponse, Wires
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -27,7 +27,10 @@ async def create_files(
         wires: str = Form(...),
         year: int = Form(...)):
     '''File upload endpoint'''
-    print('WIRES', wires)
+
+    if wires:
+        wires = Wires.from_json(wires)
+
     if holdfile and holdfile.filename == '':
         holdfile = None
     elif holdfile:
