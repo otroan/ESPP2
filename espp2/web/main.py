@@ -38,7 +38,7 @@ async def create_files(
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return ESPPResponse(tax_report=report, holdings=holdings, summary=s)
+    return ESPPResponse(tax_report=report, holdings=holdings, summary=summary)
 
 
 app.mount("/", StaticFiles(directory=realpath(
