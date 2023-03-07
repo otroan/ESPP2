@@ -93,7 +93,7 @@ def print_report_cash(wires: list, cash, console:Console):
         table.add_column("Amount NOK", style="magenta")
 
         for w in wires:
-            table.add_row(str(w.date), str(w.amount.value), str(w.amount.nok_value))
+            table.add_row(str(w.date), str(w.value), str(w.nok_value))
         console.print(table)
 
     if cash:
