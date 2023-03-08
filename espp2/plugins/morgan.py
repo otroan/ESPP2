@@ -37,7 +37,7 @@ def fixup_price2(date, currency, value):
                    nok_exchange_rate=exchange_rate,
                    nok_value=value * exchange_rate)
 
-def table(recs):
+def table(recs, filename):
     trans = []
     for e in recs:
         # print('RECORD:', e)
@@ -121,14 +121,13 @@ def table(recs):
             continue
 
         else:
-            raise Exception('Unknown activity type: {}'.format(e['Activity']))
-        print('R', r)
+            raise ValueError(f'Unknown activity type: {e["Activity"]}: {e}')
 
-        r['source'] = 'morgan'
+        r['source'] = f'morgan:{filename}'
         trans.append(parse_obj_as(Entry, r))
     return trans
 
-def morgan_html_import(html_fd):
+def morgan_html_import(html_fd, filename):
     '''Parse Morgan Stanley HTML table file.'''
 
 
@@ -138,10 +137,10 @@ def morgan_html_import(html_fd):
 
     trans = []
     for df in dfs:
-        trans += table(df.to_dict(orient='records'))
+        trans += table(df.to_dict(orient='records'), filename)
 
     return Transactions(transactions=trans)
 
-def read(html_file, logger) -> Transactions:
+def read(html_file, filename='', logger=None) -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
-    return morgan_html_import(html_file)
+    return morgan_html_import(html_file, filename)

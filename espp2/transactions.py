@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# py-lint: disable=invalid-name
 
 '''
 Normalize transaction history.
@@ -15,11 +15,11 @@ import os
 import importlib
 import argparse
 import logging
+from typing import Union
+import typer
 from fastapi import UploadFile
 import starlette
-from typing import Union
 from espp2.datamodels import Transactions
-import typer
 
 
 logger = logging.getLogger(__name__)
@@ -101,23 +101,5 @@ def normalize(data: Union[UploadFile, typer.FileText]) -> Transactions:
 
     plugin_path = 'espp2.plugins.' + trans_format
     plugin = importlib.import_module(plugin_path, package='espp2')
-    logger.info(f'Importing transactions with importer {trans_format} {filename}')
-    # if trans_format == 'pickle':
-    #     return plugin.read(fd.buffer, logger)
-    # else:
-    return plugin.read(fd, logger)
-
-def main():
-    '''Main function'''
-    args, logger = get_arguments()
-    logger.debug('Arguments: %s', args)
-    trans_obj, _ = normalize(args.format, args.transaction_file)
-    logger.info('Converting to JSON')
-    j = trans_obj.json(indent=4)
-
-    logger.info(f'Writing transaction file to: {args.output_file.name}')
-    with args.output_file as f:
-        f.write(j)
-
-if __name__ == '__main__':
-    main()
+    logger.info('Importing transactions with importer %s: %s', trans_format, filename)
+    return plugin.read(fd, filename, logger)
