@@ -7,6 +7,8 @@ from pydantic import parse_obj_as
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
 
+# pylint-disable: invalid-name
+
 def fixup_date(datestr):
     '''Fixup date'''
     d =  dt.parse(datestr)
@@ -84,7 +86,7 @@ def action_to_type(value):
         return None
     raise Exception(f'Unknown transaction entry {value}')
 
-def read(raw_data, logger=None):
+def read(raw_data, filename='', logger=None):
     '''Main entry point of plugin. Return normalized Python data structure.'''
 
     key_conv = {'DATE': 'date',
@@ -200,63 +202,9 @@ def read(raw_data, logger=None):
             # return None
             continue
         else:
-            raise Exception(f'Unknown transaction entry {e}')
+            raise ValueError(f'Unknown transaction entry: {e}')
 
+        r['source'] = f'td:{filename}'
         trans.append(parse_obj_as(Entry, r))
 
-        # if e['Activity'] == 'Opening Balance' or e['Activity'].startswith('Release'):
-        #     # Seems like a BUY entry
-        #     t = EntryTypeEnum.DEPOSIT
-        #     qty = Decimal(e['Number of Shares'])
-        #     book_value, currency = morgan_price(e['Book Value'])
-        #     purchase_price = fixup_price2(d, currency, book_value / qty)
-        #     r = {'type': t, 'date': d, 'qty': qty, 'symbol': symbol,
-        #          'description': e['Activity'],
-        #          'purchase_price': purchase_price, }
-    t = Transactions(transactions=trans)
-    # print(t.json(indent=4))
-    return t
-
-    # newlist = []
-    # for csv_item in csv_data:
-    #     newv = {}
-    #     action = action_to_type(csv_item['DESCRIPTION'])
-    #     if not action:
-    #         continue
-    #     for k, data_item in csv_item.items():
-    #         newkey = key_conv.get(k, k)
-    #         if not data_item:
-    #             continue
-    #         if newkey == 'date':
-    #             newv[newkey] = fixup_date(data_item)
-    #         # elif newkey in pricefields:
-    #         #     newv[newkey] = fixup_price(data_item)
-    #         elif newkey in numberfields:
-    #             newv[newkey] = fixup_number(data_item)
-    #         elif newkey == 'type':
-    #             newv[newkey] = action_to_type(data_item)
-    #             newv['description'] = data_item
-    #         else:
-    #             newv[newkey] = data_item
-
-    #     for pricefield in pricefields:
-    #         if pricefield in newv:
-    #             if action == 'SELL' and pricefield == 'fee':
-    #                 newv[pricefield] = fixup_price(
-    #                     newv['date'], 'USD', newv[pricefield], change_sign=True)
-    #             else:
-    #                 newv[pricefield] = fixup_price(
-    #                     newv['date'], 'USD', newv[pricefield])
-    #     if action == 'SELL':
-    #         newv['qty'] = newv['qty'] * -1
-    #     elif action == 'BUY':
-    #         print('NEWV', newv)
-    #         try:
-    #             newv['purchase_price'] = newv.pop('price')
-    #         except KeyError:
-    #             newv['purchase_price'] = Decimal('0')
-    #         # newv.pop('amount')
-
-    #     newlist.append(newv)
-
-    # return sorted(newlist, key=lambda d: d['date'])
+    return Transactions(transactions=trans)

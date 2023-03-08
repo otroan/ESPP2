@@ -169,7 +169,7 @@ def subdata(action, description, date, value):
         newlist.append(newv)
     return newlist
 
-def read(csv_file, logger=None) -> Transactions:
+def read(csv_file, filename='', logger=None) -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
 
     key_conv = {'DATE': 'date',
@@ -219,7 +219,7 @@ def read(csv_file, logger=None) -> Transactions:
                     newv[price] = fixup_price(newv['date'], 'USD', newv[price])
         if action == 'SELL':
             newv['qty'] = newv['qty'] * -1
-        newv['source'] = 'schwab'
+        newv['source'] = f'schwab:{filename}'
         newlist.append(newv)
 
     sorted_transactions = sorted(newlist, key=lambda d: d['date'])

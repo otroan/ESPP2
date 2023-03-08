@@ -190,7 +190,7 @@ def do_wire(record):
     pass
 
 
-def read(pickle_file, logger=None) -> Transactions:
+def read(pickle_file, filename='', logger=None) -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
     global records
 
@@ -250,7 +250,7 @@ def read(pickle_file, logger=None) -> Transactions:
         raise ValueError(f'Error: Unexpected pickle-file record: {rectype}')
 
     for r in records:
-        r['source'] = 'pickle'
+        r['source'] = f'pickle:{filename}'
     sorted_transactions = sorted(records, key=lambda d: d['date'])
     return Transactions(transactions=sorted_transactions)
 
