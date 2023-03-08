@@ -1,4 +1,4 @@
-# py-lint: disable=invalid-name
+# pylint: disable=invalid-name
 
 '''
 Normalize transaction history.
@@ -20,7 +20,6 @@ import typer
 from fastapi import UploadFile
 import starlette
 from espp2.datamodels import Transactions
-
 
 logger = logging.getLogger(__name__)
 

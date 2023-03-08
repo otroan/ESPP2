@@ -3,14 +3,16 @@ Morgan Stanley HTML table transaction history normalizer.
 '''
 
 # pylint: disable=invalid-name
+# pylint: disable=no-name-in-module
+# pylint: disable=no-self-argument
 
+import math
 from decimal import Decimal
 import dateutil.parser as dt
 from pandas import read_html
 from pydantic import parse_obj_as
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
-import math
 
 currency_converter = FMV()
 def morgan_price(price_str):
@@ -38,6 +40,7 @@ def fixup_price2(date, currency, value):
                    nok_value=value * exchange_rate)
 
 def table(recs, filename):
+    '''Parse Morgan Stanley HTML table transaction history.'''
     trans = []
     for e in recs:
         # print('RECORD:', e)
@@ -66,7 +69,7 @@ def table(recs, filename):
             qty = Decimal(e['Number of Shares'])
             book_value, currency = morgan_price(e['Book Value'])
             purchase_price = fixup_price2(d, currency, book_value / qty)
-            
+
             r = {'type': t, 'date': d, 'qty': qty, 'symbol': symbol,
                  'description': e['Activity'],
                  'purchase_price': purchase_price, }
