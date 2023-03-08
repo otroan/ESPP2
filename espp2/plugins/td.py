@@ -1,3 +1,11 @@
+'''
+TD Ameritrade CSV importer
+'''
+
+# pylint: disable=invalid-name
+# pylint: disable=no-name-in-module
+# pylint: disable=no-self-argument
+
 import csv
 import io
 import codecs
@@ -5,9 +13,7 @@ from decimal import Decimal
 import dateutil.parser as dt
 from pydantic import parse_obj_as
 from espp2.fmv import FMV
-from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
-
-# pylint-disable: invalid-name
+from espp2.datamodels import Transactions, Entry, EntryTypeEnum
 
 def fixup_date(datestr):
     '''Fixup date'''
@@ -43,7 +49,6 @@ def td_csv_import(fd):
 
     header = next(reader)
     assert header == ['DATE', 'TRANSACTION ID', 'DESCRIPTION', 'QUANTITY', 'SYMBOL', 'PRICE', 'COMMISSION', 'AMOUNT', 'REG FEE', 'SHORT-TERM RDM FEE', 'FUND REDEMPTION FEE', ' DEFERRED SALES CHARGE']
-    field = lambda x: header.index(x)
     data = []
     try:
         while True:
@@ -58,6 +63,7 @@ def td_csv_import(fd):
     return data
 
 def action_to_type(value):
+    '''Normalize transaction type.'''
     if value.startswith('Bought') or value.startswith('TRANSFER OF SECURITY'):
         return 'BUY'
     if value.startswith('Sold'):
@@ -84,23 +90,10 @@ def action_to_type(value):
         return 'WIRE'
     if value.startswith('DISBURSEMENT'):
         return None
-    raise Exception(f'Unknown transaction entry {value}')
+    raise ValueError(f'Unknown transaction entry {value}')
 
 def read(raw_data, filename='', logger=None):
     '''Main entry point of plugin. Return normalized Python data structure.'''
-
-    key_conv = {'DATE': 'date',
-                'SYMBOL': 'symbol',
-                'QUANTITY': 'qty',
-                'PRICE': 'price',
-                'COMMISSION': 'fee',
-                'AMOUNT': 'amount',
-                'DESCRIPTION': 'type',
-                'TRANSACTION ID': 'transaction_id'
-                }
-
-    pricefields = ['amount', 'fee', 'price']
-    numberfields = ['qty']
 
     csv_data = td_csv_import(raw_data)
     trans = []

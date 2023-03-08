@@ -2,13 +2,15 @@
 Schwab CSV normalizer.
 '''
 
+# pylint: disable=invalid-name
+
 import csv
 from decimal import Decimal
-from espp2.fmv import FMV
-import dateutil.parser as dt
 import codecs
 import io
-from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
+import dateutil.parser as dt
+from espp2.fmv import FMV
+from espp2.datamodels import Transactions
 
 def schwab_csv_import(fd):
     '''Parse Schwab CSV file.'''
@@ -27,7 +29,8 @@ def schwab_csv_import(fd):
         assert header == ['Date', 'Action', 'Symbol', 'Description',
                           'Quantity', 'Fees & Commissions', 'Disbursement Election', 'Amount']
 
-        def field(x): return header.index(x)
+        def field(x):
+            return header.index(x)
         data = []
         while True:
             row = next(reader)
@@ -66,7 +69,7 @@ def action_to_type(value, description):
     #     return 'BUY'
     if value in action:
         return action[value]
-    raise ValueError(f'Unknown transaction entry {value}')
+    raise ValueError(f'Unknown transaction entry: {value} {description}')
 
 
 def fixup_date(datestr):
@@ -137,7 +140,7 @@ def subdata(action, description, date, value):
     newlist = []
     for sub in value:
         newv = {}
-        is_espp = True if action == 'DEPOSIT' and description == 'ESPP' else False
+        is_espp = bool(action == 'DEPOSIT' and description == 'ESPP')
         for k, subdata_item in sub.items():
             if not subdata_item:
                 continue
@@ -205,6 +208,7 @@ def read(csv_file, filename='', logger=None) -> Transactions:
             else:
                 newv[newkey] = data_item
         if 'subdata' in newv:
+            data_item = '' if not data_item else data_item
             if len(newv['subdata']) == 1:
                 newv |= subdata(action, description, newv['date'], data_item)[0]
                 newv.pop('subdata')

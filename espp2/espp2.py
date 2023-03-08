@@ -3,13 +3,10 @@ ESPPv2 Wrapper
 '''
 
 # pylint: disable=invalid-name
-import os
-import sys
-import argparse
+
 import logging
-import typer
-from pathlib import Path
 from enum import Enum
+import typer
 from espp2.main import do_taxes
 from espp2.datamodels import TaxReport, Holdings
 from espp2.report import print_report

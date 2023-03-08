@@ -56,20 +56,20 @@ class Ledger():
             if t.type in (EntryTypeEnum.DEPOSIT, EntryTypeEnum.BUY, EntryTypeEnum.SELL):
                 self.add(t.symbol, t.date, t.qty)
 
-    def add(self, symbol, date, qty):
+    def add(self, symbol, transactiondate, qty):
         '''Add entry to ledger'''
         if symbol not in self.entries:
             self.entries[symbol] = []
         total = sum(e[1] for e in self.entries[symbol])
-        self.entries[symbol].append((date, qty, total+qty))
+        self.entries[symbol].append((transactiondate, qty, total+qty))
 
-    def total_shares(self, symbol, date, until=True):
+    def total_shares(self, symbol, untildate, until=True):
         '''Return total shares for symbol at date'''
         last = 0
         if symbol not in self.entries:
             return 0
         for i, e in enumerate(self.entries[symbol]):
-            if e[0] >= date:
+            if e[0] >= untildate:
                 if until:
                     return self.entries[symbol][i-1][2]
                 return e[2]
@@ -395,8 +395,8 @@ class Positions():
             fmv = f[symbol, end_of_year]
 
             r.append(EOYBalanceItem(symbol=symbol, qty=total_shares, amount=Amount(
-                value=total_shares * fmv, currency='USD', 
-                nok_exchange_rate=eoy_exchange_rate, 
+                value=total_shares * fmv, currency='USD',
+                nok_exchange_rate=eoy_exchange_rate,
                 nok_value=total_shares * fmv * eoy_exchange_rate),
                 fmv=fmv))
         return r
