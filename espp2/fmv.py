@@ -10,13 +10,13 @@ caches them in a set of JSON files.
 import os
 import datetime
 import json
+from enum import Enum
 from datetime import date, datetime, timedelta
 from typing import Union, Tuple
 import logging
 from decimal import Decimal
 import numpy as np
 import urllib3
-from enum import Enum
 # from pydantic import BaseModel
 
 # class DividendRecord(BaseModel):
@@ -26,12 +26,15 @@ from enum import Enum
 #     paymentDate: date
 #     value: Decimal
 #     currency: str
-class FMVTypeEnum:
+class FMVTypeEnum(Enum):
     '''Enum for FMV types'''
     STOCK = 'STOCK'
     CURRENCY = 'CURRENCY'
     DIVIDENDS = 'DIVIDENDS'
     FUNDAMENTALS = 'FUNDAMENTALS'
+
+    def __str__(self):
+        return str(self.value)
 
 # Store downloaded files in cache directory under current directory
 CACHE_DIR = 'cache'
@@ -116,6 +119,7 @@ class FMV():
         return r
 
     def fetch_fundamentals(self, symbol):
+        '''Returns a fundamentals object for symbol'''
         http = urllib3.PoolManager()
         url = f'https://eodhistoricaldata.com/api/fundamentals/{symbol}.US?api_token={EODHDKEY}&filter=General'
         r = http.request('GET', url)
@@ -123,7 +127,6 @@ class FMV():
             raise FMVException(
                 f'Fetching dividends data for {symbol} failed {r.status}')
         raw = json.loads(r.data.decode('utf-8'))
-        print('RAW RAW RAW', raw)
         return raw
 
     def get_filename(self, fmvtype: FMVTypeEnum, symbol):
@@ -238,5 +241,5 @@ if __name__ == '__main__':
     print('LOOKING UP DIVIDENDS', fmv.get_dividend('CSCO', '2023-01-25'))
 
     print('CISCO FUNDAMETNALS', fmv.get_fundamentals('CSCO'))
-    d = fmv.get_fundamentals('CSCO')
-    print('CISCO FUNDAMETNALS', d['ISIN'])
+    fundamentals = fmv.get_fundamentals('CSCO')
+    print('CISCO FUNDAMETNALS', fundamentals['ISIN'])
