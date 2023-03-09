@@ -43,7 +43,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
     report, holdings, summary = do_taxes(broker, transaction_files, inholdings, wires, year)
 
     if print:
-        print_report(year, report, holdings)
+        print_report(year, summary, report, holdings)
 
     # New holdings
     if outholdings:

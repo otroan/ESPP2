@@ -78,6 +78,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     p = Positions(year, taxdata, holdings, transactions, c, ledger=l)
 
     report = {}
+    fundamentals = p.fundamentals()
     report['prev_holdings'] = holdings
     report['ledger'] = l.entries
     # End of Year Balance (formueskatt)
@@ -125,7 +126,8 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
             total_gain_nok += s.totals['gain'].nok_value
             tax_deduction_used += s.totals['tax_ded_used']
         
-        foreignshares.append(ForeignShares(symbol=e.symbol, country='USA', account=broker,
+        foreignshares.append(ForeignShares(symbol=e.symbol, isin=fundamentals[e.symbol].isin,
+                                           country=fundamentals[e.symbol].country, account=broker,
                                            shares=e.qty, wealth=e.amount.nok_value,
                                            dividend=dividend[0].amount.nok_value,
                                            taxable_gain=total_gain_nok,
@@ -139,7 +141,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
                                                  gross_share_dividend=e.amount.nok_value,
                                                  tax_on_gross_share_dividend=e.tax.nok_value))
 
-    summary = TaxSummary(foreignshares=foreignshares, credit_deduction=credit_deductions)
+    summary = TaxSummary(year=year,foreignshares=foreignshares, credit_deduction=credit_deductions)
     return TaxReport(**report), p.holdings(year, broker), summary
 
 
