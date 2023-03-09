@@ -16,9 +16,27 @@ import logging
 from decimal import Decimal
 import numpy as np
 import urllib3
+from enum import Enum
+# from pydantic import BaseModel
+
+# class DividendRecord(BaseModel):
+#     '''Dividend record'''
+#     date: date
+#     recordDate: date
+#     paymentDate: date
+#     value: Decimal
+#     currency: str
+class FMVTypeEnum:
+    '''Enum for FMV types'''
+    STOCK = 'STOCK'
+    CURRENCY = 'CURRENCY'
+    DIVIDENDS = 'DIVIDENDS'
+    FUNDAMENTALS = 'FUNDAMENTALS'
 
 # Store downloaded files in cache directory under current directory
 CACHE_DIR = 'cache'
+
+EODHDKEY='6409ce1fb285f1.01896144'
 
 
 class FMVException(Exception):
@@ -33,9 +51,19 @@ class FMV():
         if cls._instance is None:
             cls._instance = super(FMV, cls).__new__(cls)
             # Put any initialization here.
-            cls.symbols = {}
             if not os.path.exists(CACHE_DIR):
                 os.makedirs(CACHE_DIR)
+
+            cls.fetchers = {FMVTypeEnum.STOCK: cls.fetch_stock,
+                            FMVTypeEnum.CURRENCY: cls.fetch_currency,
+                            FMVTypeEnum.DIVIDENDS: cls.fetch_dividends,
+                            FMVTypeEnum.FUNDAMENTALS: cls.fetch_fundamentals,
+                            }
+            cls.table = {FMVTypeEnum.STOCK: {},
+                            FMVTypeEnum.CURRENCY: {},
+                            FMVTypeEnum.DIVIDENDS: {},
+                            FMVTypeEnum.FUNDAMENTALS: {},
+                            }
         return cls._instance
 
     def fetch_stock(self, symbol):
@@ -73,53 +101,75 @@ class FMV():
             cur[d] = c
         return cur
 
-    def get_filename(self, symbol):
+    def fetch_dividends(self, symbol):
+        '''Returns a dividends object keyed on payment date'''
+        http = urllib3.PoolManager()
+        url = f'https://eodhistoricaldata.com/api/div/{symbol}.US?fmt=json&from=2000-01-01&api_token={EODHDKEY}'
+        r = http.request('GET', url)
+        if r.status != 200:
+            raise FMVException(
+                f'Fetching dividends data for {symbol} failed {r.status}')
+        raw = json.loads(r.data.decode('utf-8'))
+        r = {}
+        for element in raw:
+            r[element['paymentDate']] = element
+        return r
+
+    def fetch_fundamentals(self, symbol):
+        http = urllib3.PoolManager()
+        url = f'https://eodhistoricaldata.com/api/fundamentals/{symbol}.US?api_token={EODHDKEY}&filter=General'
+        r = http.request('GET', url)
+        if r.status != 200:
+            raise FMVException(
+                f'Fetching dividends data for {symbol} failed {r.status}')
+        raw = json.loads(r.data.decode('utf-8'))
+        print('RAW RAW RAW', raw)
+        return raw
+
+    def get_filename(self, fmvtype: FMVTypeEnum, symbol):
         '''Get filename for symbol'''
-        return f'{CACHE_DIR}/{symbol}.json'
+        return f'{CACHE_DIR}/{fmvtype}_{symbol}.json'
 
-    def load(self, symbol):
+    def load(self, fmvtype: FMVTypeEnum, symbol):
         '''Load data for symbol'''
-        filename = self.get_filename(symbol)
+        filename = self.get_filename(fmvtype, symbol)
         with open(filename, 'r', encoding='utf-8') as f:
-            self.symbols[symbol] = json.load(f)
+            self.table[fmvtype][symbol] = json.load(f)
 
-    def need_refresh(self, symbol, d: datetime.date):
+    def need_refresh(self, fmvtype: FMVTypeEnum, symbol, d: datetime.date):
         '''Check if we need to refresh data for symbol'''
-        if symbol not in self.symbols:
+        if symbol not in self.table[fmvtype]:
             return True
-        fetched = self.symbols[symbol]['fetched']
+        fetched = self.table[fmvtype][symbol]['fetched']
         fetched = datetime.strptime(fetched, '%Y-%m-%d').date()
-        if d > fetched:
+        if d and d > fetched:
             return True
         return False
 
-    def refresh(self, symbol, d: datetime.date, currency):
+    def refresh(self, symbol: str, d: datetime.date, fmvtype: FMVTypeEnum):
         '''Refresh data for symbol if needed'''
-        if not self.need_refresh(symbol, d):
+        if not self.need_refresh(fmvtype, symbol, d):
             return
 
-        filename = self.get_filename(symbol)
+        filename = self.get_filename(fmvtype, symbol)
 
         # Try loading from cache
         try:
             with open(filename, 'r', encoding='utf-8') as f:
-                self.symbols[symbol] = json.load(f)
-                if not self.need_refresh(symbol, d):
+                self.table[fmvtype][symbol] = json.load(f)
+                if not self.need_refresh(fmvtype, symbol, d):
                     return
         except IOError:
             pass
 
-        if currency:
-            data = self.fetch_currency(symbol)
-        else:
-            data = self.fetch_stock(symbol)
+        data = self.fetchers[fmvtype](self, symbol)
 
         logging.info('Caching data for %s to %s', symbol, filename)
         data['fetched'] = str(date.today())
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f)
 
-        self.symbols[symbol] = data
+        self.table[fmvtype][symbol] = data
 
     def parse_date(self, itemdate: Union[str, datetime]) -> Tuple[datetime.date, str]:
         '''Parse date/timestamp'''
@@ -131,12 +181,12 @@ class FMV():
         return itemdate, date_str
 
     def __getitem__(self, item):
-        symbol, itemdate = item
+        fmvtype, symbol, itemdate = item
         itemdate, date_str = self.parse_date(itemdate)
-        self.refresh(symbol, itemdate, False)
+        self.refresh(symbol, itemdate, fmvtype)
         for _ in range(5):
             try:
-                return Decimal(str(self.symbols[symbol][date_str]))
+                return Decimal(str(self.table[fmvtype][symbol][date_str]))
             except KeyError:
                 # Might be a holiday, iterate backwards
                 itemdate -= timedelta(days=1)
@@ -146,22 +196,47 @@ class FMV():
     def get_currency(self, currency: str, date_union: Union[str, datetime]) -> float:
         '''Get currency value. If not found, iterate backwards until found.'''
         itemdate, date_str = self.parse_date(date_union)
-        self.refresh(currency, itemdate, True)
+        self.refresh(currency, itemdate, FMVTypeEnum.CURRENCY)
+
         for _ in range(6):
             try:
-                return Decimal(str(self.symbols[currency][date_str]))
+                return Decimal(str(self.table[FMVTypeEnum.CURRENCY][currency][date_str]))
             except KeyError:
                 # Might be a holiday, iterate backwards
                 itemdate -= timedelta(days=1)
                 date_str = str(itemdate)
         raise FMVException(f'No currency data for {currency} on {date_str}')
 
+    def get_dividend(self, dividend: str, payment_date: Union[str, datetime]) -> dict:
+        '''Lookup a dividends record given the paydate.'''
+        itemdate, date_str = self.parse_date(payment_date)
+        self.refresh(dividend, itemdate, FMVTypeEnum.DIVIDENDS)
+
+        try:
+            return self.table[FMVTypeEnum.DIVIDENDS][dividend][date_str]
+        except KeyError as e:
+            raise FMVException(f'No dividends data for {dividend} on {date_str}') from e
+
+    def get_fundamentals(self, symbol: str) -> dict:
+        '''Lookup a symbol and return fundamentals'''
+        self.refresh(symbol, None, FMVTypeEnum.FUNDAMENTALS)
+
+        try:
+            return self.table[FMVTypeEnum.FUNDAMENTALS][symbol]
+        except KeyError as e:
+            raise FMVException(f'No fundamentals data for {symbol}') from e
 
 if __name__ == '__main__':
 
     fmv = FMV()
-    print('LOOKING UP DATA', fmv['CSCO', '2021-12-31'])
+    print('LOOKING UP DATA', fmv[FMVTypeEnum.STOCK, 'CSCO', '2021-12-31'])
     # print('LOOKING UP DATA', f['CSCO', '2022-12-31'])
-    print('LOOKING UP DATA', fmv['SLT', '2021-12-31'])
+    print('LOOKING UP DATA', fmv[FMVTypeEnum.STOCK, 'SLT', '2021-12-31'])
     # f.fetch_currency('USD')
     print('LOOKING UP DATA USD2NOK', fmv.get_currency('USD', '2021-12-31'))
+
+    print('LOOKING UP DIVIDENDS', fmv.get_dividend('CSCO', '2023-01-25'))
+
+    print('CISCO FUNDAMETNALS', fmv.get_fundamentals('CSCO'))
+    d = fmv.get_fundamentals('CSCO')
+    print('CISCO FUNDAMETNALS', d['ISIN'])
