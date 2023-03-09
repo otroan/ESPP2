@@ -45,6 +45,9 @@ EODHDKEY='6409ce1fb285f1.01896144'
 class FMVException(Exception):
     '''Exception class for FMV module'''
 
+def todate(datestr: str) -> date:
+    '''Convert string to datetime'''
+    return datetime.strptime(datestr, '%Y-%m-%d').date()
 
 class FMV():
     '''Class implementing the Fair Market Value module. Singleton'''
@@ -210,15 +213,19 @@ class FMV():
                 date_str = str(itemdate)
         raise FMVException(f'No currency data for {currency} on {date_str}')
 
-    def get_dividend(self, dividend: str, payment_date: Union[str, datetime]) -> dict:
+    def get_dividend(self, dividend: str, payment_date: Union[str, datetime]) -> Tuple[date, Decimal]:
         '''Lookup a dividends record given the paydate.'''
         itemdate, date_str = self.parse_date(payment_date)
         self.refresh(dividend, itemdate, FMVTypeEnum.DIVIDENDS)
-
-        try:
-            return self.table[FMVTypeEnum.DIVIDENDS][dividend][date_str]
-        except KeyError as e:
-            raise FMVException(f'No dividends data for {dividend} on {date_str}') from e
+        for _ in range(5):
+            try:
+                divinfo = self.table[FMVTypeEnum.DIVIDENDS][dividend][date_str]
+                return todate(divinfo['recordDate']), Decimal(str(divinfo['value']))
+            except KeyError:
+                # Might be a holiday, iterate backwards
+                itemdate -= timedelta(days=1)
+                date_str = str(itemdate)
+        raise FMVException(f'No dividends data for {dividend} on {date_str}')
 
     def get_fundamentals(self, symbol: str) -> dict:
         '''Lookup a symbol and return fundamentals'''

@@ -131,7 +131,7 @@ def do_transfer(record):
     price = record['price']
 
 def do_dividend(record):
-    date = record['date']
+    date = record['payDate']
     amount = Decimal(f"{record['amount']}")
     netto = record['netto']
     payDate = record['payDate']

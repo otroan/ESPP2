@@ -92,7 +92,8 @@ class Positions():
                     logger.debug(
                         'Adding tax deduction for ESPP from last year %s', p)
 
-    def __init__(self, year, taxdata, prev_holdings: Holdings, transactions, cash, validate_year='exact', ledger=None):
+    def __init__(self, year, taxdata, prev_holdings: Holdings, transactions,
+                 cash, validate_year='exact', ledger=None):
         # if validate_year == 'exact':
         #     transactions = [t for t in transactions if t.date.year == year]
         # elif validate_year == 'filter':
@@ -101,8 +102,13 @@ class Positions():
         # wrong_year = [t for t in transactions if t.date.year != year]
         # assert(len(wrong_year) == 0)
 
+        if not isinstance(cash, Cash):
+            raise ValueError('Cash must be instance of Cash')
         self.tax_deduction_rate = {year: Decimal(
             str(i[0])) for year, i in taxdata['tax_deduction_rates'].items()}
+        for t in transactions:
+            print('Transaction', t)
+
         self.new_holdings = [
             t for t in transactions if t.type in ('BUY', 'DEPOSIT')]
         self._fixup_tax_deductions()
@@ -159,6 +165,8 @@ class Positions():
         If changes are required use the update() function.
         '''
         # Copy positions
+        if symbol not in self.positions_by_symbols:
+            return []
         posview = deepcopy(self.positions_by_symbols[symbol])
         posidx = 0
         if symbol in self.sale_by_symbols:
@@ -237,14 +245,19 @@ class Positions():
             except KeyError:
                 tax_usd = tax_nok = 0
             for d in dividends:
-                total_shares = self.total_shares(self[:d.date, symbol])
-                ledger_shares = self.ledger.total_shares(symbol, d.date)
-                assert isclose(total_shares, ledger_shares, abs_tol=10**-2 ), f"Total shares don't match {total_shares} != {ledger_shares}"
+                total_shares = self.total_shares(self[:d.recorddate, symbol])
+                if self.ledger:
+                    ledger_shares = self.ledger.total_shares(symbol, d.date)
+                    assert isclose(total_shares, ledger_shares, abs_tol=10**-
+                                   2), f"Total shares don't match {total_shares} != {ledger_shares}"
                 if total_shares == 0:
                     raise InvalidPositionException(
                         f'Dividends: Total shares at dividend date is zero: {d}')
                 dps = d.amount.value / total_shares
-                for entry in self[:d.date, symbol]:  # Creates a view
+                logger.info(
+                    'Total shares of %s at dividend date: %s dps: %s reported: %s', symbol, total_shares, dps, d.dividend_dps)
+                assert dps == d.dividend_dps, "Dividend per share calculated does not match reported"
+                for entry in self[:d.recorddate, symbol]:  # Creates a view
                     entry.dps = dps if 'dps' not in entry else entry.dps + dps
                     tax_deduction = self.tax_deduction[entry.idx]
                     if tax_deduction > entry.dps:

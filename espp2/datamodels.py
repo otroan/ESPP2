@@ -1,13 +1,17 @@
-from pydantic import BaseModel, ValidationError, validator, Field, Extra
+from pydantic import BaseModel, ValidationError, validator, Field, Extra, root_validator
 from datetime import date
 from typing import List, Literal, Annotated, Union, Optional, Any, Dict
 from enum import Enum
 from decimal import Decimal
+from espp2.fmv import FMV
 
 #
 # Transactions data model
 #
 #########################################################################
+
+# Singleton caching stock and currency data
+fmv = FMV()
 
 class EntryTypeEnum(str, Enum):
     '''Entry type'''
@@ -53,6 +57,23 @@ class Amount(BaseModel):
         result.value = result.value + other.value
         result.nok_value = result.nok_value + other.nok_value
         return result
+
+class PositiveAmount(Amount):
+    '''Positive amount'''
+    @validator('value', 'nok_value')
+    def value_validator(cls, v):
+        '''Validate value'''
+        if v < 0:
+            raise ValueError('Negative value', v)
+        return v
+class NegativeAmount(Amount):
+    '''Negative amount'''
+    @validator('value', 'nok_value')
+    def value_validator(cls, v):
+        '''Validate value'''
+        if v > 0:
+            raise ValueError('Must be negative value', v)
+        return v
 
 duplicates = {}
 def get_id(values: Dict[str, Any]):
@@ -121,7 +142,7 @@ class Tax(TransactionEntry):
     date: date
     symbol: str
     description: str
-    amount: Amount
+    amount: NegativeAmount
     source: str
     id: str = Optional[str]
 
@@ -140,9 +161,19 @@ class Dividend(TransactionEntry):
     type: Literal[EntryTypeEnum.DIVIDEND]
     date: date
     symbol: str
-    amount: Amount
+    amount: PositiveAmount
     source: str
     id: str = Optional[str]
+
+    @root_validator(pre=True)
+    def check_dividend_data(cls, values):
+        '''Lookup dividend data from the external API and put those records in the data model'''
+        values['recorddate'], values['dividend_dps'] = fmv.get_dividend(values['symbol'], values['date'])
+        return values
+
+    class Config:
+        extra = Extra.allow
+
 
 class Dividend_Reinv(TransactionEntry):
     '''Dividend reinvestment transaction'''
