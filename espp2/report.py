@@ -3,7 +3,7 @@
 from decimal import Decimal
 from rich.console import Console
 from rich.table import Table
-from espp2.datamodels import TaxReport, Holdings, EOYDividend
+from espp2.datamodels import TaxReport, TaxSummary, Holdings, EOYDividend
 from espp2.positions import Ledger
 
 def print_report_tax_summary(year: int, report: TaxReport, holdings: Holdings, console:Console):
@@ -39,7 +39,7 @@ def print_report_tax_summary(year: int, report: TaxReport, holdings: Holdings, c
         except KeyError:
             sales = []
         total_gain_nok = 0
-        for s in sales:
+        for s in sales: 
             total_gain_nok += s.totals['gain'].nok_value
             tax_deduction_used += s.totals['tax_ded_used']
         table.add_row(e.symbol, "", "", str(e.qty), str(e.amount.nok_value), str(
@@ -177,7 +177,41 @@ def print_ledger(ledger: dict, console: Console):
             table.add_row(str(e[0]), symbols, str(e[1]), str(e[2]))
         console.print(table)
 
-def print_report(year: int, report: TaxReport, holdings: Holdings):
+def print_report_tax_summary2(summary: TaxSummary, console:Console):
+    console.print(f'Tax Summary for {summary.year}:', style="bold magenta")
+    table = Table(title="Finance -> Shares -> Foreign shares:", title_justify="left")
+    table.add_column("Symbol", justify="right", style="cyan", no_wrap=True)
+    table.add_column("ISIN", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Country", justify="right", style="black", no_wrap=True)
+    table.add_column("Account Manager/bank", style="magenta")
+    table.add_column("Number of shares as of 31. December", style="magenta")
+    table.add_column("Wealth", style="magenta")
+    table.add_column("Taxable dividend", style="magenta")
+    table.add_column("Taxable gain", style="magenta")
+    table.add_column("Risk-free return utilised", style="magenta")
+
+    # All shares that have been held at some point throughout the year
+    for e in summary.foreignshares:
+        table.add_row(e.symbol, e.isin, e.country, e.account, str(e.shares), str(e.wealth), str(
+            e.dividend), str(e.taxable_gain), str(e.tax_deduction_used))
+    console.print(table)
+
+    table = Table(title="Method in the event of double taxation -> Credit deduction / tax paid abroad:", title_justify="left")
+    table.add_column("Symbol", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Country", justify="right", style="black", no_wrap=True)
+    table.add_column("Income tax", style="magenta")
+    table.add_column("Gross share dividend", style="magenta")
+    table.add_column("Of which tax on gross share dividend", style="magenta")
+
+    # Tax paid in the US on dividends
+    for e in summary.credit_deduction:
+        table.add_row(e.symbol, e.country, str(e.income_tax),
+                      str(e.gross_share_dividend), str(e.tax_on_gross_share_dividend))
+    console.print(table)
+
+
+
+def print_report(year: int, summary: TaxSummary, report: TaxReport, holdings: Holdings):
     console = Console()
 
     # Print previous year holdings
@@ -195,4 +229,5 @@ def print_report(year: int, report: TaxReport, holdings: Holdings):
     print_report_cash(report.unmatched_wires, report.cash, console)
 
 
-    print_report_tax_summary(year, report, holdings, console)
+    # print_report_tax_summary(year, report, holdings, console)
+    print_report_tax_summary2(summary, console)

@@ -187,7 +187,8 @@ class FMV():
         return itemdate, date_str
 
     def __getitem__(self, item):
-        fmvtype, symbol, itemdate = item
+        symbol, itemdate = item
+        fmvtype = FMVTypeEnum.STOCK
         itemdate, date_str = self.parse_date(itemdate)
         self.refresh(symbol, itemdate, fmvtype)
         for _ in range(5):

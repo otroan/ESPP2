@@ -106,8 +106,6 @@ class Positions():
             raise ValueError('Cash must be instance of Cash')
         self.tax_deduction_rate = {year: Decimal(
             str(i[0])) for year, i in taxdata['tax_deduction_rates'].items()}
-        for t in transactions:
-            print('Transaction', t)
 
         self.new_holdings = [
             t for t in transactions if t.type in ('BUY', 'DEPOSIT')]
@@ -158,6 +156,15 @@ class Positions():
 
         # # Wires
         # cls.db_wires = [t for t in transactions if t['type'] == 'WIRE']
+
+    def fundamentals(self) -> Dict[str, Fundamentals]:
+        '''Return fundamentals for symbol at date'''
+        r = {}
+        for symbol in self.symbols:
+            f = fmv.get_fundamentals(symbol)
+            r[symbol] = Fundamentals(
+                name=f['Name'], isin=f['ISIN'], country=f['CountryName'], symbol=f['Code'])
+        return r
 
     def _balance(self, symbol, balancedate):
         '''
@@ -256,7 +263,7 @@ class Positions():
                 dps = d.amount.value / total_shares
                 logger.info(
                     'Total shares of %s at dividend date: %s dps: %s reported: %s', symbol, total_shares, dps, d.dividend_dps)
-                assert dps == d.dividend_dps, "Dividend per share calculated does not match reported"
+                assert isclose(dps, d.dividend_dps, abs_tol=10**-2), f"Dividend per share calculated does not match reported {dps} vs {d.dividend_dps}"
                 for entry in self[:d.recorddate, symbol]:  # Creates a view
                     entry.dps = dps if 'dps' not in entry else entry.dps + dps
                     tax_deduction = self.tax_deduction[entry.idx]

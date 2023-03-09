@@ -299,6 +299,7 @@ class TaxReport(BaseModel):
 class ForeignShares(BaseModel):
     '''Foreign shares'''
     symbol: str
+    isin: str
     country: str
     account: str
     shares: Decimal
@@ -317,6 +318,7 @@ class CreditDeduction(BaseModel):
 
 class TaxSummary(BaseModel):
     '''Tax summary'''
+    year: int
     foreignshares: list[ForeignShares]
     credit_deduction: list[CreditDeduction]
 
@@ -334,3 +336,10 @@ class ESPPResponse(BaseModel):
     holdings: Holdings
     tax_report: TaxReport
     summary: TaxSummary
+
+class Fundamentals(BaseModel):
+    '''Fundamentals'''
+    name: str
+    isin: str
+    country: str
+    symbol: str
