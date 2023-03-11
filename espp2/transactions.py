@@ -30,9 +30,6 @@ def get_arguments():
     ESPP 2 Transactions Normalizer.
     '''
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('--format', type=str, help='Which broker format',
-                        choices=['schwab', 'td', 'morgan', 'pickle'],
-                        required=True)
     parser.add_argument('--transaction-file',
                         type=argparse.FileType('rb'), required=True)
     parser.add_argument(
@@ -102,3 +99,15 @@ def normalize(data: Union[UploadFile, typer.FileText]) -> Transactions:
     plugin = importlib.import_module(plugin_path, package='espp2')
     logger.info('Importing transactions with importer %s: %s', trans_format, filename)
     return plugin.read(fd, filename, logger)
+
+def main():
+    '''Main function'''
+    args, logger = get_arguments()
+    logger.debug('Arguments: %s', args)
+    trans_obj = normalize(args.transaction_file)
+    logger.info('Converting to JSON')
+    j = trans_obj.json(indent=4)
+
+    logger.info('Writing transaction file to: %s', args.output_file.name)
+    with args.output_file as f:
+        f.write(j)
