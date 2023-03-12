@@ -7,7 +7,7 @@ import logging
 from decimal import Decimal
 from importlib.resources import files
 import simplejson as json
-from espp2.positions import Positions, Cash, InvalidPositionException, Holdings, Ledger
+from espp2.positions import Positions, Cash, InvalidPositionException, Ledger
 from espp2.transactions import normalize
 from espp2.datamodels import TaxReport, Transactions, Wires, Holdings, ForeignShares, TaxSummary, CreditDeduction
 from typing import Tuple
@@ -31,16 +31,10 @@ with open(taxdata_file, 'r', encoding='utf-8') as jf:
 def deduplicate(transactions):
     '''Remove duplicate transactions'''
     # Remove duplicate transactions
-    print(f'Before deduplication: {len(transactions)}')
+    prededup = len(transactions)
     seen = set()
-    # for t in transactions:
-    #     if t.id in seen:
-    #         print(f'Duplicate transaction: {t.id}')
-    #     else:
-    #         seen.add(t.id)
-    #         print('New transaction: ', t.id)
     transactions = [t for t in transactions if t.id not in seen and not seen.add(t.id)]
-    print(f'After deduplication: {len(transactions)}')
+    logger.debug('Transaction deduplication %s %s (before/after)', prededup, len(transactions))
     return transactions
 
 def validate_holdings(broker, year, prev_holdings, transactions):
@@ -108,8 +102,10 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     nomatch = c.wire()
 
     report['unmatched_wires'] = nomatch
-    report['cash'] = c.process()
-    report['cash_ledger'] = c.cash
+    # report['cash'] = {}
+    report['cash_ledger'] = c.ledger()
+    cashsummary = c.process()
+
 
     foreignshares = []
 
@@ -141,7 +137,12 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
                                                  gross_share_dividend=e.amount.nok_value,
                                                  tax_on_gross_share_dividend=e.tax.nok_value))
 
-    summary = TaxSummary(year=year,foreignshares=foreignshares, credit_deduction=credit_deductions)
+    # Tax summary:
+    # - Cash held in the US account
+    # - Losses on cash transfer / wire
+
+    summary = TaxSummary(year=year, foreignshares=foreignshares, credit_deduction=credit_deductions,
+                         cashsummary=cashsummary)
     return TaxReport(**report), p.holdings(year, broker), summary
 
 
@@ -162,6 +163,10 @@ def do_taxes(broker, transaction_files: list, holdfile,
     for t in trans[1:]:
         transactions.transactions += t.transactions
     transactions.transactions= sorted(transactions.transactions, key=lambda d: d.date)
+
+    from rich.console import Console
+    console = Console()
+    console.print(transactions)
 
     if wirefile and not isinstance(wirefile, Wires):
         wires = json_load(wirefile)

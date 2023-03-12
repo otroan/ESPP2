@@ -291,10 +291,20 @@ class TaxReport(BaseModel):
     dividends: list[EOYDividend]
     buys: list
     sales: Dict[str, list[EOYSales]]
-    cash: dict
+    # cash: dict
     cash_ledger: list
     unmatched_wires: list[WireAmount]
     prev_holdings: Holdings
+
+class CashEntry(BaseModel):
+    '''Cash entry'''
+    date: date
+    description: str
+    amount: Amount
+    transfer: Optional[bool] = False
+class CashModel(BaseModel):
+    '''Cash model'''
+    cash: List[CashEntry] = []
 
 class ForeignShares(BaseModel):
     '''Foreign shares'''
@@ -316,20 +326,26 @@ class CreditDeduction(BaseModel):
     gross_share_dividend: Decimal
     tax_on_gross_share_dividend: Decimal
 
+class TransferRecord(BaseModel):
+    '''Transfers'''
+    date: date
+    amount_sent: Amount
+    amount_received: Amount
+    gain: Decimal
+    description: str
+class CashSummary(BaseModel):
+    '''Cash account'''
+    transfers: list[TransferRecord]
+    remaining_cash: Amount
+    gain: Decimal
+
 class TaxSummary(BaseModel):
     '''Tax summary'''
     year: int
     foreignshares: list[ForeignShares]
     credit_deduction: list[CreditDeduction]
+    cashsummary: CashSummary
 
-class CashEntry(BaseModel):
-    '''Cash entry'''
-    date: date
-    amount: Amount
-    transfer: Optional[bool] = False
-class CashModel(BaseModel):
-    '''Cash model'''
-    cash: List[CashEntry] = []
 
 class ESPPResponse(BaseModel):
     '''ESPP response'''
