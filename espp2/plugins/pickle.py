@@ -130,6 +130,17 @@ def do_transfer(record):
     n = Decimal(record['n'])
     price = record['price']
 
+    newrec = dict()
+
+    add_date(newrec, 'date', date)
+    add_string(newrec, 'type', 'TRANSFER')
+    add_value(newrec, 'qty', -n)
+    add_string(newrec, 'symbol', 'CSCO')
+    # add_amount(newrec, 'amount', date, 'USD', price)
+    # add_amount(newrec, 'fee', date, 'USD', fee)
+
+    records.append(newrec)
+
 def do_dividend(record):
     date = record['payDate']
     amount = Decimal(f"{record['amount']}")

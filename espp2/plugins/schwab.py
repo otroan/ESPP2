@@ -162,6 +162,7 @@ def subdata(action, description, date, value):
             newv['purchase_price'] = newv.pop('purchase_fmv')
             newv['purchase_price']['currency'] = 'ESPPUSD'
             exchange_rate = get_espp_exchange_rate(newv['purchase_date'])
+            newv['date'] = newv['purchase_date']
             newv['purchase_price']['nok_exchange_rate'] = exchange_rate
             newv['purchase_price']['nok_value'] = exchange_rate * newv['purchase_price']['value']
         newv['broker'] = 'schwab'
