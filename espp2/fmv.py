@@ -124,7 +124,7 @@ class FMV():
     def fetch_fundamentals(self, symbol):
         '''Returns a fundamentals object for symbol'''
         http = urllib3.PoolManager()
-        url = f'https://eodhistoricaldata.com/api/fundamentals/{symbol}.US?api_token={EODHDKEY}&filter=General'
+        url = f'https://eodhistoricaldata.com/api/fundamentals/{symbol}.US?api_token={EODHDKEY}'
         r = http.request('GET', url)
         if r.status != 200:
             raise FMVException(

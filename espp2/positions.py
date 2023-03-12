@@ -17,6 +17,7 @@ getcontext().prec = 6
 
 logger = logging.getLogger(__name__)
 
+f = FMV()
 
 class InvalidPositionException(Exception):
     '''Invalid position'''
@@ -151,6 +152,7 @@ class Positions():
         # Tax
         self.db_tax = [t for t in transactions if t.type == 'TAX']
         self.db_taxsub = [t for t in transactions if t.type == 'TAXSUB']
+
         self.tax_by_symbols = position_groupby(self.db_tax)
         # cls.tax_deduction_rate = taxdata['tax_deduction_rates']
 
@@ -162,8 +164,13 @@ class Positions():
         r = {}
         for symbol in self.symbols:
             f = fmv.get_fundamentals(symbol)
+            isin = f.get('General', {}).get('ISIN', None)
+            if not isin:
+                isin = f.get('ETF_Data', {}).get('ISIN', '')
+
             r[symbol] = Fundamentals(
-                name=f['Name'], isin=f['ISIN'], country=f['CountryName'], symbol=f['Code'])
+                name=f['General']['Name'], isin=isin,
+                country=f['General']['CountryName'], symbol=f['General']['Code'])
         return r
 
     def _balance(self, symbol, balancedate):
@@ -232,13 +239,13 @@ class Positions():
 
         # Deal with dividends and cash account
         for d in self.db_dividends:
-            self.cash.debit(d.date, d.amount)
+            self.cash.debit(d.date, d.amount, 'dividend')
         for t in self.db_tax:
-            self.cash.credit(t.date, t.amount)
+            self.cash.credit(t.date, t.amount, 'tax')
         for t in self.db_taxsub:
-            self.cash.debit(t.date, t.amount)
+            self.cash.debit(t.date, t.amount, 'tax paid back')
         for i in self.db_dividend_reinv:
-            self.cash.credit(i.date, i.amount)
+            self.cash.credit(i.date, i.amount, 'dividend reinvested')
 
         r=[]
         for symbol, dividends in self.dividend_by_symbols.items():
@@ -330,7 +337,7 @@ class Positions():
             s_record = EOYSales(date=s.date, symbol=symbol, qty=s.qty,
                         fee=s.fee, amount=s.amount, from_positions=[])
             qty_to_sell = abs(s.qty)
-            self.cash.debit(s.date, s.amount.copy())
+            self.cash.debit(s.date, s.amount.copy(), 'sale')
             while qty_to_sell > 0:
                 if positions[posidx].qty == 0:
                     posidx += 1
@@ -387,12 +394,12 @@ class Positions():
             for item in self.new_holdings_by_symbols[symbol]:
                 if item.type == 'BUY':
                     if 'amount' in item:
-                        self.cash.credit(item['date'], item['amount'])
+                        self.cash.credit(item['date'], item['amount'], 'buy')
                     else:
                         amount = Amount(value=item.purchase_price.value * item.qty, currency=item.purchase_price.currency,
                                         nok_exchange_rate=item.purchase_price.nok_exchange_rate,
                                         nok_value=item.purchase_price.nok_value * item.qty)
-                        self.cash.credit(item.date, amount)
+                        self.cash.credit(item.date, amount, 'buy')
                 bought += item.qty
                 price_sum += item.purchase_price.value
                 price_sum_nok += item.purchase_price.nok_value
@@ -406,7 +413,6 @@ class Positions():
         '''End of year summary of holdings'''
         end_of_year = f'{year}-12-31'
 
-        f = FMV()
         eoy_exchange_rate = f.get_currency('USD', end_of_year)
         r = []
         for symbol in self.symbols:
@@ -450,6 +456,7 @@ class Cash():
         transactions = [t for t in transactions if t.date.year == year]
 
         # Put any initialization here.
+        self.year = year
         self.db_wires = [t for t in transactions if t.type == 'WIRE']
         self.db_received = wires
         self.cash = CashModel().cash
@@ -458,17 +465,18 @@ class Cash():
         '''Sort cash entries by date'''
         self.cash = sorted(self.cash, key=lambda d: d.date)
 
-    def debit(self, debitdate, amount,):
+    def debit(self, debitdate, amount, description=''):
         '''Debit cash balance'''
         logger.debug('Cash debit: %s: %s', debitdate, amount.value)
-        self.cash.append(CashEntry(date=debitdate, amount=amount))
+
+        self.cash.append(CashEntry(date=debitdate, amount=amount, description=description))
         self.sort()
 
-    def credit(self, creditdate, amount, transfer=False):
+    def credit(self, creditdate, amount, description='', transfer=False):
         ''' TODO: Return usdnok rate for the item credited '''
         logger.debug('Cash credit: %s: %s', creditdate, amount.value)
         self.cash.append(
-            CashEntry(date=creditdate, amount=amount, transfer=transfer))
+            CashEntry(date=creditdate, amount=amount, description=description, transfer=transfer))
         self.sort()
 
     def _wire_match(self, wire):
@@ -484,6 +492,14 @@ class Cash():
             raise ValueError(f'No received wires processing failed {wire}') from e
         return None
 
+    def ledger(self):
+        total = 0
+        ledger = []
+        for c in self.cash:
+            total += c.amount.value
+            ledger.append((c, total))
+        return ledger
+
     def wire(self):
         '''Process wires from sent and received (manual) records'''
         unmatched = []
@@ -494,22 +510,12 @@ class Cash():
                 nok_exchange_rate = match.nok_value/match.value
                 amount = Amount(currency=match.currency, value=-match.value,
                                 nok_value=-match.nok_value, nok_exchange_rate=nok_exchange_rate)
-                self.credit(match.date, amount, transfer=True)
+                self.credit(match.date, amount, 'wire', transfer=True)
             else:
-                # WWW <class 'espp2.datamodels.Wire'> type=<EntryTypeEnum.WIRE: 'WIRE'> 
-                # date=datetime.date(2022, 11, 25) amount=Amount(currency='USD',
-                #  nok_exchange_rate=Decimal('9.9263'), nok_value=Decimal('-243548'),
-                #  value=Decimal('-24535.66')) description='Cash Disbursement'
-                #  fee=Amount(currency='USD', nok_exchange_rate=Decimal('9.9263'),
-                #  nok_value=Decimal('-148.894'), value=Decimal('-15.00')) 
-                # id='WIRE2022-11-25$-24535.66Cash Disbursement$-15.00'
                 unmatched.append(WireAmount(date=w.date, currency=w.amount.currency, nok_value=w.amount.nok_value, value=w.amount.value))
-                print('WWW', type(w), w)
-                print('---')
-                self.credit(w.date, w.amount, transfer=True)
-
-            if 'fee' in w:
-                self.credit(w['date'], w['fee'])
+                self.credit(w.date, w.amount, 'wire', transfer=True)
+            if w.fee:
+                self.credit(w.date, w.fee, 'wire fee')
 
         if unmatched:
             logger.warning(
@@ -518,15 +524,16 @@ class Cash():
 
     def process(self):
         '''Process cash account'''
-        total = 0
+
+        ''' TODO: Deal with fees on wires somehow...'''
         posidx = 0
-        total_received_price_nok = 0
-        total_paid_price_nok = 0
         debit = [e for e in self.cash if e.amount.value > 0]
         credit = [e for e in self.cash if e.amount.value < 0]
-
+        transfers = []
         for e in credit:
-            total += e.amount.value
+            total_received_price_nok = 0
+            total_paid_price_nok = 0
+            total = e.amount.value
             amount_to_sell = abs(e.amount.value)
             is_transfer = e.transfer
             if is_transfer:
@@ -555,9 +562,24 @@ class Cash():
                     amount_to_sell = 0
                 if posidx == len(debit):
                     break
-        remaining_cash = [c for c in debit if c.amount.value > 0]
-        # TODO: Use data model
-        cash_report = {'total_purchased_nok': total_paid_price_nok,
-                       'total_received_nok': total_received_price_nok, 'remaining_cash': remaining_cash,
-                       'gain': total_received_price_nok - total_paid_price_nok}
-        return cash_report
+            # Only care about tranfers
+            if is_transfer:
+                transfers.append(TransferRecord(date=e.date,
+                                                amount_sent=Amount(
+                                                    currency='NOK', value=total_paid_price_nok,
+                                                    nok_value=total_paid_price_nok, nok_exchange_rate=1),
+                                                amount_received=Amount(currency='NOK', value=total_received_price_nok,
+                                                                       nok_value=total_received_price_nok,
+                                                                       nok_exchange_rate=1),
+                                                description=e.description,
+                                 gain=total_received_price_nok - total_paid_price_nok))
+        remaining_usd = sum([c.amount.value for c in debit if c.amount.value > 0])
+        eoy = datetime(self.year, 12, 31)
+        exchange_rate = f.get_currency('USD', eoy)
+        remaining_nok = remaining_usd * exchange_rate
+        remaining_cash = Amount(value=remaining_usd, currency='USD',
+                                nok_value=remaining_nok, nok_exchange_rate=exchange_rate)
+        total_gain = sum([t.gain for t in transfers])
+        total_paid_price_nok = sum([t.amount_sent.nok_value for t in transfers])
+        total_received_price_nok = sum([t.amount_received.nok_value for t in transfers])
+        return CashSummary(transfers=transfers, remaining_cash=remaining_cash, gain=total_gain,)

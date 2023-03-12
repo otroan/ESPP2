@@ -29,7 +29,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
          wires: typer.FileText = None,
          inholdings: typer.FileText = None,
          outholdings: typer.FileTextWrite = None,
-         print: bool = False,
+         verbose: bool = False,
          loglevel: str = typer.Option("WARNING", help='Logging level')):
 
     '''ESPPv2 tax reporting tool'''
@@ -42,8 +42,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
     holdings: Holdings
     report, holdings, summary = do_taxes(broker, transaction_files, inholdings, wires, year)
 
-    if print:
-        print_report(year, summary, report, holdings)
+    print_report(year, summary, report, holdings, verbose)
 
     # New holdings
     if outholdings:
