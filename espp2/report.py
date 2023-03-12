@@ -25,16 +25,16 @@ def print_cash_ledger(ledger: list, console: Console):
     table = Table(title="Cash Ledger:")
     table.add_column("Date", justify="right", style="cyan", no_wrap=True)
     table.add_column("Amount", justify="right", style="black", no_wrap=True)
-    table.add_column("Amount NOK", style="magenta")
+    table.add_column("Amount NOK", style="magenta", justify="right")
     table.add_column("Description", style="black")
-    table.add_column("Total USD", style="magenta")
+    table.add_column("Total USD", style="magenta", justify="right")
 
     for e in ledger:
         table.add_row(str(e[0].date), str(e[0].amount.value),
                       str(e[0].amount.nok_value), e[0].description, str(e[1]))
     console.print(table)
 
-def print_report_unmatcheD_wires(wires: list, console:Console):
+def print_report_unmatched_wires(wires: list, console:Console):
     '''Unmatched wires'''
     table = Table(title="Unmatched wires:")
     table.add_column("Date", justify="right", style="cyan", no_wrap=True)

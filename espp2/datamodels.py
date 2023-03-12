@@ -23,6 +23,7 @@ class EntryTypeEnum(str, Enum):
     DIVIDEND_REINV = 'DIVIDEND_REINV'
     WIRE = 'WIRE'
     SELL = 'SELL'
+    TRANSFER = 'TRANSFER'
 
     def __str__(self):
         return self.value
@@ -207,8 +208,19 @@ class Sell(TransactionEntry):
     source: str
     id: str = Optional[str]
 
+class Transfer(TransactionEntry):
+    '''Transfer transaction'''
+    type: Literal[EntryTypeEnum.TRANSFER]
+    date: date
+    symbol: str
+    qty: Decimal
+    # amount: Amount
+    # fee: Amount
+    source: str
+    id: str = Optional[str]
+ 
 Entry = Annotated[Union[Buy, Deposit, Tax, Taxsub, Dividend,
-                        Dividend_Reinv, Wire, Sell], Field(discriminator="type")]
+                        Dividend_Reinv, Wire, Sell, Transfer], Field(discriminator="type")]
 
 class Transactions(BaseModel):
     '''Transactions'''
@@ -329,8 +341,8 @@ class CreditDeduction(BaseModel):
 class TransferRecord(BaseModel):
     '''Transfers'''
     date: date
-    amount_sent: Amount
-    amount_received: Amount
+    amount_sent: Decimal
+    amount_received: Decimal
     gain: Decimal
     description: str
 class CashSummary(BaseModel):

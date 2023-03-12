@@ -10,6 +10,7 @@ import simplejson as json
 from espp2.positions import Positions, Cash, InvalidPositionException, Ledger
 from espp2.transactions import normalize
 from espp2.datamodels import TaxReport, Transactions, Wires, Holdings, ForeignShares, TaxSummary, CreditDeduction
+from espp2.report import print_ledger
 from typing import Tuple
 
 logger = logging.getLogger(__name__)
@@ -28,22 +29,22 @@ with open(taxdata_file, 'r', encoding='utf-8') as jf:
     taxdata = json.load(jf)
 
 # TODO: Include cash
-def deduplicate(transactions):
-    '''Remove duplicate transactions'''
-    # Remove duplicate transactions
-    prededup = len(transactions)
-    seen = set()
-    transactions = [t for t in transactions if t.id not in seen and not seen.add(t.id)]
-    logger.debug('Transaction deduplication %s %s (before/after)', prededup, len(transactions))
-    return transactions
+# def deduplicate(transactions):
+#     '''Remove duplicate transactions'''
+#     # Remove duplicate transactions
+#     prededup = len(transactions)
+#     seen = set()
+#     transactions = [t for t in transactions if t.id not in seen and not seen.add(t.id)]
+#     logger.debug('Transaction deduplication %s %s (before/after)', prededup, len(transactions))
+#     return transactions
 
 def validate_holdings(broker, year, prev_holdings, transactions):
     '''Validate holdings and filter transactions'''
     if prev_holdings:
         if broker != prev_holdings.broker:
             raise ESPPErrorException(f'Broker mismatch: {broker} != {prev_holdings.broker}')
-    # Remove duplicate transactions
-    transactions = deduplicate(transactions)
+    # # Remove duplicate transactions
+    # transactions = deduplicate(transactions)
     if prev_holdings and prev_holdings.stocks and prev_holdings.year == year - 1:
         # Filter out transactions from previous year
         transactions = [t for t in transactions if t.date.year == year]
@@ -61,9 +62,12 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
                prev_holdings: Holdings, taxdata) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Generate tax report'''
 
-    # l = Ledger(prev_holdings, transactions)
-    # for e in l.entries:
-    #     print(e)
+
+    # l = Ledger(prev_holdings, transactions.transactions)
+    # from rich.console import Console
+    # console = Console()
+    # print_ledger(l.entries, console)
+
 
     holdings, transactions = validate_holdings(broker, year, prev_holdings, transactions.transactions)
     l = Ledger(holdings, transactions)
@@ -145,28 +149,58 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
                          cashsummary=cashsummary)
     return TaxReport(**report), p.holdings(year, broker), summary
 
+# Merge transaction files
+# - "Concatenate" transaction on year bounaries
+# - Pickle and others represent sales differently so a simple "key" based deduplication fails
+# - Prefer last file in list then fill in up to first complete year
+# - Limit to two files?
+def merge_transactions(transaction_files: list) -> Transactions:
+    '''Merge transaction files'''
+
+    # Single file, no need to merge
+    if len(transaction_files) == 1:
+        t = normalize(transaction_files[0])
+        t = sorted(t.transactions, key=lambda d: d.date)
+        return Transactions(transactions=t)
+    if len(transaction_files) > 2:
+        raise ESPPErrorException(f'Too many transaction files {len(transaction_files)}')
+
+    sets = []
+    for tf in transaction_files:
+        t = normalize(tf)
+        t = sorted(t.transactions, key=lambda d: d.date)
+        sets.append((t[0].date.year, t[-1].date.year, t))
+    # Determine from which file to use for which year
+    years = {}
+    overlap_done = False
+    sets = sorted(sets, key=lambda d: d[0])
+    for i, s in enumerate(sets):
+        for year in range(s[0], s[1]+1):
+            if year in years and not overlap_done:
+                # Jump over first year in second file
+                overlap_done = True
+                continue
+            years[year] = i
+
+    transactions = []
+    for i in sorted(years.keys()):
+        per_year_t = sets[years[i]][2]
+        t = [t for t in per_year_t if t.date.year == i]
+        transactions += t
+
+    return Transactions(transactions=transactions)
 
 def do_taxes(broker, transaction_files: list, holdfile,
              wirefile, year) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Do taxes'''
-    trans = []
     report = []
     wires = []
     prev_holdings = []
-    for t in transaction_files:
-        try:
-            trans.append(normalize(t))
-        except Exception as e:
-            raise ESPPErrorException(f'{t.name}: {e}') from e
+    transactions = merge_transactions(transaction_files)
 
-    transactions = trans[0]
-    for t in trans[1:]:
-        transactions.transactions += t.transactions
-    transactions.transactions= sorted(transactions.transactions, key=lambda d: d.date)
-
-    from rich.console import Console
-    console = Console()
-    console.print(transactions)
+    # l = Ledger(None, transactions.transactions)
+    # for e in l.entries['CSCO']:
+    #     print(f'{str(e[0])}\t{e[1]}\t{e[2]}')
 
     if wirefile and not isinstance(wirefile, Wires):
         wires = json_load(wirefile)

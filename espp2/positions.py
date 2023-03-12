@@ -54,7 +54,7 @@ class Ledger():
         transactions_sorted = sorted(transactions + h, key=lambda d: d.date)
 
         for t in transactions_sorted:
-            if t.type in (EntryTypeEnum.DEPOSIT, EntryTypeEnum.BUY, EntryTypeEnum.SELL):
+            if t.type in (EntryTypeEnum.DEPOSIT, EntryTypeEnum.BUY, EntryTypeEnum.SELL, EntryTypeEnum.TRANSFER):
                 self.add(t.symbol, t.date, t.qty)
 
     def add(self, symbol, transactiondate, qty):
@@ -110,7 +110,7 @@ class Positions():
 
         self.new_holdings = [
             t for t in transactions if t.type in ('BUY', 'DEPOSIT')]
-        self._fixup_tax_deductions()
+        # self._fixup_tax_deductions()
         self.cash = cash
         self.ledger = ledger
         if prev_holdings and prev_holdings.stocks:
@@ -137,7 +137,7 @@ class Positions():
         self.symbols = self.positions_by_symbols.keys()
 
         # Sort sales
-        sales = [t for t in transactions if t.type == 'SELL']
+        sales = [t for t in transactions if t.type in ('SELL', 'TRANSFER')]
         self.sale_by_symbols = position_groupby(sales)
 
         # Dividends
@@ -216,7 +216,7 @@ class Positions():
             val[0].stop, str) else val[0].stop
         b = self._balance(val[1], enddate)
         for i in b:
-            if i.date < enddate:
+            if i.date <= enddate:
                 yield i
             else:
                 break
@@ -270,7 +270,7 @@ class Positions():
                 dps = d.amount.value / total_shares
                 logger.info(
                     'Total shares of %s at dividend date: %s dps: %s reported: %s', symbol, total_shares, dps, d.dividend_dps)
-                assert isclose(dps, d.dividend_dps, abs_tol=10**-2), f"Dividend per share calculated does not match reported {dps} vs {d.dividend_dps}"
+                assert isclose(dps, d.dividend_dps, abs_tol=10**-2), f"Dividend for {d.recorddate}/{d.date} per share calculated does not match reported {dps} vs {d.dividend_dps} for {total_shares} {d.amount.value}"
                 for entry in self[:d.recorddate, symbol]:  # Creates a view
                     entry.dps = dps if 'dps' not in entry else entry.dps + dps
                     tax_deduction = self.tax_deduction[entry.idx]
@@ -565,12 +565,8 @@ class Cash():
             # Only care about tranfers
             if is_transfer:
                 transfers.append(TransferRecord(date=e.date,
-                                                amount_sent=Amount(
-                                                    currency='NOK', value=total_paid_price_nok,
-                                                    nok_value=total_paid_price_nok, nok_exchange_rate=1),
-                                                amount_received=Amount(currency='NOK', value=total_received_price_nok,
-                                                                       nok_value=total_received_price_nok,
-                                                                       nok_exchange_rate=1),
+                                                amount_sent=total_paid_price_nok,
+                                                amount_received=total_received_price_nok,
                                                 description=e.description,
                                  gain=total_received_price_nok - total_paid_price_nok))
         remaining_usd = sum([c.amount.value for c in debit if c.amount.value > 0])
@@ -580,6 +576,6 @@ class Cash():
         remaining_cash = Amount(value=remaining_usd, currency='USD',
                                 nok_value=remaining_nok, nok_exchange_rate=exchange_rate)
         total_gain = sum([t.gain for t in transfers])
-        total_paid_price_nok = sum([t.amount_sent.nok_value for t in transfers])
-        total_received_price_nok = sum([t.amount_received.nok_value for t in transfers])
+        total_paid_price_nok = sum([t.amount_sent for t in transfers])
+        total_received_price_nok = sum([t.amount_received for t in transfers])
         return CashSummary(transfers=transfers, remaining_cash=remaining_cash, gain=total_gain,)
