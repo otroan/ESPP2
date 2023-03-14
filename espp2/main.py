@@ -7,6 +7,7 @@ import logging
 from decimal import Decimal
 from importlib.resources import files
 import simplejson as json
+from rich.console import Console
 from espp2.positions import Positions, Cash, InvalidPositionException, Ledger
 from espp2.transactions import normalize
 from espp2.datamodels import TaxReport, Transactions, Wires, Holdings, ForeignShares, TaxSummary, CreditDeduction
@@ -59,15 +60,13 @@ def validate_holdings(broker, year, prev_holdings, transactions):
 
 
 def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
-               prev_holdings: Holdings, taxdata) -> Tuple[TaxReport, Holdings, TaxSummary]:
+               prev_holdings: Holdings, taxdata, verbose : bool = False) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Generate tax report'''
 
-
-    # l = Ledger(prev_holdings, transactions.transactions)
-    # from rich.console import Console
-    # console = Console()
-    # print_ledger(l.entries, console)
-
+    if verbose:
+        l = Ledger(prev_holdings, transactions.transactions)
+        console = Console()
+        print_ledger(l.entries, console)
 
     holdings, transactions = validate_holdings(broker, year, prev_holdings, transactions.transactions)
     l = Ledger(holdings, transactions)
@@ -191,7 +190,7 @@ def merge_transactions(transaction_files: list) -> Transactions:
     return Transactions(transactions=transactions)
 
 def do_taxes(broker, transaction_files: list, holdfile,
-             wirefile, year) -> Tuple[TaxReport, Holdings, TaxSummary]:
+             wirefile, year, verbose=False) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Do taxes'''
     report = []
     wires = []
@@ -213,5 +212,6 @@ def do_taxes(broker, transaction_files: list, holdfile,
         prev_holdings = json_load(holdfile)
         prev_holdings = Holdings(**prev_holdings)
         logger.info('Holdings file read')
-    report, holdings, summary = tax_report(year, broker, transactions, wires, prev_holdings, taxdata)
+    report, holdings, summary = tax_report(
+        year, broker, transactions, wires, prev_holdings, taxdata, verbose=verbose)
     return report, holdings, summary

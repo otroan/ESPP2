@@ -165,7 +165,11 @@ def do_tax(record):
     newrec = dict()
 
     add_date(newrec, 'date', date)
-    add_string(newrec, 'type', 'TAX')
+
+    if amount < 0:
+        add_string(newrec, 'type', 'TAXSUB')
+    else:
+        add_string(newrec, 'type', 'TAX')
     add_string(newrec, 'symbol', 'CSCO')
     add_string(newrec, 'description', 'Debit')
     add_amount(newrec, 'amount', date, 'USD', -amount)
