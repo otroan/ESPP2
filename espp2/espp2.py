@@ -40,7 +40,8 @@ def main(transaction_files: list[typer.FileBinaryRead],
 
     report: TaxReport
     holdings: Holdings
-    report, holdings, summary = do_taxes(broker, transaction_files, inholdings, wires, year)
+    report, holdings, summary = do_taxes(
+        broker, transaction_files, inholdings, wires, year, verbose=verbose)
 
     print_report(year, summary, report, holdings, verbose)
 

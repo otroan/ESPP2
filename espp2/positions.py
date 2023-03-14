@@ -261,9 +261,9 @@ class Positions():
             for d in dividends:
                 total_shares = self.total_shares(self[:d.recorddate, symbol])
                 if self.ledger:
-                    ledger_shares = self.ledger.total_shares(symbol, d.date)
+                    ledger_shares = self.ledger.total_shares(symbol, d.recorddate)
                     assert isclose(total_shares, ledger_shares, abs_tol=10**-
-                                   2), f"Total shares don't match {total_shares} != {ledger_shares}"
+                                   2), f"Total shares don't match {total_shares} != {ledger_shares} on {d.date} / {d.recorddate}"
                 if total_shares == 0:
                     raise InvalidPositionException(
                         f'Dividends: Total shares at dividend date is zero: {d}')
@@ -548,7 +548,7 @@ class Cash():
                     continue
                 if amount_to_sell >= amount:
                     if is_transfer:
-                        total_paid_price_nok += debit[posidx].amount.nok_value
+                        total_paid_price_nok += (debit[posidx].amount.value * debit[posidx].amount.nok_exchange_rate)
                     amount_to_sell -= amount
                     # Clear the amount??
                     # Amount(**dict.fromkeys(debit[posidx].amount, 0))
