@@ -67,10 +67,34 @@ class ParseState:
         r = { 'type': EntryTypeEnum.SELL,
               'date': self.entry_date,
               'qty': qty,
-              'amount': fixup_price(self.entry_date, 'USD', f'{price}'),
+              'amount': fixup_price(self.entry_date, 'USD', f'{price * -qty}'),
               'symbol': self.symbol,
               'description': self.activity,
               'source': self.source }
+
+        self.transactions.append(parse_obj_as(Entry, r))
+
+    def dividend(self, amount):
+        assert self.symbol is not None
+
+        r = { 'type': EntryTypeEnum.DIVIDEND,
+              'date': self.entry_date,
+              'symbol': self.symbol,
+              'amount': amount,
+              'source': self.source,
+              'description': 'Credit' }
+
+        self.transactions.append(parse_obj_as(Entry, r))
+
+    def dividend_reinvest(self, amount):
+        assert self.symbol is not None
+
+        r = { 'type': EntryTypeEnum.DIVIDEND_REINV,
+              'date': self.entry_date,
+              'symbol': self.symbol,
+              'amount': amount,
+              'source': self.source,
+              'description': 'Debit' }
 
         self.transactions.append(parse_obj_as(Entry, r))
 
@@ -101,8 +125,11 @@ class ParseState:
             raise ValueError(f'Missing columns for {row}')
         qty = Decimal(qty)
         price, currency = morgan_price(price)
-        purchase_price = fixup_price2(self.entry_date, currency, price)
 
+        amount = fixup_price(self.entry_date, currency, f'{price * -qty}')
+        self.dividend_reinvest(amount)
+
+        purchase_price = fixup_price2(self.entry_date, currency, price)
         self.deposit(qty, purchase_price, 'Dividend re-invest')
         return True
 
@@ -136,24 +163,43 @@ class ParseState:
         '''This, despite its logged description, results in shares-reinvest'''
         if self.activity != 'Dividend (Cash)':
             return False
-        qty, ok = getitems(row, 'Number of Shares')
-        if ok:
+        qty, qty_ok = getitems(row, 'Number of Shares')
+        cash, cash_ok = getitems(row, 'Cash')
+
+        if qty_ok and cash_ok:
+            raise ValueError(f'Unexpected cash+shares for dividend: {row}')
+
+        if qty_ok:
             qty = Decimal(qty)
             price = currency_converter[(self.symbol, self.entry_date)]
             purchase_price = fixup_price2(self.entry_date, 'USD', price)
             self.deposit(qty, purchase_price, 'Dividend re-invest (Cash)', self.entry_date)
 
+        if cash_ok:
+            amount = fixup_price(self.entry_date, 'USD', cash)
+            self.dividend(amount)
+
         return True
 
     def parse_tax_withholding(self, row):
+        '''Record taxes withheld'''
+        if self.activity != 'Withholding' and self.activity != 'IRS Nonresident Alien Withholding':
+            return False
+        taxed, ok = getitems(row, 'Cash')
+        if not ok:
+            raise ValueError(f'Expected Cash data for tax record: {row}')
+
+        amount = fixup_price(self.entry_date, 'USD', taxed)
 
         r = { 'type': EntryTypeEnum.TAX,
               'date': self.entry_date,
               'amount': amount,
               'symbol': self.symbol,
-              'description': self.activity }
+              'description': self.activity,
+              'source': self.source }
 
-        # ___TODO!
+        self.transactions.append(parse_obj_as(Entry, r))
+        return True
 
 def morgan_price(price_str):
     '''Parse price string.'''
@@ -168,7 +214,7 @@ def morgan_price(price_str):
 
 def fixup_price(datestr, currency, pricestr, change_sign=False):
     '''Fixup price.'''
-    print('fixup_price:::', datestr, currency, pricestr, change_sign)
+    # print('fixup_price:::', datestr, currency, pricestr, change_sign)
     price, currency = morgan_price(pricestr)
     if change_sign:
         price = price * -1
@@ -219,8 +265,6 @@ def parse_rsu_table(state, recs, filename):
     ignore = {
         'Opening Value': True,
         'Closing Value': True,
-        'Dividend (Cash)': True,
-        'IRS Nonresident Alien Withholding': True,
     }
 
     for row in recs:
@@ -236,19 +280,23 @@ def parse_rsu_table(state, recs, filename):
         if state.parse_sale(row):
             continue
 
+        if state.parse_dividend_cash(row):
+            continue
+
+        if state.parse_tax_withholding(row):
+            continue
+
         if state.activity in ignore:
             continue
 
-        raise ValueError(f'Unknown activity: "{state.activity}"')
+        raise ValueError(f'Unknown RSU activity: "{state.activity}"')
 
 def parse_espp_table(state, recs, filename):
     ignore = {
         'Opening Value': True,
         'Closing Value': True,
-        'IRS Nonresident Alien Withholding': True,
         'Adhoc Adjustment': True,
         'Transfer out': True,
-        'Withholding': True,
         'Historical Transaction': True,
         'Wash Sale Adjustment': True,
     }
@@ -269,117 +317,15 @@ def parse_espp_table(state, recs, filename):
         if state.parse_dividend_cash(row):
             continue
 
+        if state.parse_tax_withholding(row):
+            continue
+
         if state.activity in ignore:
             continue
 
-        raise ValueError(f'Unknown activity2: "{state.activity}"')
+        raise ValueError(f'Unknown ESPP activity: "{state.activity}"')
 
     return state.transactions
-
-def old_parse_table(recs, filename):
-    '''Parse Morgan Stanley HTML table transaction history.'''
-    trans = []
-
-    print('---- Other:')
-    dumpdict(recs)
-    print('--')
-
-    for e in recs:
-        # print('RECORD:', e)
-        # Header row
-        if e['Activity'] == e['Entry Date']:
-            if e['Entry Date'].startswith('Fund: Cash'):
-                cash = True
-            elif e['Entry Date'].startswith('Fund: CSCO'):
-                # TODO: Handle other symbols
-                cash = False
-                symbol = 'CSCO'
-            continue
-        if e['Activity'] in ('Historical Transaction', 'Closing Value'):
-            continue
-
-        d = dt.parse(e['Entry Date'])
-
-        if cash:
-            # TODO: Handle cash
-            continue
-
-        r : dict
-        if e['Activity'] == 'Opening Balance' or e['Activity'].startswith('Release'):
-            # Seems like a BUY entry
-            t = EntryTypeEnum.DEPOSIT
-            qty = Decimal(e['Number of Shares'])
-            book_value, currency = morgan_price(e['Book Value'])
-            purchase_price = fixup_price2(d, currency, book_value / qty)
-
-            r = {'type': t, 'date': d, 'qty': qty, 'symbol': symbol,
-                 'description': e['Activity'],
-                 'purchase_price': purchase_price, }
-
-        elif e['Activity'] in ('Withholding', 'IRS Nonresident Alien Withholding'):
-            t = EntryTypeEnum.TAX
-            amount = fixup_price(d, "USD", e['Cash'])
-            r = {'type': t, 'date': d, 'amount': amount, 'symbol': symbol, 'description': e['Activity']}
-
-        elif e['Activity'] == 'Dividend (Cash)':
-            #
-            print(f'>>> Dividend (Cash): {e}')
-            tmpcash = e['Cash']
-            if isinstance(tmpcash, float) and math.isnan(tmpcash):
-                continue
-            t = EntryTypeEnum.DIVIDEND
-            amount = fixup_price(d, "USD", tmpcash)
-            r = {'type': t, 'date': d, 'amount': amount, 'symbol': symbol}
-
-        elif e['Activity'] == 'You bought (dividend)':
-            # {'Entry Date': '30-Jan-2023', 'Activity': 'You bought (dividend)',
-            #  'Type of Money': 'Employee', 'Cash': '$-7.43 USD', 'Number of Shares': '0.154000',
-            #  'Share Price': '$48.31 USD', 'Book Value': '$7.43 USD', 'Market Value': nan}
-            t = EntryTypeEnum.DIVIDEND_REINV
-            qty = Decimal(e['Number of Shares'])
-            # book_value, currency = morgan_price(e['Book Value'])
-            # purchase_price = fixup_price(d, "USD", e['Share Price'])
-            amount = fixup_price(d, "USD", e['Cash'])
-
-            r = {'type': t, 'date': d, 'qty': qty, 'symbol': symbol,
-                 'description': e['Activity'],
-                 'amount': amount, }
-
-
-        elif e['Activity'] == 'Sale':
-            # {'Entry Date': '06-Jan-2023', 'Activity': 'Sale', 'Type of Money': 'Employee',
-            #  'Cash': nan, 'Number of Shares': '-23.000000', 'Share Price': '$47.86 USD',
-            #  'Book Value': '$-1,009.93 USD', 'Market Value': nan}
-
-            t = EntryTypeEnum.SELL
-            qty = Decimal(e['Number of Shares'])
-            tmpcash = e['Cash']
-            if isinstance(tmpcash, float) and math.isnan(tmpcash):
-                amount = fixup_price(d, "USD", e['Book Value'])
-            else:
-                amount = fixup_price(d, "USD", e['Cash'])
-
-            r = {'type': t, 'date': d, 'qty': qty, 'amount': amount, 'symbol': symbol, 'description': e['Activity']}
-
-        elif e['Activity'] == 'Cash Transfer Out':
-            # TODO
-            t = EntryTypeEnum.WIRE
-            continue
-
-        elif e['Activity'] == 'Opening Value':
-            # Opening Value of cash in shares account
-            continue
-
-        elif e['Activity'] == 'Historical Purchase':
-            # Probably ESPP but we get the data from somewhere else
-            continue
-
-        else:
-            raise ValueError(f'Unknown activity type: {e["Activity"]}: {e}')
-
-        r['source'] = f'morgan:{filename}'
-        trans.append(parse_obj_as(Entry, r))
-    return trans
 
 def morgan_html_import(html_fd, filename):
     '''Parse Morgan Stanley HTML table file.'''
@@ -390,6 +336,7 @@ def morgan_html_import(html_fd, filename):
     dfs = read_html(
         html_fd, header=1, attrs={'class': 'sw-datatable', 'id': 'Activity_table'})
 
+    # Expect two tables from this selection; one for RSU and one for the rest (ESPP)
     assert(len(dfs) == 2)
 
     parse_rsu_table(state, dfs[0].to_dict(orient='records'), filename)
