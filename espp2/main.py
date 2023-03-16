@@ -189,8 +189,9 @@ def merge_transactions(transaction_files: list) -> Transactions:
 
     return Transactions(transactions=transactions)
 
+
 def do_taxes(broker, transaction_files: list, holdfile,
-             wirefile, year, verbose=False) -> Tuple[TaxReport, Holdings, TaxSummary]:
+             wirefile, year, verbose=False, opening_balance=None) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Do taxes'''
     report = []
     wires = []
@@ -200,6 +201,8 @@ def do_taxes(broker, transaction_files: list, holdfile,
     # l = Ledger(None, transactions.transactions)
     # for e in l.entries['CSCO']:
     #     print(f'{str(e[0])}\t{e[1]}\t{e[2]}')
+    if holdfile and opening_balance:
+        raise ESPPErrorException('Cannot specify both opening balance and holdings file')
 
     if wirefile and not isinstance(wirefile, Wires):
         wires = json_load(wirefile)
@@ -212,6 +215,8 @@ def do_taxes(broker, transaction_files: list, holdfile,
         prev_holdings = json_load(holdfile)
         prev_holdings = Holdings(**prev_holdings)
         logger.info('Holdings file read')
+    elif opening_balance:
+        prev_holdings = opening_balance
     report, holdings, summary = tax_report(
         year, broker, transactions, wires, prev_holdings, taxdata, verbose=verbose)
     return report, holdings, summary

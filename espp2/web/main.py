@@ -10,9 +10,10 @@ from typing import Optional
 from os.path import realpath
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
+from pydantic import parse_obj_as
 from fastapi.staticfiles import StaticFiles
 from espp2.main import do_taxes
-from espp2.datamodels import ESPPResponse, Wires
+from espp2.datamodels import ESPPResponse, Wires, Holdings
 import json
 
 logging.basicConfig(level=logging.DEBUG)
@@ -26,6 +27,7 @@ async def create_files(
         broker: str = Form(...),
         holdfile: UploadFile | None = None,
         wires: str = Form(...),
+        opening_balance: str = Form(...),
         year: int = Form(...)):
     '''File upload endpoint'''
 
@@ -33,13 +35,17 @@ async def create_files(
         wires_list = json.loads(wires)
         wires = Wires(wires=wires_list)
 
+    if opening_balance:
+        opening_balance = json.loads(opening_balance)
+        opening_balance = parse_obj_as(Holdings, opening_balance)
+
     if holdfile and holdfile.filename == '':
         holdfile = None
     elif holdfile:
         holdfile = holdfile.file
     try:
         report, holdings, summary = do_taxes(
-            broker, transaction_files, holdfile, wires, year)
+            broker, transaction_files, holdfile, wires, year, opening_balance=opening_balance)
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
