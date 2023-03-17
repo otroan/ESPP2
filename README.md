@@ -3,42 +3,47 @@
 [![pytest](https://github.com/otroan/ESPP2/actions/workflows/main.yml/badge.svg)](https://github.com/otroan/ESPP2/actions/workflows/main.yml)
 
 ## Introduction
-The ESPP2 tool is a command line tool built to help calculate Norwegian taxes on ESPP (Employee Stock Purchase Plan) and RSU (Restricted Stock Unit) shares.
+The ESPP2 tool serves both as a backend for a web frontend and a command line tool. The tool is built to help calculate Norwegian taxes on ESPP (Employee Stock Purchase Plan) and RSU (Restricted Stock Unit) shares. It also supports other shares held from TD Ameritrade.
 
-The tool is built as a pipeline of small utilities.
+To calculate taxes, the tool needs to know the whole "history" of the stock position. The purchase price and date when it was acquired, as well as any dividends and tax-free deductions accumulated. Unfortunately, some stock brokers do not provide the complete transaction history. This problem is also compounded by the fact that while Norwegian tax law requires selling FIFO, some brokers allow the user to sell any lot, or makes it hard to sell FIFO.
 
-```mermaid
-graph LR;
-    Holdings-2021-->ESPP{{ESPP}}
-    Transactions-2022-->ESPP
-    ESPP-->Tax-Report
-    ESPP-->Holdings-2022
-    Schwab["schwab-transactions-2022.csv"]-->TransNorm{{TransNorm}}
-    TD["td-ameritrade-transactions-2022.csv"]-->TransNorm{{TransNorm}}
-    Morgan["morgan-transactions-2022.htmltable"]-->TransNorm-->Transactions-2022
-```
+The tool tries to alleviate this problem by taking a complete set of holdings by a year end as input and likewise generating a new holdings file for the tax year. For next year, that means one only need to provide the current year transactions and the holdings file from the previous year.
 
-In case you are transitioning from the old tool or having not used a tool at all, see the section "if you have no holdings file" below. The pipeline for that looks like:
+The tax processing pipeline looks something like this:
 
 ```mermaid
 graph LR;
-    ESPPv1-Pickle-.->TransNorm
-    Schwab-Complete-Transaction-History-->TransNorm{{TransNorm}}-->ESPP-GenHoldings{{ESPP-GenHoldings}}
-    ESPP-GenHoldings-->Holdings-2021
-    Schwab-Incomplete-Transaction-History-->TransNorm
-    Manually-Generated-OlderHoldings-.->ESPP-GenHoldings
+    Holdings-2021-->ESPP2{{ESPP2}}
+    ESPP2-->Tax-Report-2022
+    ESPP2-->Holdings-2022
+    Schwab["schwab-transactions-all.csv"]-->ESPP2{{ESPP2}}
+    TD["td-ameritrade-transactions-all.csv"]-->ESPP2{{ESPP2}}
+    Morgan["morgan-transactions-complete.html"]-->ESPP2{{ESPP2}}
+    ESPPv1-Pickle-.->ESPP2{{ESPP2}}
+    Manual["Manually Entered opening balance"]-.->ESPP2{{ESPP2}}
 ```
 
-### Transaction History Normalizer
-A transaction history normaliser that uses per-broker plugins to normalize a transaction history into a JSON format, following the expected ESPP2 transaction history data model.
-Currently the Schwab CSV format is supported. In addition TD Ameritrade CSV is supported for regular stock transactions. A manual JSON format and a Morgan Stanley HTML table scraper is underway.
+In case you are transitioning from the old tool or having not used a tool at all, see the section "if you have no holdings file" below.
+
+### Data formats
+The tool uses JSON as the data format for all input and output. The JSON schema for the different data formats are defined in the `espp2/data` directory.
+
+There are data importers for the following formats:
+- Schwab CSV
+- TD Ameritrade CSV
+- Morgan Stanley HTML
+- ESPPv1 pickle file
 
 ### Fair Market Value
 The FMV module downloads and caches historical fair market values for shares and exchange rates.
-It has a manually maintained list of Oracle P&L 6 month sliding window rates used for ESPP.
+It has a manually maintained list of Oracle P&L 6 month sliding window rates used for ESPP that we each year receive from the stocks team.
+
+The USD to NOK exchange rate is downloaded from the Norwegian Central Bank.
+The stock prices are downloaded from Alpha Vantage.
+Dividend dates and fundamentals are fetched from the EOD Historical Data provider.
 
 ### Tax calculation
-The main espp2 tool takes a normalized transaction history for the current year, a holdings file listing all held positions at the end of the previous year, and a list of "wires" received all in JSON format. Then it calculates the gains/losses and outputs that in a tax-report file and a holdings file for the current year.
+The espp2 tool takes a normalized transaction history for the current year, a holdings file listing all held positions at the end of the previous year, and a list of "wires" received all in JSON format. Then it calculates the gains/losses and outputs that in a tax-report file and a holdings file for the current year.
 
 
 ## Installation
@@ -52,40 +57,63 @@ pip install git+https://github.com/otroan/ESPP2.git#egg=espp2
 ## How to run
 
 ```
-espp2_transnorm --transaction-file <schwab-2022.csv> --format schwab --output-file <schwab-transactions-2022.json>
-
-espp2 --year=2022 --transaction-file <schwab-transactions-2022.json> --inholdings-file=<schwab-holdings-2021.json> --output-file <schwab-tax-report-2022.json> --outholdings-file <schwab-holdings-2022.json> --wire-file=<schwab-wires-2022.json>
+espp2 <schwab-2022.csv> <espp1.pickle> --wires <schwab-wires-2022.json>
+      --outholdings <schwab-holdings-2022.json>
+```
 
 ```
+espp2 --help
+```
+
+Will show the available options. The --verbose option will show the tax calculations in more detail and it is important to verify that these are correct.
+
+*In partiulcar it is important to verify that the total stock positions match the statements from the stock broker. If these numbers do not match, the resulting tax calculation will be wrong.*
 
 ## What to do if you don't have a holdings file?
-As the tax generation tool requires the previous years positions. That may have to be calculated as it's different from the previous version of this tool. There are 3 ways to generate the previous year holding file:
 
-Note: It is very important that you verify the total stock positions with the statements from the stock broker. If these numbers do not match, the resulting tax calculation will be wrong.
+There is a transition required from the old tool to the new tool.
 
-### Exporting it from the pickle file from last years tax run (previous version) (not yet implemented)
+#### Schwab: You have a pickle file from the old tool and as much transaction history as is available
+Just give both the pickle file and the Schwab transaction file to the tool.
 
-### Generated from the complete transaction history from all years
+#### Schwab: You have a complete transaction history from all years
+Which means you have only worked for the company for less than three years. Just pass the complete transaction file to the tool and you are good to go.
 
-### Manually created holdings file and as much transaction history as is available.
+#### Schwab: You have an incomplete transaction history
 
-Normalize the complete transaction history (combined with manual holdings file):
+You will need to create a holdings file giving the opening balance for the last year. Schwab gives only 3 years of transaction history, so you will need to manually create the holdings file for the year overlapping with that. Which for the tax year of 2022 means that you must provide the opening balance as of 2019-12-31.
 
-```
-espp2_transnorm --transaction-file <schwab-complete-history.csb> --output-file <schwab-complete-transactions.json>
-
-espp2_genholdings --year 2021 --transaction-file <schwab-complete-transactions.json> [--inholdings-file <schwab-holdings-2018.json>] --outholdings-file <schwab-holdings-2021.json>
+The holdings file is a JSON file with the following format:
 
 ```
+{
+    "stocks": [
+        {
+            "symbol": "CSCO",
+            "date": "2019-12-31",
+            "qty": 1000.0,
+            "purchase_price": {
+                "value": NaN,
+            }
+        }
+    ],
+    "cash": [],
+    "year": 2019,
+    "broker": "schwab"
+}
+```
 
-## TODO
-- [ ] ESPPv1 pickle holdings export
-- [x] Holdings export from complete transaction history
-- [ ] Manual JSON transaction history importer
-- [ ] TD Ameritrade CSV transaction history importer
-- [ ] JSON schema and validation for transaction, holdings, and wire formats
-- [ ] Windows, OSX packaging through Github actions
-- [ ] Unit tests
-- [ ] User interface. Local webserver? At least pretty printing reporting tool
+If all the positions held in 2019 was sold in prior tax years, the tool do not need the purchasing price. If that is not the case, that you hold or have sold positions that are held in 2019 or earlier, you need to provide the purchase date and purchase price for all the held positions.
 
+## Web frontend
 
+The web frontend is a separate project and can be found at https://github.com/MittBrukernavn/ESPP2-web.
+
+The web interface lets the user drag and drop transaction files and presents the tax report in a nice table. It also lets the user download the holdings file, that will be used for running the tool next year.
+
+It also allows the user to input the actual NOK values for received wires and to provide an opening balance.
+
+The web interface uses the same backend as the command line tool, so the same data formats are used.
+It is a single request / response REST API between the frontend and the backend. No data is stored on the server, and if the user makes a change to the input, the whole tax calculation is redone.
+
+While the server does some logging, the transaction files are not stored on the server.
