@@ -175,6 +175,9 @@ class ParseState:
             purchase_price = fixup_price2(self.entry_date, 'USD', price)
             self.deposit(qty, purchase_price, 'Dividend re-invest (Cash)', self.entry_date)
 
+            amount = fixup_price(self.entry_date, 'USD', f'{price * -qty}')
+            self.dividend_reinvest(amount)
+
         if cash_ok:
             amount = fixup_price(self.entry_date, 'USD', cash)
             self.dividend(amount)
