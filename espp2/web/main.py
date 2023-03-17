@@ -26,7 +26,7 @@ async def create_files(
         transaction_files: list[UploadFile],
         broker: str = Form(...),
         holdfile: UploadFile | None = None,
-        wires: str = Form(...),
+        wires: str = Form(""),
 #        opening_balance: str = Form(...),
         year: int = Form(...)):
     '''File upload endpoint'''
