@@ -27,10 +27,10 @@ async def create_files(
         broker: str = Form(...),
         holdfile: UploadFile | None = None,
         wires: str = Form(...),
-        opening_balance: str = Form(...),
+#        opening_balance: str = Form(...),
         year: int = Form(...)):
     '''File upload endpoint'''
-
+    opening_balance = None
     if wires:
         wires_list = json.loads(wires)
         wires = Wires(wires=wires_list)
@@ -45,7 +45,7 @@ async def create_files(
         holdfile = holdfile.file
     try:
         report, holdings, summary = do_taxes(
-            broker, transaction_files, holdfile, wires, year, opening_balance=opening_balance)
+            broker, transaction_files, holdfile, wires, year)
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
