@@ -18,7 +18,7 @@ setup(
     install_requires=["simplejson", "numpy", "pydantic",
                       "urllib3", "python-dateutil", "uvicorn", "fastapi",
                       "python-multipart", "tabulate", "pandas", "lxml", "pytest", "httpx",
-                      "rich", "typing"],
+                      "rich", "typing", "html5lib"],
     package_data={
         "espp2": ["*.json"],
     },
