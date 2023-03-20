@@ -87,7 +87,7 @@ def add_amount(rec, name, date, currency, amount):
 
 def do_deposit(record):
     date = record['date']
-    n = Decimal(record['n'])
+    n = Decimal(str(record['n']))
     price = Decimal(f"{record['price']}")
     vpd = Decimal(f"{record['vpd']}")
     fee = Decimal(record['fee'])
@@ -104,6 +104,20 @@ def do_deposit(record):
     add_amount(newrec, 'subscription_fmv', date, 'USD', vpd)
     # add_amount(newrec, 'plan_purchase_price', 'TODO!')
     add_amount(newrec, 'purchase_price', date, 'USD', price)
+
+    records.append(newrec)
+
+def do_reinvest(record):
+    # REINVEST {'date': datetime.date(2021, 7, 28), 'amount': 262.5, 'fee': 0.0}
+    date = record['date']
+    amount = Decimal(f"{record['amount']}")
+    newrec = dict()
+
+    add_date(newrec, 'date', date)
+    add_string(newrec, 'type', 'DIVIDEND_REINV')
+    add_string(newrec, 'symbol', 'CSCO')
+    add_amount(newrec, 'amount', date, 'USD', amount)
+    add_string(newrec, 'description', '')
 
     records.append(newrec)
 
@@ -229,6 +243,10 @@ def read(pickle_file, filename='', logger=None) -> Transactions:
 
         if rectype == 'DEPOSIT':
             do_deposit(record)
+            continue
+
+        if rectype == 'REINVEST':
+            do_reinvest(record)
             continue
 
         if rectype == 'DIVIDEND':
