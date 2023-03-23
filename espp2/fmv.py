@@ -92,7 +92,7 @@ class FMV():
         http = urllib3.PoolManager()
         # The REST api is described here: https://app.norges-bank.no/query/index.html#/no/
         # url = f'https://data.norges-bank.no/api/data/EXR/B.{currency}.NOK.SP?startPeriod=2000&format=sdmx-json'
-        url = f'https://data.norges-bank.no/api/data/EXR/B.{currency}.NOK.SP?startPeriod=2000&format=csv-:-comma-false-y'
+        url = f'https://data.norges-bank.no/api/data/EXR/B.{currency}.NOK.SP?startPeriod=1998&format=csv-:-comma-false-y'
         r = http.request('GET', url)
         if r.status != 200:
             raise FMVException(
@@ -110,7 +110,8 @@ class FMV():
     def fetch_dividends(self, symbol):
         '''Returns a dividends object keyed on payment date'''
         http = urllib3.PoolManager()
-        url = f'https://eodhistoricaldata.com/api/div/{symbol}.US?fmt=json&from=2000-01-01&api_token={EODHDKEY}'
+        # url = f'https://eodhistoricaldata.com/api/div/{symbol}.US?fmt=json&from=2000-01-01&api_token={EODHDKEY}'
+        url = f'https://eodhistoricaldata.com/api/div/{symbol}.US?fmt=json&api_token={EODHDKEY}'
         r = http.request('GET', url)
         if r.status != 200:
             raise FMVException(
@@ -177,19 +178,26 @@ class FMV():
 
         self.table[fmvtype][symbol] = data
 
-    def parse_date(self, itemdate: Union[str, datetime]) -> Tuple[datetime.date, str]:
-        '''Parse date/timestamp'''
-        if isinstance(itemdate, str):
-            itemdate = datetime.strptime(itemdate, '%Y-%m-%d').date()
+    def extract_date(self, input_date: Union[str, datetime, datetime.date]) -> Tuple[datetime.date, str]:
+        '''Extract date component from input string or datetime object'''
+        if isinstance(input_date, str):
+            try:
+                date_obj = datetime.strptime(input_date, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValueError(f"Invalid date format '{input_date}'. Use 'YYYY-MM-DD' format.")
+        elif isinstance(input_date, datetime):
+            date_obj = input_date.date()
+        elif isinstance(input_date, date):
+            date_obj = input_date
         else:
-            itemdate = itemdate.date()
-        date_str = str(itemdate)
-        return itemdate, date_str
+            raise TypeError(f"Input must be string or datetime object, not {type(input_date)}")
+        date_str = date_obj.isoformat()
+        return date_obj, date_str
 
     def __getitem__(self, item):
         symbol, itemdate = item
         fmvtype = FMVTypeEnum.STOCK
-        itemdate, date_str = self.parse_date(itemdate)
+        itemdate, date_str = self.extract_date(itemdate)
         self.refresh(symbol, itemdate, fmvtype)
         for _ in range(5):
             try:
@@ -202,7 +210,7 @@ class FMV():
 
     def get_currency(self, currency: str, date_union: Union[str, datetime]) -> float:
         '''Get currency value. If not found, iterate backwards until found.'''
-        itemdate, date_str = self.parse_date(date_union)
+        itemdate, date_str = self.extract_date(date_union)
         self.refresh(currency, itemdate, FMVTypeEnum.CURRENCY)
 
         for _ in range(6):
@@ -214,14 +222,17 @@ class FMV():
                 date_str = str(itemdate)
         raise FMVException(f'No currency data for {currency} on {date_str}')
 
-    def get_dividend(self, dividend: str, payment_date: Union[str, datetime]) -> Tuple[date, Decimal]:
+    def get_dividend(self, dividend: str, payment_date: Union[str, datetime]) -> Tuple[date, date, Decimal]:
         '''Lookup a dividends record given the paydate.'''
-        itemdate, date_str = self.parse_date(payment_date)
+        itemdate, date_str = self.extract_date(payment_date)
         self.refresh(dividend, itemdate, FMVTypeEnum.DIVIDENDS)
         for _ in range(5):
             try:
                 divinfo = self.table[FMVTypeEnum.DIVIDENDS][dividend][date_str]
-                return todate(divinfo['recordDate']), Decimal(str(divinfo['value']))
+                exdate = todate(divinfo['date'])
+                declarationdate = todate(
+                    divinfo['declarationDate']) if divinfo['declarationDate'] else exdate
+                return exdate, declarationdate, Decimal(str(divinfo['value']))
             except KeyError:
                 # Might be a holiday, iterate backwards
                 itemdate -= timedelta(days=1)
