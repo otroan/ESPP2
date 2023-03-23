@@ -17,15 +17,25 @@ import logging
 from decimal import Decimal
 import numpy as np
 import urllib3
-# from pydantic import BaseModel
 
-# class DividendRecord(BaseModel):
-#     '''Dividend record'''
-#     date: date
-#     recordDate: date
-#     paymentDate: date
-#     value: Decimal
-#     currency: str
+
+#### ESPP Rate MANUALLY MAINTAINED ####
+def get_espp_exchange_rate(date):
+    '''Return the 6 month P&L average. Manually maintained for now.'''
+    espp = {'2017-06-30':	8.465875,
+            '2017-12-29':	8.07695,
+            '2018-06-29':	7.96578333,
+            '2018-12-31':	8.27031667,
+            '2019-06-28':	8.62925833,
+            '2019-12-31':	8.92531667,
+            '2020-06-30':	9.77359167,
+            '2020-12-31':	9.12461667,
+            '2021-06-30':	8.4733,
+            '2021-12-31':	8.70326667,
+            '2022-06-30':	9.07890833,
+            '2022-12-30':	10.0731583, }
+    return Decimal(espp[date])
+
 class FMVTypeEnum(Enum):
     '''Enum for FMV types'''
     STOCK = 'STOCK'
@@ -211,6 +221,10 @@ class FMV():
     def get_currency(self, currency: str, date_union: Union[str, datetime]) -> float:
         '''Get currency value. If not found, iterate backwards until found.'''
         itemdate, date_str = self.extract_date(date_union)
+
+        if currency == 'ESPPUSD':
+            return get_espp_exchange_rate(date_str)
+
         self.refresh(currency, itemdate, FMVTypeEnum.CURRENCY)
 
         for _ in range(6):
