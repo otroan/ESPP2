@@ -57,7 +57,6 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     '''Generate tax report'''
 
     this_year = [t for t in transactions.transactions if t.date.year == year]
-
     p = Positions(year, prev_holdings, this_year, wires)
     p.process()
     holdings = p.holdings(year, broker)
@@ -102,9 +101,13 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     foreignshares = []
 
     for e in report['eoy_balance'][year]:
+        tax_deduction_used = 0
+        dividend_nok_value = 0
         dividend = [d for d in report['dividends'] if d.symbol == e.symbol]
-        assert len(dividend) == 1
-        tax_deduction_used = dividend[0].tax_deduction_used
+        if dividend:
+            assert len(dividend) == 1
+            tax_deduction_used = dividend[0].tax_deduction_used
+            dividend_nok_value = dividend[0].amount.nok_value
         try:
             sales = report['sales'][e.symbol]
         except KeyError:
@@ -116,11 +119,14 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
             total_gain_pre_tax_inc_nok += s.totals['pre_tax_inc_gain'].nok_value
             tax_deduction_used += s.totals['tax_ded_used']
         if year == 2022:
+            dividend_pre_tax_inc_nok_value = 0
+            if dividend:
+                dividend_pre_tax_inc_nok_value = dividend[0].pre_tax_inc_amount.nok_value
             foreignshares.append(ForeignShares(symbol=e.symbol, isin=fundamentals[e.symbol].isin,
                                             country=fundamentals[e.symbol].country, account=broker,
                                             shares=e.qty, wealth=e.amount.nok_value,
-                                            dividend=dividend[0].amount.nok_value,
-                                            pre_tax_inc_dividend=dividend[0].pre_tax_inc_amount.nok_value,
+                                            dividend=dividend_nok_value,
+                                            pre_tax_inc_dividend=dividend_pre_tax_inc_nok_value,
                                             taxable_pre_tax_inc_gain=total_gain_pre_tax_inc_nok,
                                             taxable_gain=total_gain_nok,
                                             tax_deduction_used=tax_deduction_used))
@@ -128,7 +134,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
             foreignshares.append(ForeignShares(symbol=e.symbol, isin=fundamentals[e.symbol].isin,
                                             country=fundamentals[e.symbol].country, account=broker,
                                             shares=e.qty, wealth=e.amount.nok_value,
-                                            dividend=dividend[0].amount.nok_value,
+                                            dividend=dividend_nok_value,
                                             taxable_gain=total_gain_nok,
                                             tax_deduction_used=tax_deduction_used))
 
@@ -200,7 +206,7 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
             break
         this_year = [t for t in transactions.transactions if t.date.year == y]
         logger.info('Calculating tax for previous year: %s', y)
-        p = Positions(y, holdings, this_year, received_wires=Wires(wires=[]))
+        p = Positions(y, holdings, this_year, received_wires=Wires(__root__=[]))
 
         # Calculate taxes for the year
         p.process()
@@ -223,7 +229,6 @@ def do_taxes(broker, transaction_files: list, holdfile,
 
     If holdings file is specified already for previous year, the first phase is skipped.
     '''
-    report = []
     wires = []
     prev_holdings = []
     transactions, years = merge_transactions(transaction_files)
@@ -245,17 +250,13 @@ def do_taxes(broker, transaction_files: list, holdfile,
     elif opening_balance:
         prev_holdings = opening_balance
 
-
-    # Generate holdings for year-1
-    new_prev_holdings = generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
-
-    if new_prev_holdings == prev_holdings:
+    if (prev_holdings and prev_holdings.year == year-1) or (not prev_holdings and year in years):
         # Phase 2
-        logger.info('No changes in holdings for previous year, calculating tax')
-
+        # Previous holdings or all transactions from the tax year (new user)
+        logger.info('Holdings file for previous year found, calculating tax')
         return tax_report(
-            year, broker, transactions, wires, new_prev_holdings, verbose=verbose)
-    else:
-        # Phase 1. Return our approximation for previous year holdings for review
-        logger.info('Changes in holdings for previous year')
-        return new_prev_holdings
+            year, broker, transactions, wires, prev_holdings, verbose=verbose)
+
+    # Phase 1. Return our approximation for previous year holdings for review
+    logger.info('Changes in holdings for previous year')
+    return generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
