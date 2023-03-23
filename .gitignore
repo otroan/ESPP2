@@ -4,3 +4,4 @@ cache/
 old/
 venv/
 .venv/
+espp2/_version.py
