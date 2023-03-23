@@ -64,7 +64,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
 
     # Tax report (in JSON)
     if output:
-        j = report.json(indent=4)
+        j = result.report.json(indent=4)
         logger.info('Writing tax report to: %s', output.name)
         with output as f:
             f.write(j)
