@@ -10,7 +10,7 @@ import codecs
 import io
 import dateutil.parser as dt
 from espp2.fmv import FMV
-from espp2.datamodels import Transactions
+from espp2.datamodels import Transactions, Amount
 
 def schwab_csv_import(fd):
     '''Parse Schwab CSV file.'''
@@ -93,23 +93,6 @@ def fixup_number(numberstr):
     except ValueError:
         return ""
 
-#### TODO
-def get_espp_exchange_rate(date):
-    '''Return the 6 month P&L average. Manually maintained for now.'''
-    espp = {'2017-06-30':	8.465875,
-            '2017-12-29':	8.07695,
-            '2018-06-29':	7.96578333,
-            '2018-12-31':	8.27031667,
-            '2019-06-28':	8.62925833,
-            '2019-12-31':	8.92531667,
-            '2020-06-30':	9.77359167,
-            '2020-12-31':	9.12461667,
-            '2021-06-30':	8.4733,
-            '2021-12-31':	8.70326667,
-            '2022-06-30':	9.07890833,
-            '2022-12-30':	10.0731583, }
-    return Decimal(espp[date])
-
 def subdata(action, description, date, value):
     '''Parse Schwab sub-data field.'''
 
@@ -159,12 +142,11 @@ def subdata(action, description, date, value):
         if is_espp:
             # purchase_price is the plan price, not our cost basis
             newv['plan_purchase_price'] = newv.pop('purchase_price')
-            newv['purchase_price'] = newv.pop('purchase_fmv')
-            newv['purchase_price']['currency'] = 'ESPPUSD'
-            exchange_rate = get_espp_exchange_rate(newv['purchase_date'])
-            newv['date'] = newv['purchase_date']
-            newv['purchase_price']['nok_exchange_rate'] = exchange_rate
-            newv['purchase_price']['nok_value'] = exchange_rate * newv['purchase_price']['value']
+            purchase_price = newv.pop('purchase_fmv')['value']
+            purchase_date = newv['purchase_date']
+            newv['purchase_price'] = Amount(amountdate=purchase_date, value=purchase_price, currency='ESPPUSD')
+            newv['date'] = purchase_date
+
         newv['broker'] = 'schwab'
         # for price in pricefields:
         #     if price in newv:
