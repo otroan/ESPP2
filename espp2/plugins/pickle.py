@@ -128,6 +128,11 @@ def do_trans(record):
     n = Decimal(f"{record['n']}")
     price = Decimal(f"{record['price']}") * n
 
+    if n == 0:
+        # Old pickle file has a bug where it sometimes has a zero quanity for sale. Ignore it.
+        logger.warning("Zero quantity for sale, ignoring it: %s", record)
+        return
+
     newrec = dict()
 
     add_date(newrec, 'date', date)
