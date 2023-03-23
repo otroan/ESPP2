@@ -117,3 +117,12 @@ The web interface uses the same backend as the command line tool, so the same da
 It is a single request / response REST API between the frontend and the backend. No data is stored on the server, and if the user makes a change to the input, the whole tax calculation is redone.
 
 While the server does some logging, the transaction files are not stored on the server.
+
+
+## Release notes
+
+### Pickle import
+
+- Trade fees and commissions are not included in the pickle file, so some manual adjustment of the cash balance for Schwab is expected. Typically these are a between a few cents and $19.95.
+
+- Dividends. The pickle file does not include the dividend total, only dividend per share. So the total (for the cash balance) must be calculated based on the calculated number of shares on the ex-date. It seems to be getting it right, but there is some risk of error here.

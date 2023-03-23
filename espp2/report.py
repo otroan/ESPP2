@@ -98,6 +98,24 @@ def print_report_holdings(holdings: Holdings, console: Console):
 
     console.print(table)
 
+    '''Cash ledger'''
+    table = Table(title=f"Cash Holdings {holdings.year}:")
+    table.add_column("Date", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Amount", justify="right", style="black", no_wrap=True)
+    table.add_column("Amount NOK", style="magenta", justify="right")
+    table.add_column("Description", style="black")
+    table.add_column("Total", style="black")
+    total = Decimal(0)
+
+    for e in holdings.cash:
+        total += e.amount.value
+
+        table.add_row(str(e.date), str(e.amount.value),
+                      str(e.amount.nok_value), e.description)
+    table.add_row("", "", "", "", str(total))
+
+    console.print(table)
+
 def print_ledger(ledger: dict, console: Console):
     for symbols in ledger:
         table = Table(title=f"Ledger: {symbols}")
@@ -126,8 +144,20 @@ def print_report_tax_summary(summary: TaxSummary, console:Console):
 
     # All shares that have been held at some point throughout the year
     for e in summary.foreignshares:
-        table.add_row(e.symbol, e.isin, e.country, e.account, str(e.shares), str(e.wealth), str(
-            e.dividend), str(e.taxable_gain), str(e.tax_deduction_used))
+        if summary.year == 2022:
+            table.add_row("", "", "", "", "", "",
+                        str(e.pre_tax_inc_dividend),
+                        str(e.taxable_pre_tax_inc_gain),
+                        "")
+            dividend = e.dividend - e.pre_tax_inc_dividend
+            gain = e.taxable_gain - e.taxable_pre_tax_inc_gain
+        else:
+            dividend = e.dividend
+            gain = e.taxable_gain
+        table.add_row(e.symbol, e.isin, e.country, e.account, str(e.shares), str(e.wealth),
+                    str(dividend), str(gain),
+                    str(e.tax_deduction_used))
+
     console.print(table)
 
     table = Table(title="Method in the event of double taxation -> Credit deduction / tax paid abroad:", title_justify="left")

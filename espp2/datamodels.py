@@ -13,6 +13,7 @@ from espp2.fmv import FMV
 # Singleton caching stock and currency data
 fmv = FMV()
 
+
 class EntryTypeEnum(str, Enum):
     '''Entry type'''
     BUY = 'BUY'
@@ -24,6 +25,7 @@ class EntryTypeEnum(str, Enum):
     WIRE = 'WIRE'
     SELL = 'SELL'
     TRANSFER = 'TRANSFER'
+    FEE = 'FEE'
 
     def __str__(self):
         return self.value
@@ -34,6 +36,19 @@ class Amount(BaseModel):
     nok_exchange_rate: Decimal
     nok_value: Decimal
     value: Decimal
+
+    def __init__(self, amountdate=None, **data):
+        '''Initialize amount from currency, date and value'''
+        if amountdate and 'nok_exchange_rate' not in data:
+            exchange_rate = fmv.get_currency(data['currency'], amountdate)
+            data['nok_exchange_rate'] = exchange_rate
+            data['nok_value'] = Decimal(str(data['value'])) * exchange_rate
+        elif not data:
+            data['nok_exchange_rate'] = 0
+            data['nok_value'] = 0
+            data['currency'] = 'NA'
+            data['value'] = 0
+        super().__init__(**data)
 
     def __str__(self):
         if self.currency == 'USD':
@@ -162,14 +177,16 @@ class Dividend(TransactionEntry):
     type: Literal[EntryTypeEnum.DIVIDEND]
     date: date
     symbol: str
-    amount: PositiveAmount
+    amount: Optional[PositiveAmount]
+    amount_ps: Optional[PositiveAmount]
     source: str
     id: str = Optional[str]
 
     @root_validator(pre=True)
     def check_dividend_data(cls, values):
         '''Lookup dividend data from the external API and put those records in the data model'''
-        values['recorddate'], values['dividend_dps'] = fmv.get_dividend(values['symbol'], values['date'])
+        values['exdate'], values['declarationdate'], values['dividend_dps'] = fmv.get_dividend(
+            values['symbol'], values['date'])
         return values
 
     class Config:
@@ -192,7 +209,7 @@ class Wire(TransactionEntry):
     date: date
     amount: Amount
     description: str
-    fee: Optional[Amount]
+    fee: Optional[NegativeAmount]
     source: str
     id: str = Optional[str]
 
@@ -202,9 +219,17 @@ class Sell(TransactionEntry):
     date: date
     symbol: str
     qty: Decimal
-    fee: Optional[Amount]
+    fee: Optional[NegativeAmount]
     amount: Amount
     description: str
+    source: str
+    id: str = Optional[str]
+
+class Fee(TransactionEntry):
+    '''Independent Fee'''
+    type: Literal[EntryTypeEnum.FEE]
+    date: date
+    amount: NegativeAmount
     source: str
     id: str = Optional[str]
 
@@ -215,12 +240,12 @@ class Transfer(TransactionEntry):
     symbol: str
     qty: Decimal
     # amount: Amount
-    # fee: Amount
+    fee: Optional[NegativeAmount] = 0
     source: str
     id: str = Optional[str]
  
 Entry = Annotated[Union[Buy, Deposit, Tax, Taxsub, Dividend,
-                        Dividend_Reinv, Wire, Sell, Transfer], Field(discriminator="type")]
+                        Dividend_Reinv, Wire, Sell, Transfer, Fee], Field(discriminator="type")]
 
 class Transactions(BaseModel):
     '''Transactions'''
@@ -253,12 +278,19 @@ class Stock(BaseModel):
     class Config:
         extra = Extra.allow
 
+class CashEntry(BaseModel):
+    '''Cash entry'''
+    date: date
+    description: str
+    amount: Amount
+    transfer: Optional[bool] = False
+
 class Holdings(BaseModel):
     '''Stock holdings'''
     year: int
     broker: str
     stocks: list[Stock]
-    cash: list[WireAmount] ## TODO? Cash
+    cash: list[CashEntry]
 
 class EOYBalanceItem(BaseModel):
     '''EOY balance item'''
@@ -273,6 +305,7 @@ class EOYDividend(BaseModel):
     '''EOY dividend'''
     symbol: str
     amount: Amount
+    pre_tax_inc_amount: Optional[Amount]
     tax: Amount # Negative
     tax_deduction_used: Decimal # NOK
 
@@ -308,12 +341,6 @@ class TaxReport(BaseModel):
     unmatched_wires: list[WireAmount]
     prev_holdings: Holdings
 
-class CashEntry(BaseModel):
-    '''Cash entry'''
-    date: date
-    description: str
-    amount: Amount
-    transfer: Optional[bool] = False
 class CashModel(BaseModel):
     '''Cash model'''
     cash: List[CashEntry] = []
@@ -326,8 +353,10 @@ class ForeignShares(BaseModel):
     account: str
     shares: Decimal
     wealth: Decimal
+    pre_tax_inc_dividend: Optional[Decimal]
     dividend: Decimal
     taxable_gain: Decimal
+    taxable_pre_tax_inc_gain: Optional[Decimal]
     tax_deduction_used: Decimal
 
 class CreditDeduction(BaseModel):
@@ -349,6 +378,7 @@ class CashSummary(BaseModel):
     '''Cash account'''
     transfers: list[TransferRecord]
     remaining_cash: Amount
+    holdings: list[CashEntry]
     gain: Decimal
 
 class TaxSummary(BaseModel):

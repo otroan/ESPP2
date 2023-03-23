@@ -88,7 +88,7 @@ def add_amount(rec, name, date, currency, amount):
 def do_deposit(record):
     date = record['date']
     n = Decimal(str(record['n']))
-    price = Decimal(f"{record['price']}")
+    price = Decimal(f"{record['price']}").quantize(Decimal('0.0001'))
     vpd = Decimal(f"{record['vpd']}")
     fee = Decimal(record['fee'])
 
@@ -116,16 +116,17 @@ def do_reinvest(record):
     add_date(newrec, 'date', date)
     add_string(newrec, 'type', 'DIVIDEND_REINV')
     add_string(newrec, 'symbol', 'CSCO')
-    add_amount(newrec, 'amount', date, 'USD', amount)
+    add_amount(newrec, 'amount', date, 'USD', -amount)
     add_string(newrec, 'description', '')
 
     records.append(newrec)
 
 def do_trans(record):
+    '''Sale'''
     date = record['date']
     fee = Decimal(f"{record['fee']}")
     n = Decimal(f"{record['n']}")
-    price = Decimal(f"{record['price']}")
+    price = Decimal(f"{record['price']}") * n
 
     newrec = dict()
 
@@ -134,11 +135,12 @@ def do_trans(record):
     add_string(newrec, 'symbol', 'CSCO')
     add_value(newrec, 'qty', -n)
     add_value(newrec, 'description', '')
-    add_amount(newrec, 'fee', date, 'USD', fee)
+    add_amount(newrec, 'fee', date, 'USD', -fee)
     add_amount(newrec, 'amount', date, 'USD', price)
     records.append(newrec)
 
 def do_transfer(record):
+    '''Shares are transferred to another broker'''
     date = record['date']
     fee = Decimal(f"{record['fee']}")
     n = Decimal(record['n'])
@@ -151,24 +153,21 @@ def do_transfer(record):
     add_value(newrec, 'qty', -n)
     add_string(newrec, 'symbol', 'CSCO')
     # add_amount(newrec, 'amount', date, 'USD', price)
-    # add_amount(newrec, 'fee', date, 'USD', fee)
+    add_amount(newrec, 'fee', date, 'USD', -fee)
 
     records.append(newrec)
 
 def do_dividend(record):
     date = record['payDate']
-    amount = Decimal(f"{record['amount']}")
-    netto = record['netto']
+    amount_ps = Decimal(f"{record['amount']}")
     payDate = record['payDate']
-    taxPercentage = record['taxPercentage']
 
     newrec = dict()
-
     add_date(newrec, 'date', date)
     add_string(newrec, 'type', 'DIVIDEND')
     add_string(newrec, 'symbol', 'CSCO')
     add_string(newrec, 'description', 'Credit')
-    add_amount(newrec, 'amount', payDate, 'USD', amount)
+    add_amount(newrec, 'amount_ps', payDate, 'USD', amount_ps)
 
     records.append(newrec)
 
@@ -212,12 +211,37 @@ def do_rsu(record):
 
     records.append(newrec)
 
-def do_journal(record):
-    pass
-
 def do_wire(record):
-    pass
+    ''' {'date': datetime.date(2012, 12, 12), 'sent': 12805.27, 'received': 71975.86161600001, 'fee': 25.0}'''
+    date = record['date']
+    fee = Decimal(record['fee'])
+    sent = Decimal(record['sent'])
+    received = Decimal(f"{record['received']}")
 
+    newrec = dict()
+
+    add_date(newrec, 'date', date)
+    add_string(newrec, 'type', 'WIRE')
+    add_string(newrec, 'description', '')
+    add_amount(newrec, 'amount', date, 'USD', -sent)
+    add_amount(newrec, 'fee', date, 'USD', -fee)
+
+    # Sent & Received
+
+    records.append(newrec)
+
+def do_fee(record):
+    # FEE: {'date': datetime.date(2018, 7, 9), 'amount': 25.0}
+    date = record['date']
+    fee = Decimal(record['amount'])
+
+    newrec = dict()
+
+    add_date(newrec, 'date', date)
+    add_string(newrec, 'type', 'FEE')
+    add_amount(newrec, 'amount', date, 'USD', -fee)
+
+    records.append(newrec)
 
 def read(pickle_file, filename='', logger=None) -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
@@ -227,7 +251,6 @@ def read(pickle_file, filename='', logger=None) -> Transactions:
 
     # Read the pickle-file
     p = UnpicklerESPP(pickle_file).load()
-
     # Print the data of the raw pickle-file data for debugging
     if False:
         print('Pickle-file dump:')
@@ -270,11 +293,11 @@ def read(pickle_file, filename='', logger=None) -> Transactions:
             continue
 
         if rectype == 'JOURNAL':
-            do_journal(record)
+            do_wire(record)
             continue
 
         if rectype == 'FEE':
-            # TODO MORTEN
+            do_fee(record)
             continue
 
         if rectype == 'WIRE':

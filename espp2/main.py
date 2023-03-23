@@ -5,13 +5,12 @@ ESPPv2 main entry point
 # pylint: disable=invalid-name
 import logging
 from decimal import Decimal
-from importlib.resources import files
 import simplejson as json
 from rich.console import Console
 from espp2.positions import Positions, Cash, InvalidPositionException, Ledger
 from espp2.transactions import normalize
 from espp2.datamodels import TaxReport, Transactions, Wires, Holdings, ForeignShares, TaxSummary, CreditDeduction
-from espp2.report import print_ledger
+from espp2.report import print_ledger, print_cash_ledger, print_report_holdings
 from typing import Tuple
 
 logger = logging.getLogger(__name__)
@@ -24,60 +23,49 @@ def json_load(fp):
     data = json.load(fp, parse_float=Decimal, encoding='utf-8')
     return data
 
-# Initialize the taxdata
-taxdata_file = files('espp2').joinpath('taxdata.json')
-with open(taxdata_file, 'r', encoding='utf-8') as jf:
-    taxdata = json.load(jf)
+# def validate_holdings(broker, year, prev_holdings, transactions):
+#     '''Validate holdings and filter transactions'''
+#     if prev_holdings:
+#         if broker != prev_holdings.broker:
+#             raise ESPPErrorException(f'Broker mismatch: {broker} != {prev_holdings.broker}')
+#     # # Remove duplicate transactions
+#     # transactions = deduplicate(transactions)
+#     if prev_holdings and prev_holdings.stocks and prev_holdings.year == year - 1:
+#         # Filter out transactions from previous year
+#         # TODO: Cash?
+#         transactions = [t for t in transactions if t.date.year == year]
+#         return prev_holdings, transactions
 
-# TODO: Include cash
-# def deduplicate(transactions):
-#     '''Remove duplicate transactions'''
-#     # Remove duplicate transactions
-#     prededup = len(transactions)
-#     seen = set()
-#     transactions = [t for t in transactions if t.id not in seen and not seen.add(t.id)]
-#     logger.debug('Transaction deduplication %s %s (before/after)', prededup, len(transactions))
-#     return transactions
+#     # No holdings, or holdings are from wrong year
+#     c = Cash(year-1, transactions, None)
+#     p = Positions(year-1, prev_holdings, transactions, c)
+#     print('***Cash from previous year***')
+#     print_cash_ledger(c.ledger(), Console())
+#     holdings = p.holdings(year-1, broker)
+#     transactions = [t for t in transactions if t.date.year == year]
+#     return holdings, transactions
 
-def validate_holdings(broker, year, prev_holdings, transactions):
-    '''Validate holdings and filter transactions'''
-    if prev_holdings:
-        if broker != prev_holdings.broker:
-            raise ESPPErrorException(f'Broker mismatch: {broker} != {prev_holdings.broker}')
-    # # Remove duplicate transactions
-    # transactions = deduplicate(transactions)
-    if prev_holdings and prev_holdings.stocks and prev_holdings.year == year - 1:
-        # Filter out transactions from previous year
-        transactions = [t for t in transactions if t.date.year == year]
-        return prev_holdings, transactions
-
-    # No holdings, or holdings are from wrong year
-    c = Cash(year-1, transactions, None)
-    p = Positions(year-1, taxdata, prev_holdings, transactions, c)
-    holdings = p.holdings(year-1, broker)
-    transactions = [t for t in transactions if t.date.year == year]
-    return holdings, transactions
+from typing import NamedTuple
+class TaxReportReturn(NamedTuple):  # inherit from typing.NamedTuple
+    report: TaxReport
+    holdings: Holdings
+    summary: TaxSummary
 
 
 def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
-               prev_holdings: Holdings, taxdata, verbose : bool = False) -> Tuple[TaxReport, Holdings, TaxSummary]:
+               prev_holdings: Holdings, verbose : bool = False) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Generate tax report'''
 
-    if verbose:
-        l = Ledger(prev_holdings, transactions.transactions)
-        console = Console()
-        print_ledger(l.entries, console)
+    this_year = [t for t in transactions.transactions if t.date.year == year]
 
-    holdings, transactions = validate_holdings(broker, year, prev_holdings, transactions.transactions)
-    l = Ledger(holdings, transactions)
-
-    c = Cash(year, transactions, wires)
-    p = Positions(year, taxdata, holdings, transactions, c, ledger=l)
-
+    p = Positions(year, prev_holdings, this_year, wires)
+    p.process()
+    holdings = p.holdings(year, broker)
     report = {}
     fundamentals = p.fundamentals()
-    report['prev_holdings'] = holdings
-    report['ledger'] = l.entries
+    report['prev_holdings'] = prev_holdings
+    report['ledger'] = p.ledger.entries
+
     # End of Year Balance (formueskatt)
     try:
         prev_year_eoy = p.eoy_balance(year-1)
@@ -85,6 +73,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     except InvalidPositionException as err:
         logger.error(err)
         raise
+
     report['eoy_balance'] = {year - 1: prev_year_eoy,
                              year: this_year_eoy}
 
@@ -102,13 +91,10 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     report['sales'] = p.sales()
 
     # Cash and wires
-    nomatch = c.wire()
 
-    report['unmatched_wires'] = nomatch
-    # report['cash'] = {}
-    report['cash_ledger'] = c.ledger()
-    cashsummary = c.process()
-
+    report['unmatched_wires'] = p.unmatched_wires_report
+    report['cash_ledger'] = p.cash.ledger()
+    cashsummary = p.cash_summary
 
     foreignshares = []
 
@@ -121,16 +107,27 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
         except KeyError:
             sales = []
         total_gain_nok = 0
+        total_gain_pre_tax_inc_nok = 0
         for s in sales:
             total_gain_nok += s.totals['gain'].nok_value
+            total_gain_pre_tax_inc_nok += s.totals['pre_tax_inc_gain'].nok_value
             tax_deduction_used += s.totals['tax_ded_used']
-        
-        foreignshares.append(ForeignShares(symbol=e.symbol, isin=fundamentals[e.symbol].isin,
-                                           country=fundamentals[e.symbol].country, account=broker,
-                                           shares=e.qty, wealth=e.amount.nok_value,
-                                           dividend=dividend[0].amount.nok_value,
-                                           taxable_gain=total_gain_nok,
-                                           tax_deduction_used=tax_deduction_used))
+        if year == 2022:
+            foreignshares.append(ForeignShares(symbol=e.symbol, isin=fundamentals[e.symbol].isin,
+                                            country=fundamentals[e.symbol].country, account=broker,
+                                            shares=e.qty, wealth=e.amount.nok_value,
+                                            dividend=dividend[0].amount.nok_value,
+                                            pre_tax_inc_dividend=dividend[0].pre_tax_inc_amount.nok_value,
+                                            taxable_pre_tax_inc_gain=total_gain_pre_tax_inc_nok,
+                                            taxable_gain=total_gain_nok,
+                                            tax_deduction_used=tax_deduction_used))
+        else:
+            foreignshares.append(ForeignShares(symbol=e.symbol, isin=fundamentals[e.symbol].isin,
+                                            country=fundamentals[e.symbol].country, account=broker,
+                                            shares=e.qty, wealth=e.amount.nok_value,
+                                            dividend=dividend[0].amount.nok_value,
+                                            taxable_gain=total_gain_nok,
+                                            tax_deduction_used=tax_deduction_used))
 
     # Tax paid in the US on dividends
     credit_deductions = []
@@ -146,7 +143,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
 
     summary = TaxSummary(year=year, foreignshares=foreignshares, credit_deduction=credit_deductions,
                          cashsummary=cashsummary)
-    return TaxReport(**report), p.holdings(year, broker), summary
+    return TaxReportReturn(TaxReport(**report), holdings, summary)
 
 # Merge transaction files
 # - "Concatenate" transaction on year bounaries
@@ -160,7 +157,7 @@ def merge_transactions(transaction_files: list) -> Transactions:
     if len(transaction_files) == 1:
         t = normalize(transaction_files[0])
         t = sorted(t.transactions, key=lambda d: d.date)
-        return Transactions(transactions=t)
+        return Transactions(transactions=t), {}
     if len(transaction_files) > 2:
         raise ESPPErrorException(f'Too many transaction files {len(transaction_files)}')
 
@@ -187,20 +184,47 @@ def merge_transactions(transaction_files: list) -> Transactions:
         t = [t for t in per_year_t if t.date.year == i]
         transactions += t
 
-    return Transactions(transactions=transactions)
+    return Transactions(transactions=transactions), years
 
+
+def generate_previous_year_holdings(broker, years, year, prev_holdings, transactions,
+                                    verbose=False):
+    '''Start from earliest year and generate taxes for every year until previous year.'''
+
+    holdings = prev_holdings
+    for y in years:
+        if y >= year:
+            break
+        this_year = [t for t in transactions.transactions if t.date.year == y]
+        logger.info('Calculating tax for previous year: %s', y)
+        p = Positions(y, holdings, this_year, received_wires=Wires(wires=[]))
+
+        # Calculate taxes for the year
+        p.process()
+        holdings = p.holdings(y, broker)
+
+        if verbose:
+            print_ledger(p.ledger.entries, Console())
+            print_cash_ledger(p.cash.ledger(), Console())
+            print_report_holdings(holdings, Console())
+
+    # Return holdings for previous year
+    return holdings
 
 def do_taxes(broker, transaction_files: list, holdfile,
              wirefile, year, verbose=False, opening_balance=None) -> Tuple[TaxReport, Holdings, TaxSummary]:
-    '''Do taxes'''
+    '''Do taxes
+    This function is run in two phases:
+    1. Process transactions and older holdings to generate holdings for previous year
+    2. Process transactions and holdings for previous year to generate taxes for current year
+
+    If holdings file is specified already for previous year, the first phase is skipped.
+    '''
     report = []
     wires = []
     prev_holdings = []
-    transactions = merge_transactions(transaction_files)
+    transactions, years = merge_transactions(transaction_files)
 
-    # l = Ledger(None, transactions.transactions)
-    # for e in l.entries['CSCO']:
-    #     print(f'{str(e[0])}\t{e[1]}\t{e[2]}')
     if holdfile and opening_balance:
         raise ESPPErrorException('Cannot specify both opening balance and holdings file')
 
@@ -217,6 +241,18 @@ def do_taxes(broker, transaction_files: list, holdfile,
         logger.info('Holdings file read')
     elif opening_balance:
         prev_holdings = opening_balance
-    report, holdings, summary = tax_report(
-        year, broker, transactions, wires, prev_holdings, taxdata, verbose=verbose)
-    return report, holdings, summary
+
+
+    # Generate holdings for year-1
+    new_prev_holdings = generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
+
+    if new_prev_holdings == prev_holdings:
+        # Phase 2
+        logger.info('No changes in holdings for previous year, calculating tax')
+
+        return tax_report(
+            year, broker, transactions, wires, new_prev_holdings, verbose=verbose)
+    else:
+        # Phase 1. Return our approximation for previous year holdings for review
+        logger.info('Changes in holdings for previous year')
+        return new_prev_holdings

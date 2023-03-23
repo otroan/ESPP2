@@ -47,10 +47,13 @@ def main(transaction_files: list[typer.FileBinaryRead],
 
     report: TaxReport
     holdings: Holdings
-    report, holdings, summary = do_taxes(
-        broker, transaction_files, inholdings, wires, year, verbose=verbose, opening_balance=opening_balance)
-
-    print_report(year, summary, report, holdings, verbose)
+    result = do_taxes(broker, transaction_files, inholdings, wires, year, verbose=verbose, opening_balance=opening_balance)
+    if isinstance(result, Holdings):
+        holdings = result
+    # report, holdings, summary = do_taxes(
+    #     broker, transaction_files, inholdings, wires, year, verbose=verbose, opening_balance=opening_balance)
+    else:
+        print_report(year, result.summary, result.report, result.holdings, verbose)
 
     # New holdings
     if outholdings:

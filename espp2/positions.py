@@ -2,6 +2,29 @@
 ESPPv2 Positions module
 '''
 
+#
+# Remember to add the new tax-free deduction rates for a new year
+#
+tax_deduction_rates = {
+    2006: [2.1, 3.0],
+    2007: [3.3, 4.6],
+    2008: [3.8, 5.2],
+    2009: [1.3, 1.8],
+    2010: [1.6, 2.2],
+    2011: [1.5, 2.1],
+    2012: [1.1, 1.6],
+    2013: [1.1, 1.5],
+    2014: [0.9, 1.2],
+    2015: [0.6, 0.8],
+    2016: [0.4, 0.5],
+    2017: [0.7, 0.9],
+    2018: [0.8, 1.1],
+    2019: [1.3, 1.7],
+    2020: [0.6, 0.8],
+    2021: [0.5, 0.6],
+    2022: [1.7, 2.1]
+}
+
 # pylint: disable=too-many-instance-attributes, line-too-long, invalid-name, logging-fstring-interpolation
 
 import logging
@@ -93,8 +116,8 @@ class Positions():
                     logger.debug(
                         'Adding tax deduction for ESPP from last year %s', p)
 
-    def __init__(self, year, taxdata, prev_holdings: Holdings, transactions,
-                 cash, validate_year='exact', ledger=None):
+    def __init__(self, year, opening_balance: Holdings, transactions, received_wires=None,
+                 validate_year='exact'):
         # if validate_year == 'exact':
         #     transactions = [t for t in transactions if t.date.year == year]
         # elif validate_year == 'filter':
@@ -102,25 +125,28 @@ class Positions():
         #         t['date']).year <= year]
         # wrong_year = [t for t in transactions if t.date.year != year]
         # assert(len(wrong_year) == 0)
-
-        if not isinstance(cash, Cash):
-            raise ValueError('Cash must be instance of Cash')
+        self.year = year
+        # if not isinstance(cash, Cash):
+        #     raise ValueError('Cash must be instance of Cash')
         self.tax_deduction_rate = {year: Decimal(
-            str(i[0])) for year, i in taxdata['tax_deduction_rates'].items()}
+            str(i[0])) for year, i in tax_deduction_rates.items()}
 
         self.new_holdings = [
             t for t in transactions if t.type in ('BUY', 'DEPOSIT')]
         # self._fixup_tax_deductions()
-        self.cash = cash
-        self.ledger = ledger
-        if prev_holdings and prev_holdings.stocks:
+        if opening_balance:
+            self.cash = Cash(year, opening_balance.cash)
+        else:
+            self.cash = Cash(year)
+        self.ledger = Ledger(opening_balance, transactions)
+        if opening_balance and opening_balance.stocks:
             logger.info('Adding %d new holdings to %d previous holdings', len(
-                self.new_holdings), len(prev_holdings.stocks))
+                self.new_holdings), len(opening_balance.stocks))
             logger.info(
-                f'Previous holdings from: {prev_holdings.year} {validate_year}')
-            transactions = [t for t in transactions if t.date.year > prev_holdings.year]
+                f'Previous holdings from: {opening_balance.year} {validate_year}')
+            transactions = [t for t in transactions if t.date.year > opening_balance.year]
             self.new_holdings = [t for t in transactions if t.type in ('BUY', 'DEPOSIT')]
-            self.positions = prev_holdings.stocks + self.new_holdings
+            self.positions = opening_balance.stocks + self.new_holdings
         else:
             logger.warning(
                 "No previous holdings or stocks in holding file. Requires the complete transaction history.")
@@ -154,10 +180,20 @@ class Positions():
         self.db_taxsub = [t for t in transactions if t.type == 'TAXSUB']
 
         self.tax_by_symbols = position_groupby(self.db_tax)
-        # cls.tax_deduction_rate = taxdata['tax_deduction_rates']
 
-        # # Wires
-        # cls.db_wires = [t for t in transactions if t['type'] == 'WIRE']
+        # Wires
+        self.db_wires = [t for t in transactions if t.type == 'WIRE']
+        self.received_wires = received_wires
+
+        # Fees
+        self.db_fees = [t for t in transactions if t.type == 'FEE']
+
+        self.buys_report = None
+        self.sales_report = None
+        self.dividends_report = None
+        self.cash_summary = None
+        self.unmatched_wires_report = None
+        self.fees_report = None
 
     def fundamentals(self) -> Dict[str, Fundamentals]:
         '''Return fundamentals for symbol at date'''
@@ -185,7 +221,8 @@ class Positions():
         posidx = 0
         if symbol in self.sale_by_symbols:
             for s in self.sale_by_symbols[symbol]:
-                if s.date > balancedate:
+                if s.date >= balancedate:
+                    # We are including positions sold on this day too.
                     break
                 if posview[posidx].date > balancedate:
                     raise InvalidPositionException(
@@ -233,13 +270,14 @@ class Positions():
             total += i.qty
         return total
 
-    def dividends(self):
+    def _dividends(self):
         '''Process Dividends'''
         tax_deduction_used = 0
+        # if not d.amount and not d.amount.ps:
+        #     raise ValueError('Dividend amount is zero', d)
+
 
         # Deal with dividends and cash account
-        for d in self.db_dividends:
-            self.cash.debit(d.date, d.amount, 'dividend')
         for t in self.db_tax:
             self.cash.credit(t.date, t.amount, 'tax')
         for t in self.db_taxsub:
@@ -248,10 +286,20 @@ class Positions():
             self.cash.credit(i.date, i.amount, 'dividend reinvested')
 
         r=[]
+        norwegian_dividend_split = datetime(2022, 10, 5).date()
         for symbol, dividends in self.dividend_by_symbols.items():
             logger.debug('Processing dividends for %s', symbol)
-            dividend_usd = sum(item.amount.value for item in dividends)
-            dividend_nok = sum(item.amount.nok_value for item in dividends)
+            dividend_usd = 0 #sum(item.amount.value for item in dividends)
+            dividend_nok = 0 #sum(item.amount.nok_value for item in dividends)
+            if self.year == 2022:
+                # Need to separately calculate pre and post tax increase for 2022.
+                pre_tax_inc_usd = sum(
+                    item.amount.value for item in dividends if item.declarationdate <= norwegian_dividend_split)
+                pre_tax_inc_nok = sum(
+                    item.amount.nok_value for item in dividends if item.declarationdate <= norwegian_dividend_split)
+            else:
+                pre_tax_inc_usd = None
+                pre_tax_inc_nok = None
             # Note, in some cases taxes have not been withheld. E.g. dividends too small
             try:
                 tax_usd = sum(item.amount.value for item in self.tax_by_symbols[symbol])
@@ -259,19 +307,31 @@ class Positions():
             except KeyError:
                 tax_usd = tax_nok = 0
             for d in dividends:
-                total_shares = self.total_shares(self[:d.recorddate, symbol])
+                total_shares = self.total_shares(self[:d.exdate, symbol])
                 if self.ledger:
-                    ledger_shares = self.ledger.total_shares(symbol, d.recorddate)
+                    ledger_shares = self.ledger.total_shares(symbol, d.exdate)
                     assert isclose(total_shares, ledger_shares, abs_tol=10**-
-                                   2), f"Total shares don't match {total_shares} != {ledger_shares} on {d.date} / {d.recorddate}"
-                if total_shares == 0:
+                                   2), f"Total shares don't match {total_shares} != {ledger_shares} on {d.date} / {d.exdate}"
+                if total_shares == 0: # and not d.amount_ps:
                     raise InvalidPositionException(
                         f'Dividends: Total shares at dividend date is zero: {d}')
-                dps = d.amount.value / total_shares
+
+                if d.amount_ps:
+                    # Inherit problem from pickle. Might not even have gotten dividends here.
+                    dps = d.amount_ps.value
+                    value = d.amount_ps * total_shares
+                    d.amount = value
+                else:
+                    dps = d.amount.value / total_shares
+
+                self.cash.debit(d.date, d.amount, 'dividend')
+                dividend_usd += d.amount.value
+                dividend_nok += d.amount.nok_value
+
                 logger.info(
                     'Total shares of %s at dividend date: %s dps: %s reported: %s', symbol, total_shares, dps, d.dividend_dps)
-                assert isclose(dps, d.dividend_dps, abs_tol=10**-2), f"Dividend for {d.recorddate}/{d.date} per share calculated does not match reported {dps} vs {d.dividend_dps} for {total_shares} {d.amount.value}"
-                for entry in self[:d.recorddate, symbol]:  # Creates a view
+                assert isclose(dps, d.dividend_dps, abs_tol=10**-2), f"Dividend for {d.exdate}/{d.date} per share calculated does not match reported {dps} vs {d.dividend_dps} for {total_shares} {d.amount.value}"
+                for entry in self[:d.exdate, symbol]:  # Creates a view
                     entry.dps = dps if 'dps' not in entry else entry.dps + dps
                     tax_deduction = self.tax_deduction[entry.idx]
                     if tax_deduction > entry.dps:
@@ -281,17 +341,39 @@ class Positions():
                         tax_deduction_used += (tax_deduction * entry.qty)
                         self.tax_deduction[entry.idx] = 0
                     self.update(entry.idx, 'dps', entry.dps)
-            r.append(EOYDividend(symbol=symbol,
-                                 amount=Amount(currency="USD",
-                                               value=dividend_usd,
-                                               nok_value=dividend_nok,
-                                               nok_exchange_rate=0),
-                                 tax=Amount(currency="USD",
-                                            value=tax_usd,
-                                            nok_value=tax_nok,
-                                            nok_exchange_rate=0),
-                                 tax_deduction_used=tax_deduction_used))
+            if pre_tax_inc_usd:
+                r.append(EOYDividend(symbol=symbol,
+                                    amount=Amount(currency="USD",
+                                                value=dividend_usd,
+                                                nok_value=dividend_nok,
+                                                nok_exchange_rate=0),
+                                    pre_tax_inc_amount=Amount(currency="USD",
+                                                            value=pre_tax_inc_usd,
+                                                            nok_value=pre_tax_inc_nok,
+                                                            nok_exchange_rate=0),
+                                    tax=Amount(currency="USD",
+                                                value=tax_usd,
+                                                nok_value=tax_nok,
+                                                nok_exchange_rate=0),
+                                    tax_deduction_used=tax_deduction_used))
+            else:
+                r.append(EOYDividend(symbol=symbol,
+                                    amount=Amount(currency="USD",
+                                                value=dividend_usd,
+                                                nok_value=dividend_nok,
+                                                nok_exchange_rate=0),
+                                    tax=Amount(currency="USD",
+                                                value=tax_usd,
+                                                nok_value=tax_nok,
+                                                nok_exchange_rate=0),
+                                    tax_deduction_used=tax_deduction_used))
         return r
+
+    def dividends(self):
+        '''Calculate dividends for the year.'''
+        if not self.dividends_report:
+            self.dividends_report = self._dividends()
+        return self.dividends_report
 
     def individual_sale(self, sale_entry, buy_entry, qty):
         '''Calculate gain. Currently using total amount that includes fees.'''
@@ -334,41 +416,59 @@ class Positions():
         sales_report = []
 
         for s in sales:
-            s_record = EOYSales(date=s.date, symbol=symbol, qty=s.qty,
-                        fee=s.fee, amount=s.amount, from_positions=[])
+            if s.fee.value < 0:
+                self.cash.credit(s.date, s.fee.copy(), 'sale fee')
+            is_sale = s.type == EntryTypeEnum.SELL
+            if is_sale:
+                s_record = EOYSales(date=s.date, symbol=symbol, qty=s.qty,
+                            fee=s.fee, amount=s.amount, from_positions=[])
+                self.cash.debit(s.date, s.amount.copy(), 'sale')
+
             qty_to_sell = abs(s.qty)
-            self.cash.debit(s.date, s.amount.copy(), 'sale')
             while qty_to_sell > 0:
                 if positions[posidx].qty == 0:
                     posidx += 1
                 if qty_to_sell >= positions[posidx].qty:
-                    r = self.individual_sale(
-                        s, positions[posidx], positions[posidx].qty)
+                    if is_sale:
+                        r = self.individual_sale(
+                            s, positions[posidx], positions[posidx].qty)
                     qty_to_sell -= positions[posidx].qty
                     positions[posidx].qty = 0
                     posidx += 1
                 else:
-                    r = self.individual_sale(s, positions[posidx], qty_to_sell)
+                    if is_sale:
+                        r = self.individual_sale(s, positions[posidx], qty_to_sell)
                     positions[posidx].qty -= qty_to_sell
                     qty_to_sell = 0
-                s_record.from_positions.append(r)
-
+            if not is_sale:
+                continue
+            s_record.from_positions.append(r)
             total_gain = sum(item.gain_ps * item.qty
                              for item in s_record.from_positions)
+            if self.year == 2022:
+                total_gain_pre_tax_inc = sum(item.gain_ps * item.qty
+                                             for item in s_record.from_positions if s_record.date <= date(2022, 10, 5))
+                if not total_gain_pre_tax_inc:
+                    total_gain_pre_tax_inc = Amount(0)
+            else:
+                total_gain_pre_tax_inc = Amount(0)
             total_tax_ded = sum(item.tax_deduction_used
                                 for item in s_record.from_positions)
             total_purchase_price = sum(
                 item.purchase_price * item.qty for item in s_record.from_positions)
             if s.fee:
                 total_purchase_price += s.fee
-            totals = {'gain': total_gain, 'purchase_price': total_purchase_price, 'tax_ded_used': total_tax_ded,
+            totals = {'gain': total_gain,
+                      'pre_tax_inc_gain': total_gain_pre_tax_inc,
+                      'purchase_price': total_purchase_price,
+                      'tax_ded_used': total_tax_ded,
                       }
             s_record.totals = totals
             sales_report.append(s_record)
 
         return sales_report
 
-    def sales(self):
+    def _sales(self):
         '''Process all sales.'''
 
         # Walk through all sales from transactions. Deducting from balance.
@@ -382,7 +482,21 @@ class Positions():
             sale_report[symbol] += r
         return sale_report
 
-    def buys(self):
+    def sales(self):
+        '''Return report of sales'''
+        if not self.sales_report:
+            self.sales_report = self._sales()
+        return self.sales_report
+
+    def _fees(self):
+        for f in self.db_fees:
+            self.cash.credit(f.date, f.amount, 'fee')
+    def fees(self):
+        if not self.fees_report:
+            self.fees_report = self._fees()
+        return self.fees_report
+
+    def _buys(self):
         '''Return report of BUYS'''
         r = []
         for symbol in self.symbols:
@@ -409,6 +523,12 @@ class Positions():
                      'avg_usd': avg_usd, 'avg_nok': avg_nok})
         return r
 
+    def buys(self):
+        if self.buys_report:
+            return self.buys_report
+        self.buys_report = self._buys()
+        return self.buys_report
+
     def eoy_balance(self, year):
         '''End of year summary of holdings'''
         end_of_year = f'{year}-12-31'
@@ -418,13 +538,13 @@ class Positions():
         for symbol in self.symbols:
             eoy_balance = self[:end_of_year, symbol]
             total_shares = self.total_shares(eoy_balance)
-            fmv = f[symbol, end_of_year]
+            eoyfmv = f[symbol, end_of_year]
 
             r.append(EOYBalanceItem(symbol=symbol, qty=total_shares, amount=Amount(
-                value=total_shares * fmv, currency='USD',
+                value=total_shares * eoyfmv, currency='USD',
                 nok_exchange_rate=eoy_exchange_rate,
-                nok_value=total_shares * fmv * eoy_exchange_rate),
-                fmv=fmv))
+                nok_value=total_shares * eoyfmv * eoy_exchange_rate),
+                fmv=eoyfmv))
         return r
 
     def holdings(self, year, broker):
@@ -438,28 +558,43 @@ class Positions():
                     continue
                 tax_deduction = self.tax_deduction[item.idx]
                 tax_deduction += (item.purchase_price.nok_value *
-                                  self.tax_deduction_rate[str(year)])/100
+                                  self.tax_deduction_rate[year])/100
                 hitem = Stock(date=item.date, symbol=item.symbol, qty=item.qty,
                               purchase_price=item.purchase_price.copy(), tax_deduction=tax_deduction)
                 stocks.append(hitem)
-        return Holdings(year=year, broker=broker, stocks=stocks, cash=[])
+        return Holdings(year=year, broker=broker, stocks=stocks, cash=self.cash_summary.holdings)
+
+    def process(self):
+        '''Process all transactions'''
+        self.buys()
+        self.sales()
+        self.dividends()
+        self.fees()
+
+        # Process wires
+        self.unmatched_wires_report = self.cash.wire(self.db_wires, self.received_wires)
+        # print('unmatched', unmatched)
+        try:
+            self.cash_summary = self.cash.process()
+        except CashException as e:
+            l = self.cash.ledger()
+            s = ''
+            for entry in l:
+                s += f'{entry[0].date} {entry[0].amount.value} {entry[0].description} {entry[1]}\n'
+            # raise CashException(f'{str(e)}:\n{s}')
+            pass
 
 
 class Cash():
-    ''' Cash balance.
-    1) Cash USD Brokerage (per valuta)
-    2) Hjemmebeholdning av valuta  (valutatrans)
-    3) NOK hjemme
-    '''
-
-    def __init__(self, year, transactions=None, wires=None):
-        transactions = [t for t in transactions if t.date.year == year]
-
-        # Put any initialization here.
+    '''Cash balance'''
+    def __init__(self, year, opening_balance=[]):
+        '''Initialize cash balance for a given year.'''
         self.year = year
-        self.db_wires = [t for t in transactions if t.type == 'WIRE']
-        self.db_received = wires
         self.cash = CashModel().cash
+
+        # Spin through and add the opening balance
+        for e in opening_balance:
+            self.cash.append(e)
 
     def sort(self):
         '''Sort cash entries by date'''
@@ -468,23 +603,27 @@ class Cash():
     def debit(self, debitdate, amount, description=''):
         '''Debit cash balance'''
         logger.debug('Cash debit: %s: %s', debitdate, amount.value)
-
+        if amount.value < 0:
+            raise ValueError('Amount must be positive')
         self.cash.append(CashEntry(date=debitdate, amount=amount, description=description))
         self.sort()
 
     def credit(self, creditdate, amount, description='', transfer=False):
         ''' TODO: Return usdnok rate for the item credited '''
         logger.debug('Cash credit: %s: %s', creditdate, amount.value)
+        if amount.value > 0:
+            raise ValueError('Amount must be negative')
+
         self.cash.append(
             CashEntry(date=creditdate, amount=amount, description=description, transfer=transfer))
         self.sort()
 
-    def _wire_match(self, wire):
+    def _wire_match(self, wire, wires_received):
         '''Match wire transfer to received record'''
-        if isinstance(self.db_received, list) and len(self.db_received) == 0:
+        if isinstance(wires_received, list) and len(wires_received) == 0:
             return None
         try:
-            for v in self.db_received.wires:
+            for v in wires_received.wires:
                 if v.date == wire.date and isclose(v.value, abs(wire.amount.value), abs_tol=0.05):
                     return v
         except AttributeError as e:
@@ -493,6 +632,7 @@ class Cash():
         return None
 
     def ledger(self):
+        '''Cash ledger'''
         total = 0
         ledger = []
         for c in self.cash:
@@ -500,18 +640,20 @@ class Cash():
             ledger.append((c, total))
         return ledger
 
-    def wire(self):
+    def wire(self, wire_transactions, wires_received):
         '''Process wires from sent and received (manual) records'''
         unmatched = []
 
-        for w in self.db_wires:
-            match = self._wire_match(w)
+        for w in wire_transactions:
+            match = self._wire_match(w, wires_received)
             if match:
                 nok_exchange_rate = match.nok_value/match.value
                 amount = Amount(currency=match.currency, value=-match.value,
                                 nok_value=-match.nok_value, nok_exchange_rate=nok_exchange_rate)
                 self.credit(match.date, amount, 'wire', transfer=True)
             else:
+                # TODO: What's the exchange rate here?
+                # Should be NaN?
                 unmatched.append(WireAmount(date=w.date, currency=w.amount.currency, nok_value=w.amount.nok_value, value=w.amount.value))
                 self.credit(w.date, w.amount, 'wire', transfer=True)
             if w.fee:
@@ -524,11 +666,10 @@ class Cash():
 
     def process(self):
         '''Process cash account'''
-
-        ''' TODO: Deal with fees on wires somehow...'''
+        cash_positions = deepcopy(self.cash)
         posidx = 0
-        debit = [e for e in self.cash if e.amount.value > 0]
-        credit = [e for e in self.cash if e.amount.value < 0]
+        debit = [e for e in cash_positions if e.amount.value > 0]
+        credit = [e for e in cash_positions if e.amount.value < 0]
         transfers = []
         for e in credit:
             total_received_price_nok = 0
@@ -538,10 +679,7 @@ class Cash():
             is_transfer = e.transfer
             if is_transfer:
                 total_received_price_nok += abs(e.amount.nok_value)
-            while amount_to_sell > 0:
-                if posidx >= len(debit):
-                    raise CashException(
-                        f'Transferring more money that is in cash account {amount_to_sell}')
+            while amount_to_sell > 0 and posidx < len(debit):
                 amount = debit[posidx].amount.value
                 if amount == 0:
                     posidx += 1
@@ -560,8 +698,11 @@ class Cash():
                                                  debit[posidx].amount.nok_exchange_rate)
                     debit[posidx].amount.value -= amount_to_sell
                     amount_to_sell = 0
-                if posidx == len(debit):
-                    break
+
+            # if amount_to_sell > 0:
+            #     raise CashException(
+            #         f'Transferring more money that is in cash account {amount_to_sell} {e}')
+
             # Only care about tranfers
             if is_transfer:
                 transfers.append(TransferRecord(date=e.date,
@@ -578,4 +719,13 @@ class Cash():
         total_gain = sum([t.gain for t in transfers])
         total_paid_price_nok = sum([t.amount_sent for t in transfers])
         total_received_price_nok = sum([t.amount_received for t in transfers])
-        return CashSummary(transfers=transfers, remaining_cash=remaining_cash, gain=total_gain,)
+
+        # Cash holdings. List of WireAmounts
+        cash_holdings = []
+        for e in debit:
+            if e.amount.value > 0:
+                e.amount.nok_value = e.amount.value * e.amount.nok_exchange_rate # Reset this after selling
+                cash_holdings.append(CashEntry(date=e.date,
+                                                description=e.description,
+                                                amount=e.amount))
+        return CashSummary(transfers=transfers, remaining_cash=remaining_cash, gain=total_gain, holdings=cash_holdings)
