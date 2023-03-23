@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools","setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.pylint.main]
+
+[tool.pylint.basic]
+
+[tool.pylint."messages control"]
+disable = ["missing-function-docstring", "missing-module-docstring", "missing-class-docstring", "too-few-public-methods"]
+
+[tool.setuptools_scm]
+write_to = "espp2/_version.py"
+
+[tool.setuptools]
+packages = ['espp2']
+
+[project]
+name = "espp2"
+description="A tax tool for ESPP/RSU and foreignly held shares"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+dynamic = ["version"]
+dependencies = [
+    "simplejson", "numpy", "pydantic",
+    "urllib3", "python-dateutil", "uvicorn", "fastapi",
+    "python-multipart", "tabulate", "pandas", "lxml", "pytest", "httpx",
+    "rich", "typing", "html5lib", "typer", "openpyxl",
+]
+authors = [
+    { name = "Ole Troan", email = "otroan@employees.org"},
+]
+readme = "README.md"
+
+[project.urls]
+repository = "https://github.com/otroan/ESPP2"
+
+[project.scripts]
+espp2 = "espp2.espp2:app"
+espp2_transactions = "espp2.transactions:main"
