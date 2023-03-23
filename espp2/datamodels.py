@@ -264,7 +264,7 @@ class WireAmount(BaseModel):
 #     date: date
 #     wire: WireAmount
 class Wires(BaseModel):
-    wires: list[WireAmount]
+    __root__: list[WireAmount]
 
 
 # Holdings data model

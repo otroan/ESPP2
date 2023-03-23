@@ -623,7 +623,7 @@ class Cash():
         if isinstance(wires_received, list) and len(wires_received) == 0:
             return None
         try:
-            for v in wires_received.wires:
+            for v in wires_received.__root__:
                 if v.date == wire.date and isclose(v.value, abs(wire.amount.value), abs_tol=0.05):
                     return v
         except AttributeError as e:

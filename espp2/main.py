@@ -89,6 +89,9 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     # Position changes?
     report['buys'] = p.buys()
     report['sales'] = p.sales()
+    fees = p.fees()
+    if fees:
+        logger.error("Unhandled fees: %s", fees)
 
     # Cash and wires
 
@@ -230,7 +233,7 @@ def do_taxes(broker, transaction_files: list, holdfile,
 
     if wirefile and not isinstance(wirefile, Wires):
         wires = json_load(wirefile)
-        wires = Wires(wires=wires)
+        wires = Wires(__root__=wires)
         logger.info('Wires: read')
     elif wirefile:
         wires = wirefile

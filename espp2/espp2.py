@@ -8,10 +8,11 @@ import logging
 from enum import Enum
 import typer
 from espp2.main import do_taxes
-from espp2.datamodels import TaxReport, Holdings
+from espp2.datamodels import TaxReport, Holdings, Wires
 from espp2.report import print_report
 from pydantic import parse_obj_as
 import json
+from numpy import nan
 
 app = typer.Typer()
 
@@ -36,6 +37,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
          wires: typer.FileText = None,
          inholdings: typer.FileText = None,
          outholdings: typer.FileTextWrite = None,
+         outwires: typer.FileTextWrite = None,
          verbose: bool = False,
          opening_balance: str = None,
          loglevel: str = typer.Option("WARNING", help='Logging level'),
@@ -65,6 +67,15 @@ def main(transaction_files: list[typer.FileBinaryRead],
         logger.info('Writing new holdings to %s', outholdings.name)
         j = holdings.json(indent=4)
         with outholdings as f:
+            f.write(j)
+    if outwires and result.report.unmatched_wires:
+        logger.info('Writing unmatched wires to %s', outwires.name)
+        outw = Wires(__root__=result.report.unmatched_wires)
+        for w in outw.__root__:
+            w.nok_value = nan
+            w.value = abs(w.value)
+        j = outw.json(indent=4)
+        with outwires as f:
             f.write(j)
 
     # Tax report (in JSON)
