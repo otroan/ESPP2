@@ -23,6 +23,11 @@ class BrokerEnum(str, Enum):
 
 logger = logging.getLogger(__name__)
 
+from espp2._version import __version__
+def version_callback(value: bool):
+    if value:
+        typer.echo(f"espp2 CLI Version: {__version__}")
+        raise typer.Exit()
 @app.command()
 def main(transaction_files: list[typer.FileBinaryRead],
          output: typer.FileTextWrite = None,
@@ -33,7 +38,8 @@ def main(transaction_files: list[typer.FileBinaryRead],
          outholdings: typer.FileTextWrite = None,
          verbose: bool = False,
          opening_balance: str = None,
-         loglevel: str = typer.Option("WARNING", help='Logging level')):
+         loglevel: str = typer.Option("WARNING", help='Logging level'),
+         version: bool = typer.Option(None, "--version", callback=version_callback, is_eager=True)):
 
     '''ESPPv2 tax reporting tool'''
     lognames = logging.getLevelNamesMapping()
@@ -45,7 +51,6 @@ def main(transaction_files: list[typer.FileBinaryRead],
         opening_balance = json.loads(opening_balance)
         opening_balance = parse_obj_as(Holdings, opening_balance)
 
-    report: TaxReport
     holdings: Holdings
     result = do_taxes(broker, transaction_files, inholdings, wires, year, verbose=verbose, opening_balance=opening_balance)
     if isinstance(result, Holdings):
