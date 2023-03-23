@@ -8,8 +8,7 @@ Morgan Stanley HTML table transaction history normalizer.
 
 import math
 from decimal import Decimal
-import dateutil.parser as dt
-from pandas import read_html
+from pandas import read_html, Index, MultiIndex
 from pydantic import parse_obj_as
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
@@ -19,6 +18,51 @@ import logging
 
 logger = logging.getLogger(__name__)
 currency_converter = FMV()
+
+def setitem(rec, name, val):
+    '''Used to set cell-values from a table by to_dict() function'''
+    if val is None:
+        return
+    if isinstance(val, float):
+        if math.isnan(val):
+            return
+        rec[name] = Decimal(f'{val}')
+        return
+    if not isinstance(val, str):
+        raise ValueError(f'setitem() expected string, got {val}')
+    rec[name] = val
+
+class Table:
+    def __init__(self, dataframe):
+        self.dataframe = dataframe
+        self.colnames = []
+        self.colname2idx = dict()
+        self.rows = dataframe.index
+
+    def get(self, rownum, colname):
+        try:
+            idx = self.colname2idx[colname]
+        except KeyError:
+            return None
+        return self.dataframe.iat[rownum, idx]
+
+    def to_dict(self, dlines=0):
+        rc = []
+        if dlines > 0:
+            end = len(self.header)
+            start = end - dlines
+            for hl in range(start, end):
+                rec = dict()
+                for name, val in zip(self.colnames, self.header[hl]):
+                    setitem(rec, name, val)
+                rc.append(rec)
+
+        for row in self.rows:
+            rec = dict()
+            for colname in self.colname2idx.keys():
+                setitem(rec, colname, self.get(row, colname))
+            rc.append(rec)
+        return rc
 
 class ParseState:
     def __init__(self, filename):
@@ -43,7 +87,7 @@ class ParseState:
                 self.symbol = None
             return False    # No more parsing needed
 
-        self.entry_date = dt.parse(date)
+        self.entry_date = fixup_date(date)
         self.activity = getitem(row, 'Activity')
 
         return True
@@ -97,6 +141,18 @@ class ParseState:
               'amount': amount,
               'source': self.source,
               'description': 'Debit' }
+
+        self.transactions.append(parse_obj_as(Entry, r))
+
+    def wire_transfer(self, date, amount, fee):
+        assert self.symbol is not None
+
+        r = { 'type': EntryTypeEnum.WIRE,
+              'date': date,
+              'amount': amount,
+              'description': 'Cash Disbursement',
+              'fee': fee,
+              'source': self.source }
 
         self.transactions.append(parse_obj_as(Entry, r))
 
@@ -234,15 +290,77 @@ def fixup_price2(date, currency, value):
                    nok_exchange_rate=exchange_rate,
                    nok_value=value * exchange_rate)
 
+def create_amount(date, price):
+    value, currency = morgan_price(price)
+    return fixup_price2(date, currency, value)
+
+def sum_amounts(amounts, negative=False):
+    if len(amounts) == 0:
+        return None
+
+    sign = -1 if negative else 1
+
+    total = sign * amounts[0].value
+    nok_total = sign * amounts[0].nok_value
+    currency = amounts[0].currency
+
+    for a in amounts[1:]:
+        if a.currency != currency:
+            raise ValueError(f'Summing {currency} with {a.currency}')
+        total -= a.value
+        nok_total -= a.nok_value
+
+    avg_nok_exchange_rate = nok_total / total
+
+    return Amount(currency=currency, value=total,
+                  nok_exchange_rate=avg_nok_exchange_rate,
+                  nok_value=nok_total)
+
+def fixup_date(morgandate):
+    '''Do this explicitly here to learn about changes in the export format'''
+    m = re.fullmatch(r'''(\d+)-([A-Z][a-z][a-z])-(20\d\d)''', morgandate)
+    if m:
+        day = f'{int(m.group(1)):02d}'
+        textmonth = m.group(2)
+        year = m.group(3)
+
+        if textmonth == 'Jan':
+            return f'{year}-01-{day}'
+        elif textmonth == 'Feb':
+            return f'{year}-02-{day}'
+        elif textmonth == 'Mar':
+            return f'{year}-03-{day}'
+        elif textmonth == 'Apr':
+            return f'{year}-04-{day}'
+        elif textmonth == 'May':
+            return f'{year}-05-{day}'
+        elif textmonth == 'Jun':
+            return f'{year}-06-{day}'
+        elif textmonth == 'Jul':
+            return f'{year}-07-{day}'
+        elif textmonth == 'Aug':
+            return f'{year}-08-{day}'
+        elif textmonth == 'Sep':
+            return f'{year}-09-{day}'
+        elif textmonth == 'Oct':
+            return f'{year}-10-{day}'
+        elif textmonth == 'Nov':
+            return f'{year}-11-{day}'
+        elif textmonth == 'Dec':
+            return f'{year}-12-{day}'
+
+    raise ValueError(f'Illegal date: "{morgandate}"')
+
 def getitem(row, colname):
     '''Get a named item from a row, or None if nothing there'''
     if colname not in row:
         return None
     item = row[colname]
-    if isinstance(item, float) and math.isnan(item):
-        return None
-    assert isinstance(item, str)
-    if item == '':
+    if isinstance(item, float):
+        if math.isnan(item):
+            return None
+        return Decimal(f'{item}')
+    if isinstance(item, str) and item == '':
         return None
     return item
 
@@ -257,16 +375,7 @@ def getitems(row, *colnames):
     rc.append(ok)
     return tuple(rc)
 
-def dumpdict(dct):
-    print(json.dumps(dct, use_decimal=True, indent=4))
-
-def get_entry_date(row):
-    item = getitem(row, 'Entry Date')
-    if item is None:
-        raise ValueError(f'Expected entry-date for row {row}')
-    return dt.parse(item)
-
-def parse_rsu_table(state, recs, filename):
+def parse_rsu_table(state, recs):
     ignore = {
         'Opening Value': True,
         'Closing Value': True,
@@ -296,7 +405,7 @@ def parse_rsu_table(state, recs, filename):
 
         raise ValueError(f'Unknown RSU activity: "{state.activity}"')
 
-def parse_espp_table(state, recs, filename):
+def parse_espp_table(state, recs):
     ignore = {
         'Opening Value': True,
         'Closing Value': True,
@@ -332,22 +441,247 @@ def parse_espp_table(state, recs, filename):
 
     return state.transactions
 
+class Withdrawal:
+    '''Given three tables for withdrawal, extract information we need'''
+    def __init__(self, wd, sb, np):
+        self.wda = decode_data(wd)  # Array-representation of Withdrawal table
+        self.sba = decode_data(sb)  # The "Sales/Proceeds Breakdown" table
+        self.npa = decode_data(np)  # The final "Net Proceeds" table
+
+        self.is_wire = False
+        self.has_wire_fee = False
+
+        assert(self.wda[2][2] =='Settlement Date:')
+        self.entry_date = fixup_date(self.wda[2][3])
+
+        assert(self.wda[2][0] == 'Fund')
+        self.fund = self.wda[2][1]
+        m = re.fullmatch(r'''([A-Za-z]+)\s+-.*''', self.fund)
+        if not m:
+            raise ValueError(f'Unexpected symbol format: {self.fund}')
+        self.symbol = m.group(1)
+
+        gross = []
+        fees = []
+        net = []
+
+        for line in self.sba:
+            if 'Gross Proceeds' in line[0]:
+                gross.append(create_amount(self.entry_date, line[1]))
+            if 'Fee' in line[0]:
+                fees.append(create_amount(self.entry_date, line[1]))
+            if 'Wire Fee' in line[0]:
+                has_wire_fee = True
+
+        m = re.fullmatch(r'''Net Proceeds: (.*)''', self.npa[0][0])
+        if m:
+            net.append(create_amount(self.entry_date, m.group(1)))
+
+        assert(len(gross) == 1)
+        assert(len(net) == 1)
+
+        self.gross_amount = sum_amounts(gross)
+        self.fees_amount = sum_amounts(fees)
+        self.net_amount = sum_amounts(net, negative=True)
+
+        assert(self.wda[4][0] == 'Delivery Method:')
+        if 'Transfer funds via wire' in self.wda[4][1]:
+            self.is_wire = True
+
+        if 'Historical sale of shares' in self.wda[4][1] and has_wire_fee:
+            self.is_wire = True
+
+def parse_withdrawal_sales(state, sales):
+    '''Withdrawals from sale of shares'''
+    for wd, sb, np in sales:
+        w = Withdrawal(wd, sb, np)
+        if w.is_wire:
+            assert(w.symbol != 'Cash')   # No Cash-fund for sale withdrawals
+            state.wire_transfer(w.entry_date, w.net_amount, w.fees_amount)
+        else:
+            raise ValueError(f'Sales withdrawal w/o wire-transfer: {w.wda}')
+
+def parse_withdrawal_proceeds(state, proceeds):
+    '''Withdrawal of accumulated Cash (it seems)'''
+    for wd, pb, np in proceeds:
+        w = Withdrawal(wd, pb, np)
+        if w.is_wire:
+            assert(w.symbol == 'Cash')   # Proceeds withdrawal is for cash
+            state.wire_transfer(w.entry_date, w.net_amount, w.fees_amount)
+        else:
+            raise ValueError(f'Proceeds withdrawal w/o wire-transfer: {w.wda}')
+
+def decode_headers(mi):
+    '''Force a MultiIndex or Index object into a plain array-of-arrays'''
+    rc = []
+    if isinstance(mi, MultiIndex):
+        for lvl in range(0, mi.nlevels):
+            line = []
+            for n in range(0, mi.levshape[lvl]):
+                line.append(str(mi[n][lvl]))
+            rc.append(line)
+    elif isinstance(mi, Index):
+        rc.append([str(x) for x in mi.values])
+    return rc
+
+def decode_data(table):
+    '''Place table-data into a plain array-of-arrays'''
+    rc = []
+    for r in table.rows:
+        line = []
+        for c in range(0, len(table.colnames)):
+            line.append(str(table.dataframe.iat[r, c]))
+        rc.append(line)
+    return rc
+
+def array_match_2d(candidate, template):
+    '''Match a candidate array-of-arrays against a template to match it.
+
+    The template may contain None entries, which will match any candidate
+    entry, or it may contain a compiled regular expression - and the result
+    will be the condidata data covered by the regex parenthesis. A simple
+    string will need to match completely, incl. white-spaces.'''
+
+    if len(candidate) != len(template):
+        return None
+
+    rc = []
+    for cl, tl in zip(candidate, template):
+        if len(cl) != len(tl):
+            return None
+        line = []
+        for n, ci, ti in zip(range(1, 1000), cl, tl):
+            if ti is None:
+                line.append(str(ci))
+                continue
+            if isinstance(ti, re.Pattern):
+                m = ti.fullmatch(ci)
+                if m:
+                    line.append(m.group(1))
+                    continue
+                return None
+            if ci == ti:
+                line.append(ci)
+                continue
+            return None
+        rc.append(line)
+
+    return rc
+
+def header_match(df, search_header, hline=0):
+    '''Use a search-template to look for tables with headers that match.
+
+    The search-template is give to 'array_match_2d' above for matching.
+    When a table is matched, the column-names are established from the
+    header-line given by 'hline' (default 0).'''
+    hdrs = decode_headers(df.columns)
+    result = array_match_2d(hdrs, search_header)
+    if result is None:
+        return None
+    table = Table(df)
+    table.header = result
+    table.colnames = result[hline]
+    for idx, colname in zip(range(0, 1000), table.colnames):
+        table.colname2idx[colname] = idx
+
+    return table
+
+def find_tables_by_header(dfs, search_header, hline=0):
+    '''Given a header-template for matching, return all matching tables'''
+    rc = []
+    for n, df in zip(range(0, 100000), dfs):
+        table = header_match(df, search_header, hline)
+        if table:
+            table.dfidx = n
+            rc.append(table)
+
+    return rc
+
+def parse_rsu_html(all_dfs, state):
+    '''Look for the RSU table and parse it'''
+    any = re.compile(r'''(.*)''')
+    search_rsu_header = [
+        ['Activity'],
+        ['Entry Date', 'Activity', 'Type of Money', 'Cash',
+         'Number of Shares', 'Share Price', 'Book Value', 'Market Value'],
+        [any]  # This will contain the 'Fund - CSCO' heading
+    ]
+
+    rsu = find_tables_by_header(all_dfs, search_rsu_header, 1)
+    assert len(rsu) == 1
+
+    parse_rsu_table(state, rsu[0].to_dict(1))
+
+def parse_espp_html(all_dfs, state):
+    '''Look for the ESPP table and parse it'''
+    any = re.compile(r'''(.*)''')
+    search_espp_header = [
+        ['Activity'],
+        ['Entry Date', 'Activity', 'Cash',
+         'Number of Shares', 'Share Price', 'Market Value', any],
+        [any]  # This will contain the 'Fund - CSCO' heading
+    ]
+
+    espp = find_tables_by_header(all_dfs, search_espp_header, 1)
+    assert(len(espp) == 1)
+
+    parse_espp_table(state, espp[0].to_dict(1))
+
+def parse_withdrawals_html(all_dfs, state):
+    search_withdrawal_header = [
+        [re.compile(r'''Withdrawal on (.*)'''), None, None, None]
+    ]
+    search_salebreakdown = [
+        [re.compile(r'''\s*(Sale Breakdown)'''), None]
+    ]
+    search_proceedsbreakdown = [
+        [re.compile(r'''\s*(Proceeds Breakdown)'''), None]
+    ]
+    search_net_proceeds = [
+        [None]
+    ]
+
+    withdrawals = find_tables_by_header(all_dfs, search_withdrawal_header)
+
+    sales = []
+    proceeds = []
+    netproceeds = []
+    for wd in withdrawals:
+        nextfd = [all_dfs[wd.dfidx + 1]]
+        nextnextfd = [all_dfs[wd.dfidx + 2]]
+
+        np = find_tables_by_header(nextnextfd, search_net_proceeds)
+        if len(np) != 1:
+            raise ValueException(f'Unable to parse net-proceeds: {nextnextfd}')
+
+        sb = find_tables_by_header(nextfd, search_salebreakdown)
+        if len(sb) == 1:
+            sales.append((wd, sb[0], np[0]))
+            continue
+
+        pb = find_tables_by_header(nextfd, search_proceedsbreakdown)
+        if len(pb) == 1:
+            proceeds.append((wd, pb[0], np[0]))
+            continue
+
+        raise ValueError('Unable to parse "Sale/Proceeds Breakdown"')
+
+    parse_withdrawal_sales(state, sales)
+    parse_withdrawal_proceeds(state, proceeds)
+
 def morgan_html_import(html_fd, filename):
     '''Parse Morgan Stanley HTML table file.'''
 
+    all_dfs = read_html(html_fd)
+
     state = ParseState(filename)
+    parse_rsu_html(all_dfs, state)
+    parse_espp_html(all_dfs, state)
+    parse_withdrawals_html(all_dfs, state)
 
-    # Extract the cash and stocks activity tables
-    dfs = read_html(
-        html_fd, header=1, attrs={'class': 'sw-datatable', 'id': 'Activity_table'})
+    transes = sorted(state.transactions, key=lambda d: d.date)
 
-    # Expect two tables from this selection; one for RSU and one for the rest (ESPP)
-    assert(len(dfs) == 2)
-
-    parse_rsu_table(state, dfs[0].to_dict(orient='records'), filename)
-    parse_espp_table(state, dfs[1].to_dict(orient='records'), filename)
-
-    return Transactions(transactions=sorted(state.transactions, key=lambda d: d.date))
+    return Transactions(transactions=transes)
 
 def read(html_file, filename='') -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
