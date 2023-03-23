@@ -4,6 +4,7 @@ Read a pickle-file and create a transactions-file
 
 # import sys
 import pickle
+import logging
 import simplejson as json
 from decimal import Decimal
 from pprint import pprint    # Pretty-print objects for debugging
@@ -17,6 +18,8 @@ import codecs
 # ESPP2 tools needed
 from espp2.positions import Positions, Cash
 from espp2.fmv import FMV
+
+logger = logging.getLogger(__name__)
 
 # Store all transaction records here
 records = []
