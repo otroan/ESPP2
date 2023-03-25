@@ -339,7 +339,7 @@ class TaxReport(BaseModel):
     # cash: dict
     cash_ledger: list
     unmatched_wires: list[WireAmount]
-    prev_holdings: Holdings
+    prev_holdings: Optional[Holdings]
 
 class CashModel(BaseModel):
     '''Cash model'''
