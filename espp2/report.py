@@ -201,7 +201,8 @@ def print_report(year: int, summary: TaxSummary, report: TaxReport, holdings: Ho
 
     if verbose:
         # Print previous year holdings
-        print_report_holdings(report.prev_holdings, console)
+        if report.prev_holdings:
+            print_report_holdings(report.prev_holdings, console)
 
         print_ledger(report.ledger, console)
 
