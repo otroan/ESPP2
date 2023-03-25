@@ -62,7 +62,8 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     holdings = p.holdings(year, broker)
     report = {}
     fundamentals = p.fundamentals()
-    report['prev_holdings'] = prev_holdings
+    if prev_holdings:
+        report['prev_holdings'] = prev_holdings
     report['ledger'] = p.ledger.entries
 
     # End of Year Balance (formueskatt)
@@ -161,15 +162,6 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
 # - Limit to two files?
 def merge_transactions(transaction_files: list) -> Transactions:
     '''Merge transaction files'''
-
-    # Single file, no need to merge
-    if len(transaction_files) == 1:
-        t = normalize(transaction_files[0])
-        t = sorted(t.transactions, key=lambda d: d.date)
-        return Transactions(transactions=t), {}
-    if len(transaction_files) > 2:
-        raise ESPPErrorException(f'Too many transaction files {len(transaction_files)}')
-
     sets = []
     for tf in transaction_files:
         t = normalize(tf)
