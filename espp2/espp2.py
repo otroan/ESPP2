@@ -63,6 +63,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
 
     holdings: Holdings
     if expected_balance:
+        logger.warning("This does not work with reinvested dividends!")
         result = do_holdings_2(broker, transaction_files, year, expected_balance, verbose=verbose)
     else:
         result = do_taxes(broker, transaction_files, inholdings, wires, year, verbose=verbose,
