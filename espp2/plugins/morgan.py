@@ -15,7 +15,9 @@ from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
 import simplejson as json
 import re
+import logging
 
+logger = logging.getLogger(__name__)
 currency_converter = FMV()
 
 class ParseState:
@@ -347,6 +349,6 @@ def morgan_html_import(html_fd, filename):
 
     return Transactions(transactions=sorted(state.transactions, key=lambda d: d.date))
 
-def read(html_file, filename='', logger=None) -> Transactions:
+def read(html_file, filename='') -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
     return morgan_html_import(html_file, filename)

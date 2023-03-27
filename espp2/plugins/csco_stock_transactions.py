@@ -16,6 +16,9 @@ from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount, Deposit
 import simplejson as json
 import re
 from datetime import datetime, date
+import logging
+
+logger = logging.getLogger(__name__)
 
 currency_converter = FMV()
 
@@ -47,6 +50,6 @@ def stock_transactions_xls_import(fd, filename):
         transes.append(d)
     return Transactions(transactions=sorted(transes, key=lambda d: d.date))
 
-def read(fd, filename='', logger=None) -> Transactions:
+def read(fd, filename='') -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
     return stock_transactions_xls_import(fd, filename)

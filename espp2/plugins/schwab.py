@@ -11,6 +11,9 @@ import io
 import dateutil.parser as dt
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Amount
+import logging
+
+logger = logging.getLogger(__name__)
 
 def schwab_csv_import(fd):
     '''Parse Schwab CSV file.'''
@@ -155,7 +158,7 @@ def subdata(action, description, date, value):
         newlist.append(newv)
     return newlist
 
-def read(csv_file, filename='', logger=None) -> Transactions:
+def read(csv_file, filename='') -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
 
     key_conv = {'DATE': 'date',

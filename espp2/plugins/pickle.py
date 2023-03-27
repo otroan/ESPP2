@@ -251,7 +251,7 @@ def do_fee(record):
 
     records.append(newrec)
 
-def read(pickle_file, filename='', logger=None) -> Transactions:
+def read(pickle_file, filename='') -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
     global records
 

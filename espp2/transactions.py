@@ -59,9 +59,8 @@ def get_arguments():
         f" -- must be one of: {' | '.join(levels.keys())}")
 
     logging.basicConfig(level=level)
-    logger = logging.getLogger(__name__)
 
-    return parser.parse_args(), logger
+    return parser.parse_args()
 
 def guess_format(filename, data) -> str:
     '''Guess format'''
@@ -104,11 +103,11 @@ def normalize(data: Union[UploadFile, typer.FileText]) -> Transactions:
     plugin_path = 'espp2.plugins.' + trans_format
     plugin = importlib.import_module(plugin_path, package='espp2')
     logger.info('Importing transactions with importer %s: %s', trans_format, filename)
-    return plugin.read(fd, filename, logger)
+    return plugin.read(fd, filename)
 
 def main():
     '''Main function'''
-    args, logger = get_arguments()
+    args = get_arguments()
     logger.debug('Arguments: %s', args)
     trans_obj = normalize(args.transaction_file)
     logger.info('Converting to JSON')
