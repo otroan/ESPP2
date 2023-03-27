@@ -2,21 +2,17 @@
 Read a pickle-file and create a transactions-file
 '''
 
-# import sys
+# pylint: disable=invalid-name
+
 import pickle
 import logging
-import simplejson as json
+import datetime
+import codecs
 from decimal import Decimal
 from pprint import pprint    # Pretty-print objects for debugging
 from espp2.datamodels import Transactions
 
-# These are needed when unpickling 'espp.pickle' files, as such objects
-# are present in pickle file, and needs to be created during loading.
-import datetime
-import codecs
-
 # ESPP2 tools needed
-from espp2.positions import Positions, Cash
 from espp2.fmv import FMV
 
 logger = logging.getLogger(__name__)
@@ -78,7 +74,7 @@ def add_value(rec, name, value):
     rec[name] = value
 
 def add_amount(rec, name, date, currency, amount):
-    tmp = dict()
+    tmp = {}
     add_string(tmp, 'currency', currency)
     add_value(tmp, "value", amount)
 
@@ -93,19 +89,16 @@ def do_deposit(record):
     n = Decimal(str(record['n']))
     price = Decimal(f"{record['price']}").quantize(Decimal('0.0001'))
     vpd = Decimal(f"{record['vpd']}")
-    fee = Decimal(record['fee'])
 
-    newrec = dict()
+    newrec = {}
 
     add_date(newrec, 'date', date)
     add_string(newrec, 'type', 'DEPOSIT')
     add_string(newrec, 'symbol', 'CSCO')
-    add_string(newrec, 'description', 'ESPP')  # TODO: Make sure it is so!
+    add_string(newrec, 'description', 'ESPP')
     add_value(newrec, 'qty', n)
-    add_date(newrec, 'purchase_date', date)   # TODO: Which date?
-    # add_string(newrec, 'subscription_date', 'TODO!')
+    add_date(newrec, 'purchase_date', date)
     add_amount(newrec, 'subscription_fmv', date, 'USD', vpd)
-    # add_amount(newrec, 'plan_purchase_price', 'TODO!')
     add_amount(newrec, 'purchase_price', date, 'USD', price)
 
     records.append(newrec)
@@ -114,7 +107,7 @@ def do_reinvest(record):
     # REINVEST {'date': datetime.date(2021, 7, 28), 'amount': 262.5, 'fee': 0.0}
     date = record['date']
     amount = Decimal(f"{record['amount']}")
-    newrec = dict()
+    newrec = {}
 
     add_date(newrec, 'date', date)
     add_string(newrec, 'type', 'DIVIDEND_REINV')
@@ -136,7 +129,7 @@ def do_trans(record):
         logger.warning("Zero quantity for sale, ignoring it: %s", record)
         return
 
-    newrec = dict()
+    newrec = {}
 
     add_date(newrec, 'date', date)
     add_string(newrec, 'type', 'SELL')
@@ -152,9 +145,8 @@ def do_transfer(record):
     date = record['date']
     fee = Decimal(f"{record['fee']}")
     n = Decimal(record['n'])
-    price = record['price']
 
-    newrec = dict()
+    newrec = {}
 
     add_date(newrec, 'date', date)
     add_string(newrec, 'type', 'TRANSFER')
@@ -170,7 +162,7 @@ def do_dividend(record):
     amount_ps = Decimal(f"{record['amount']}")
     payDate = record['payDate']
 
-    newrec = dict()
+    newrec = {}
     add_date(newrec, 'date', date)
     add_string(newrec, 'type', 'DIVIDEND')
     add_string(newrec, 'symbol', 'CSCO')
@@ -183,7 +175,7 @@ def do_tax(record):
     date = record['date']
     amount = Decimal(record['amount'])
 
-    newrec = dict()
+    newrec = {}
 
     add_date(newrec, 'date', date)
 
@@ -199,12 +191,11 @@ def do_tax(record):
 
 def do_rsu(record):
     date = record['date']
-    fee = Decimal(record['fee'])
     n = Decimal(record['n'])
     price = Decimal(f"{record['price']}")
     vpd = Decimal(f"{record['vpd']}")
 
-    newrec = dict()
+    newrec = {}
 
     add_date(newrec, 'date', date)
     add_string(newrec, 'type', 'DEPOSIT')
@@ -224,9 +215,8 @@ def do_wire(record):
     date = record['date']
     fee = Decimal(record['fee'])
     sent = Decimal(record['sent'])
-    received = Decimal(f"{record['received']}")
 
-    newrec = dict()
+    newrec = {}
 
     add_date(newrec, 'date', date)
     add_string(newrec, 'type', 'WIRE')
@@ -243,7 +233,7 @@ def do_fee(record):
     date = record['date']
     fee = Decimal(record['amount'])
 
-    newrec = dict()
+    newrec = {}
 
     add_date(newrec, 'date', date)
     add_string(newrec, 'type', 'FEE')
@@ -267,7 +257,7 @@ def read(pickle_file, filename='') -> Transactions:
     for key in sorted(p.rawData):
         # Simple sanity-check, first item in key must be a date object
         if not isinstance(key[0], datetime.date):
-            raise Exception(f'Transaction key not starting with a date')
+            raise Exception(f'Transaction key not starting with a date {key}')
 
         rectype = key[1]
         record = p.rawData[key]
@@ -289,7 +279,7 @@ def read(pickle_file, filename='') -> Transactions:
             do_tax(record)
             continue
 
-        if rectype == 'RSU' or rectype == 'PURCHASE':
+        if rectype in ('RSU', 'PURCHASE'):
             do_rsu(record)
             continue
 
@@ -318,4 +308,3 @@ def read(pickle_file, filename='') -> Transactions:
         r['source'] = f'pickle:{filename}'
     sorted_transactions = sorted(records, key=lambda d: d['date'])
     return Transactions(transactions=sorted_transactions)
-
