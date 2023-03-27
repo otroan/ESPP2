@@ -2,16 +2,16 @@
 Schwab CSV normalizer.
 '''
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, too-many-locals, too-many-branches
 
 import csv
 from decimal import Decimal
 import codecs
 import io
+import logging
 import dateutil.parser as dt
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Amount
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,8 @@ def schwab_csv_import(fd):
                     row = next(reader)
                 if 'subdata' not in data[-1]:
                     data[-1]['subdata'] = []
-                data[-1]['subdata'].append({subheader[v].upper(): k for v, k in enumerate(row) if v != 0})
+                data[-1]['subdata'].append({subheader[v].upper():
+                                            k for v, k in enumerate(row) if v != 0})
                 row = next(reader)
                 subheader = None
             data.append({header[v].upper(): k for v, k in enumerate(row)})
@@ -87,7 +88,9 @@ def fixup_price(datestr, currency, pricestr, change_sign=False):
     if change_sign:
         price = price * -1
     exchange_rate = currency_converter.get_currency(currency, datestr)
-    return {'currency': currency, "value": price, 'nok_exchange_rate': exchange_rate, 'nok_value': price * exchange_rate }
+    return {'currency': currency, "value": price,
+            'nok_exchange_rate': exchange_rate,
+            'nok_value': price * exchange_rate}
 
 def fixup_number(numberstr):
     '''Convert string to number.'''
@@ -147,7 +150,8 @@ def subdata(action, description, date, value):
             newv['plan_purchase_price'] = newv.pop('purchase_price')
             purchase_price = newv.pop('purchase_fmv')['value']
             purchase_date = newv['purchase_date']
-            newv['purchase_price'] = Amount(amountdate=purchase_date, value=purchase_price, currency='ESPPUSD')
+            newv['purchase_price'] = Amount(
+                amountdate=purchase_date, value=purchase_price, currency='ESPPUSD')
             newv['date'] = purchase_date
 
         newv['broker'] = 'schwab'
@@ -179,6 +183,7 @@ def read(csv_file, filename='') -> Transactions:
         newv = {}
         action = action_to_type(csv_item['ACTION'], csv_item['DESCRIPTION'])
         description = csv_item['DESCRIPTION']
+        data_item = None
         for k,data_item in csv_item.items():
             newkey = key_conv.get(k, k)
             if not data_item:

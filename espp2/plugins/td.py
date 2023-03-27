@@ -2,19 +2,18 @@
 TD Ameritrade CSV importer
 '''
 
-# pylint: disable=invalid-name
-# pylint: disable=no-name-in-module
-# pylint: disable=no-self-argument
+# pylint: disable=invalid-name, no-name-in-module, no-self-argument, too-many-branches, too-many-statements
+# pylint: disable=too-many-return-statements
 
 import csv
 import io
 import codecs
 from decimal import Decimal
+import logging
 import dateutil.parser as dt
 from pydantic import parse_obj_as
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +23,8 @@ def fixup_date(datestr):
     return d.strftime('%Y-%m-%d')
 
 currency_converter = FMV()
+
+
 def fixup_price(datestr, currency, pricestr, change_sign=False):
     '''Fixup price.'''
     price = Decimal(pricestr)
@@ -31,7 +32,8 @@ def fixup_price(datestr, currency, pricestr, change_sign=False):
     if change_sign:
         price = price * -1
     exchange_rate = currency_converter.get_currency(currency, datestr)
-    return {'currency': currency, "value": price, 'nok_exchange_rate': exchange_rate, 'nok_value': price * exchange_rate }
+    return {'currency': currency, "value": price, 'nok_exchange_rate': exchange_rate,
+            'nok_value': price * exchange_rate}
 
 def fixup_number(numberstr):
     '''Convert string to number.'''
@@ -51,7 +53,9 @@ def td_csv_import(fd):
         reader = csv.reader(codecs.iterdecode(fd,'utf-8'))
 
     header = next(reader)
-    assert header == ['DATE', 'TRANSACTION ID', 'DESCRIPTION', 'QUANTITY', 'SYMBOL', 'PRICE', 'COMMISSION', 'AMOUNT', 'REG FEE', 'SHORT-TERM RDM FEE', 'FUND REDEMPTION FEE', ' DEFERRED SALES CHARGE']
+    assert header == ['DATE', 'TRANSACTION ID', 'DESCRIPTION', 'QUANTITY', 'SYMBOL',
+                      'PRICE', 'COMMISSION', 'AMOUNT', 'REG FEE', 'SHORT-TERM RDM FEE',
+                      'FUND REDEMPTION FEE', ' DEFERRED SALES CHARGE']
     data = []
     try:
         while True:
@@ -139,10 +143,10 @@ def read(raw_data, filename=''):
                  'purchase_price': price, 'fee': fee}
 
         elif action.startswith('Sold'):
-            # {'DATE': '09/21/2021', 'TRANSACTION ID': '37504205925', 
+            # {'DATE': '09/21/2021', 'TRANSACTION ID': '37504205925',
             # 'DESCRIPTION': 'Sold 130 SPY @ 433.1', 'QUANTITY': '130',
-            #  'SYMBOL': 'SPY', 'PRICE': '433.10', 'COMMISSION': '0.00', 
-            # 'AMOUNT': '56302.69', 'REG FEE': '0.31', 'SHORT-TERM RDM FEE': '', 
+            #  'SYMBOL': 'SPY', 'PRICE': '433.10', 'COMMISSION': '0.00',
+            # 'AMOUNT': '56302.69', 'REG FEE': '0.31', 'SHORT-TERM RDM FEE': '',
             # 'FUND REDEMPTION FEE': '', ' DEFERRED SALES CHARGE': ''}
             t = EntryTypeEnum.SELL
             qty = -Decimal(e['QUANTITY'])
@@ -155,7 +159,7 @@ def read(raw_data, filename=''):
             #  'DESCRIPTION': 'ORDINARY DIVIDEND (SPY)',
             #  'QUANTITY': '', 'SYMBOL': 'SPY', 'PRICE': '',
             #  'COMMISSION': '', 'AMOUNT': '398.68', 'REG FEE': '',
-            #  'SHORT-TERM RDM FEE': '', 'FUND REDEMPTION FEE': '', 
+            #  'SHORT-TERM RDM FEE': '', 'FUND REDEMPTION FEE': '',
             # ' DEFERRED SALES CHARGE': ''}
 
             t = EntryTypeEnum.DIVIDEND
@@ -169,12 +173,13 @@ def read(raw_data, filename=''):
             r = {'type': t, 'date': d, 'amount': amount,
                  'symbol': e['SYMBOL'], 'description': action}
 
-        elif action.startswith('CLIENT REQUESTED ELECTRONIC FUNDING DISBURSEMENT') or action.startswith('WIRE OUTGOING'):
+        elif action.startswith('CLIENT REQUESTED ELECTRONIC FUNDING DISBURSEMENT') or \
+             action.startswith('WIRE OUTGOING'):
             # {'DATE': '09/23/2021', 'TRANSACTION ID': '37555188264',
-            #  'DESCRIPTION': 'CLIENT REQUESTED ELECTRONIC FUNDING DISBURSEMENT (FUNDS NOW)', 
+            #  'DESCRIPTION': 'CLIENT REQUESTED ELECTRONIC FUNDING DISBURSEMENT (FUNDS NOW)',
             # 'QUANTITY': '', 'SYMBOL': '', 'PRICE': '', 'COMMISSION': '',
             #  'AMOUNT': '-56330.26', 'REG FEE': '',
-            #  'SHORT-TERM RDM FEE': '', 'FUND REDEMPTION FEE': '', 
+            #  'SHORT-TERM RDM FEE': '', 'FUND REDEMPTION FEE': '',
             # ' DEFERRED SALES CHARGE': ''}
 
             t = EntryTypeEnum.WIRE
