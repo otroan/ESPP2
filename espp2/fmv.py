@@ -17,10 +17,12 @@ import logging
 from decimal import Decimal
 import numpy as np
 import urllib3
+import logging
 
+logger = logging.getLogger(__name__)
 
 #### ESPP Rate MANUALLY MAINTAINED ####
-def get_espp_exchange_rate(date):
+def get_espp_exchange_rate(ratedate):
     '''Return the 6 month P&L average. Manually maintained for now.'''
     espp = {'2017-06-30':	8.465875,
             '2017-12-29':	8.07695,
@@ -34,7 +36,7 @@ def get_espp_exchange_rate(date):
             '2021-12-31':	8.70326667,
             '2022-06-30':	9.07890833,
             '2022-12-30':	10.0731583, }
-    return Decimal(espp[date])
+    return Decimal(espp[ratedate])
 
 class FMVTypeEnum(Enum):
     '''Enum for FMV types'''
@@ -223,8 +225,13 @@ class FMV():
         itemdate, date_str = self.extract_date(date_union)
 
         if currency == 'ESPPUSD':
-            return get_espp_exchange_rate(date_str)
-
+            try:
+                return get_espp_exchange_rate(date_str)
+            except KeyError:
+                # Missing ESPP data for this date
+                logger.error("Missing ESPP data for %s", date_str)
+                # Fall-back to USD
+                currency = 'USD'
         self.refresh(currency, itemdate, FMVTypeEnum.CURRENCY)
 
         for _ in range(6):

@@ -533,9 +533,9 @@ class Positions():
                     if 'amount' in item:
                         self.cash.credit(item['date'], item['amount'], 'buy')
                     else:
-                        amount = Amount(value=item.purchase_price.value * item.qty, currency=item.purchase_price.currency,
+                        amount = Amount(value=-item.purchase_price.value * item.qty, currency=item.purchase_price.currency,
                                         nok_exchange_rate=item.purchase_price.nok_exchange_rate,
-                                        nok_value=item.purchase_price.nok_value * item.qty)
+                                        nok_value=-item.purchase_price.nok_value * item.qty)
                         self.cash.credit(item.date, amount, 'buy')
                 bought += item.qty
                 price_sum += item.purchase_price.value
@@ -636,7 +636,7 @@ class Cash():
         ''' TODO: Return usdnok rate for the item credited '''
         logger.debug('Cash credit: %s: %s', creditdate, amount.value)
         if amount.value > 0:
-            raise ValueError('Amount must be negative')
+            raise ValueError(f'Amount must be negative {amount}')
 
         self.cash.append(
             CashEntry(date=creditdate, amount=amount, description=description, transfer=transfer))
