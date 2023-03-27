@@ -7,11 +7,12 @@ import logging
 from decimal import Decimal
 import simplejson as json
 from rich.console import Console
-from espp2.positions import Positions, Cash, InvalidPositionException, Ledger
+from espp2.positions import Positions, Cash, InvalidPositionException, Ledger, get_tax_deduction_rate
 from espp2.transactions import normalize
-from espp2.datamodels import TaxReport, Transactions, Wires, Holdings, ForeignShares, TaxSummary, CreditDeduction
+from espp2.datamodels import TaxReport, Transactions, Wires, Holdings, ForeignShares, TaxSummary, CreditDeduction, Sell, EntryTypeEnum, Amount
 from espp2.report import print_ledger, print_cash_ledger, print_report_holdings
 from typing import Tuple
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -212,8 +213,9 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
     # Return holdings for previous year
     return holdings
 
+
 def do_taxes(broker, transaction_files: list, holdfile,
-             wirefile, year, verbose=False, opening_balance=None) -> Tuple[TaxReport, Holdings, TaxSummary]:
+             wirefile, year, verbose=False, opening_balance=None, expected_balance=None) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Do taxes
     This function is run in two phases:
     1. Process transactions and older holdings to generate holdings for previous year
@@ -242,7 +244,7 @@ def do_taxes(broker, transaction_files: list, holdfile,
     elif opening_balance:
         prev_holdings = opening_balance
 
-    if (prev_holdings and prev_holdings.year == year-1) or (not prev_holdings and year in years):
+    if (prev_holdings and prev_holdings.year == year-1) or (not prev_holdings and year in years and len(years) == 1):
         # Phase 2
         # Previous holdings or all transactions from the tax year (new user)
         logger.info('Holdings file for previous year found, calculating tax')
@@ -251,4 +253,23 @@ def do_taxes(broker, transaction_files: list, holdfile,
 
     # Phase 1. Return our approximation for previous year holdings for review
     logger.info('Changes in holdings for previous year')
-    return generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
+    holdings = generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
+
+    if expected_balance:
+        logger.info('Expected balance: %s', expected_balance)
+        symbol, qty = expected_balance.split(':')
+        sum_qty = sum(e.qty for e in holdings.stocks if e.symbol == symbol)
+        logger.info('Current balance: %s/%s', sum_qty, qty)
+        if sum_qty != int(qty):
+            logger.info('Artifically selling: %s', sum_qty - int(qty))
+            sell_trans = Sell(type=EntryTypeEnum.SELL, symbol=symbol, qty=-(sum_qty - int(
+                qty)), date=datetime.date(year-1, 12, 31), price=0.0, description='', amount=Amount(0), source='artificial')
+            transactions.transactions.append(sell_trans)
+            t = sorted(transactions.transactions, key=lambda d: d.date)
+            transactions = Transactions(transactions=t)
+            holdings = generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
+            tax_deduction_rate = get_tax_deduction_rate(year-1)
+            # Reset tax deduction
+            for i, h in enumerate(holdings.stocks):
+                holdings.stocks[i].tax_deduction = (h.purchase_price.nok_value * tax_deduction_rate)/100
+    return holdings

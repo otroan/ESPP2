@@ -207,6 +207,8 @@ def read(csv_file, filename='', logger=None) -> Transactions:
         if action == 'SELL':
             newv['qty'] = newv['qty'] * -1
         newv['source'] = f'schwab:{filename}'
+        logger.debug('Processing record: %s', newv)
+
         newlist.append(newv)
 
     sorted_transactions = sorted(newlist, key=lambda d: d['date'])

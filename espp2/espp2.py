@@ -13,9 +13,16 @@ from espp2.report import print_report
 from pydantic import parse_obj_as
 import json
 from numpy import nan
+from pydantic import BaseModel
+from decimal import Decimal
+from rich.logging import RichHandler
 
 app = typer.Typer()
 
+class ExpectedBalance(BaseModel):
+    '''Expected balance'''
+    symbol: str
+    qty: Decimal
 class BrokerEnum(str, Enum):
     '''BrokerEnum'''
     schwab = 'schwab'
@@ -41,24 +48,24 @@ def main(transaction_files: list[typer.FileBinaryRead],
          verbose: bool = False,
          opening_balance: str = None,
          loglevel: str = typer.Option("WARNING", help='Logging level'),
-         version: bool = typer.Option(None, "--version", callback=version_callback, is_eager=True)):
+         version: bool = typer.Option(None, "--version", callback=version_callback, is_eager=True),
+         expected_balance: str = None):
 
     '''ESPPv2 tax reporting tool'''
     lognames = logging.getLevelNamesMapping()
     if loglevel not in lognames:
         raise typer.BadParameter(f'Invalid loglevel: {loglevel}')
-    logging.basicConfig(level=lognames[loglevel])
+    logging.basicConfig(level=lognames[loglevel], handlers=[RichHandler()])
 
     if opening_balance:
         opening_balance = json.loads(opening_balance)
         opening_balance = parse_obj_as(Holdings, opening_balance)
 
     holdings: Holdings
-    result = do_taxes(broker, transaction_files, inholdings, wires, year, verbose=verbose, opening_balance=opening_balance)
+    result = do_taxes(broker, transaction_files, inholdings, wires, year, verbose=verbose,
+                      opening_balance=opening_balance, expected_balance=expected_balance)
     if isinstance(result, Holdings):
         holdings = result
-    # report, holdings, summary = do_taxes(
-    #     broker, transaction_files, inholdings, wires, year, verbose=verbose, opening_balance=opening_balance)
     else:
         print_report(year, result.summary, result.report, result.holdings, verbose)
 

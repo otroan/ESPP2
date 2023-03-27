@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ValidationError, validator, Field, Extra, root_validator
+from pydantic import BaseModel, ValidationError, validator, Field, Extra, root_validator, condecimal
 from datetime import date
 from typing import List, Literal, Annotated, Union, Optional, Any, Dict
 from enum import Enum
@@ -218,7 +218,7 @@ class Sell(TransactionEntry):
     type: Literal[EntryTypeEnum.SELL]
     date: date
     symbol: str
-    qty: Decimal
+    qty: condecimal(lt=0)
     fee: Optional[NegativeAmount]
     amount: Amount
     description: str
