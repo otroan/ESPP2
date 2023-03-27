@@ -99,7 +99,7 @@ def do_deposit(record):
     add_value(newrec, 'qty', n)
     add_date(newrec, 'purchase_date', date)
     # add_amount(newrec, 'subscription_fmv', date, 'USD', vpd)
-    add_amount(newrec, 'purchase_price', date, 'USD', vpd)
+    add_amount(newrec, 'purchase_price', date, 'ESPPUSD', vpd)
 
     records.append(newrec)
 

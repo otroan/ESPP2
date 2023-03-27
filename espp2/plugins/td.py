@@ -107,6 +107,7 @@ def read(raw_data, filename=''):
     for e in csv_data:
         r : dict
         r = {}
+        logger.debug('Processing %s', e)
         action = e['DESCRIPTION']
         d = dt.parse(e['DATE'])
         if action.startswith('Bought'):
