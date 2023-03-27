@@ -87,7 +87,7 @@ def add_amount(rec, name, date, currency, amount):
 def do_deposit(record):
     date = record['date']
     n = Decimal(str(record['n']))
-    price = Decimal(f"{record['price']}").quantize(Decimal('0.0001'))
+    # price = Decimal(f"{record['price']}").quantize(Decimal('0.0001'))
     vpd = Decimal(f"{record['vpd']}")
 
     newrec = {}
@@ -98,8 +98,8 @@ def do_deposit(record):
     add_string(newrec, 'description', 'ESPP')
     add_value(newrec, 'qty', n)
     add_date(newrec, 'purchase_date', date)
-    add_amount(newrec, 'subscription_fmv', date, 'USD', vpd)
-    add_amount(newrec, 'purchase_price', date, 'USD', price)
+    # add_amount(newrec, 'subscription_fmv', date, 'USD', vpd)
+    add_amount(newrec, 'purchase_price', date, 'USD', vpd)
 
     records.append(newrec)
 
