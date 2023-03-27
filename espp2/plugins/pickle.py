@@ -2,26 +2,17 @@
 Read a pickle-file and create a transactions-file
 '''
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, too-few-public-methods
 
 import pickle
 import logging
 import datetime
 import codecs
-from decimal import Decimal
-from pprint import pprint    # Pretty-print objects for debugging
-from espp2.datamodels import Transactions
-
-# ESPP2 tools needed
-from espp2.fmv import FMV
+from pprint import pformat    # Pretty-print objects for debugging
+from espp2.datamodels import Transactions, Amount, Deposit, EntryTypeEnum, Sell, Tax, Dividend_Reinv
+from espp2.datamodels import Dividend, Taxsub, Wire, Fee, Transfer
 
 logger = logging.getLogger(__name__)
-
-# Store all transaction records here
-records = []
-
-# Needed to establish exchange-rates
-currency_converter = FMV()
 
 #
 # This class is responsible for loading the pickle-file. It is a
@@ -64,247 +55,154 @@ class UnpicklerESPP(pickle.Unpickler):
         errmsg = f"module '{module}' name '{name}' is denied"
         raise pickle.UnpicklingError(errmsg)
 
-def add_string(rec, name, value):
-    rec[name] = value
+def do_deposit(record, source):
+    ''' DEPOSIT {'date': datetime.date(2021, 7, 28), 'n': 1, 'vpd': 26.25} '''
+    return Deposit(type=EntryTypeEnum.DEPOSIT,
+                   date=record['date'],
+                   symbol='CSCO',
+                   description='ESPP',
+                   qty=record['n'],
+                   purchase_date=record['date'],
+                   purchase_price=Amount(amountdate=record['date'],
+                                         currency='ESPPUSD', value=record['vpd']),
+                   source=source)
 
-def add_date(rec, name, date):
-    add_string(rec, name, date.strftime('%Y-%m-%d'))
+def do_reinvest(record, source):
+    ''' REINVEST {'date': datetime.date(2021, 7, 28), 'amount': 262.5, 'fee': 0.0} '''
+    return Dividend_Reinv(type=EntryTypeEnum.DIVIDEND_REINV,
+                          date=record['date'],
+                          symbol='CSCO',
+                          description='',
+                          amount=Amount(amountdate=record['date'],
+                                        currency='USD', value=record['amount']),
+                          source=source)
 
-def add_value(rec, name, value):
-    rec[name] = value
-
-def add_amount(rec, name, date, currency, amount):
-    tmp = {}
-    add_string(tmp, 'currency', currency)
-    add_value(tmp, "value", amount)
-
-    datestr = date.strftime('%Y-%m-%d')
-    exch_rate = currency_converter.get_currency(currency, datestr)
-    add_value(tmp, 'nok_exchange_rate', exch_rate)
-    add_value(tmp, 'nok_value', Decimal(exch_rate) * amount)
-    rec[name] = tmp
-
-def do_deposit(record):
-    date = record['date']
-    n = Decimal(str(record['n']))
-    # price = Decimal(f"{record['price']}").quantize(Decimal('0.0001'))
-    vpd = Decimal(f"{record['vpd']}")
-
-    newrec = {}
-
-    add_date(newrec, 'date', date)
-    add_string(newrec, 'type', 'DEPOSIT')
-    add_string(newrec, 'symbol', 'CSCO')
-    add_string(newrec, 'description', 'ESPP')
-    add_value(newrec, 'qty', n)
-    add_date(newrec, 'purchase_date', date)
-    # add_amount(newrec, 'subscription_fmv', date, 'USD', vpd)
-    add_amount(newrec, 'purchase_price', date, 'ESPPUSD', vpd)
-
-    records.append(newrec)
-
-def do_reinvest(record):
-    # REINVEST {'date': datetime.date(2021, 7, 28), 'amount': 262.5, 'fee': 0.0}
-    date = record['date']
-    amount = Decimal(f"{record['amount']}")
-    newrec = {}
-
-    add_date(newrec, 'date', date)
-    add_string(newrec, 'type', 'DIVIDEND_REINV')
-    add_string(newrec, 'symbol', 'CSCO')
-    add_amount(newrec, 'amount', date, 'USD', -amount)
-    add_string(newrec, 'description', '')
-
-    records.append(newrec)
-
-def do_trans(record):
+def do_trans(record, source):
     '''Sale'''
-    date = record['date']
-    fee = Decimal(f"{record['fee']}")
-    n = Decimal(f"{record['n']}")
-    price = Decimal(f"{record['price']}") * n
-
-    if n == 0:
+    if record['n'] == 0:
         # Old pickle file has a bug where it sometimes has a zero quanity for sale. Ignore it.
         logger.warning("Zero quantity for sale, ignoring it: %s", record)
-        return
+        return None
+    return Sell(type=EntryTypeEnum.SELL,
+                date=record['date'],
+                symbol='CSCO',
+                description='',
+                qty=-record['n'],
+                fee=Amount(amountdate=record['date'], currency='USD', value=-record['fee']),
+                amount=Amount(amountdate=record['date'], currency='USD',
+                              value=record['price'] * record['n']),
+                source=source)
 
-    newrec = {}
 
-    add_date(newrec, 'date', date)
-    add_string(newrec, 'type', 'SELL')
-    add_string(newrec, 'symbol', 'CSCO')
-    add_value(newrec, 'qty', -n)
-    add_value(newrec, 'description', '')
-    add_amount(newrec, 'fee', date, 'USD', -fee)
-    add_amount(newrec, 'amount', date, 'USD', price)
-    records.append(newrec)
-
-def do_transfer(record):
+def do_transfer(record, source):
     '''Shares are transferred to another broker'''
-    date = record['date']
-    fee = Decimal(f"{record['fee']}")
-    n = Decimal(record['n'])
+    return Transfer(type=EntryTypeEnum.TRANSFER,
+                    date=record['date'],
+                    symbol='CSCO',
+                    description='',
+                    qty=-record['n'],
+                    fee=Amount(amountdate=record['date'], currency='USD', value=-record['fee']),
+                    source=source)
 
-    newrec = {}
+def do_dividend(record, source):
+    ''' Dividends '''
+    return Dividend(type=EntryTypeEnum.DIVIDEND,
+                    date=record['payDate'],
+                    symbol='CSCO',
+                    description='',
+                    amount_ps=Amount(amountdate=record['payDate'], currency='USD',
+                                     value=record['amount']),
+                    source=source)
 
-    add_date(newrec, 'date', date)
-    add_string(newrec, 'type', 'TRANSFER')
-    add_value(newrec, 'qty', -n)
-    add_string(newrec, 'symbol', 'CSCO')
-    # add_amount(newrec, 'amount', date, 'USD', price)
-    add_amount(newrec, 'fee', date, 'USD', -fee)
+def do_tax(record, source):
+    ''' Dividend tax'''
+    if record['amount'] >= 0:
+        # This is a tax refund, so we need to add a new record with the
+        # same date, but with a positive amount
+        return Tax(type=EntryTypeEnum.TAX,
+                   date=record['date'],
+                   symbol='CSCO',
+                   description='',
+                   amount=Amount(amountdate=record['date'], currency='USD',
+                                 value=-record['amount']),
+                   source=source)
 
-    records.append(newrec)
+    return Taxsub(type=EntryTypeEnum.TAXSUB,
+                    date=record['date'],
+                    symbol='CSCO',
+                    description='',
+                    amount=Amount(amountdate=record['date'], currency='USD',
+                                  value=record['amount']),
+                    source=source)
 
-def do_dividend(record):
-    date = record['payDate']
-    amount_ps = Decimal(f"{record['amount']}")
-    payDate = record['payDate']
 
-    newrec = {}
-    add_date(newrec, 'date', date)
-    add_string(newrec, 'type', 'DIVIDEND')
-    add_string(newrec, 'symbol', 'CSCO')
-    add_string(newrec, 'description', 'Credit')
-    add_amount(newrec, 'amount_ps', payDate, 'USD', amount_ps)
+def do_rsu(record, source):
+    ''' RSU '''
+    return Deposit(type=EntryTypeEnum.DEPOSIT,
+                   date=record['date'],
+                   symbol='CSCO',
+                   description='RSU',
+                   qty=record['n'],
+                   purchase_date=record['date'],
+                   purchase_price=Amount(amountdate=record['date'], currency='USD',
+                                         value=record['vpd']),
+                   source=source)
 
-    records.append(newrec)
-
-def do_tax(record):
-    date = record['date']
-    amount = Decimal(record['amount'])
-
-    newrec = {}
-
-    add_date(newrec, 'date', date)
-
-    if amount < 0:
-        add_string(newrec, 'type', 'TAXSUB')
-    else:
-        add_string(newrec, 'type', 'TAX')
-    add_string(newrec, 'symbol', 'CSCO')
-    add_string(newrec, 'description', 'Debit')
-    add_amount(newrec, 'amount', date, 'USD', -amount)
-
-    records.append(newrec)
-
-def do_rsu(record):
-    date = record['date']
-    n = Decimal(record['n'])
-    price = Decimal(f"{record['price']}")
-    vpd = Decimal(f"{record['vpd']}")
-
-    newrec = {}
-
-    add_date(newrec, 'date', date)
-    add_string(newrec, 'type', 'DEPOSIT')
-    add_string(newrec, 'symbol', 'CSCO')
-    add_string(newrec, 'description', 'RS')
-    add_value(newrec, 'qty', n)
-    add_date(newrec, 'purchase_date', date)   # TODO: Which date?
-    # add_string(newrec, 'subscription_date', 'TODO!')
-    add_amount(newrec, 'subscription_fmv', date, 'USD', vpd)
-    # add_amount(newrec, 'plan_purchase_price', 'TODO!')
-    add_amount(newrec, 'purchase_price', date, 'USD', price)
-
-    records.append(newrec)
-
-def do_wire(record):
-    ''' {'date': datetime.date(2012, 12, 12), 'sent': 12805.27, 'received': 71975.86161600001, 'fee': 25.0}'''
-    date = record['date']
-    fee = Decimal(record['fee'])
-    sent = Decimal(record['sent'])
-
-    newrec = {}
-
-    add_date(newrec, 'date', date)
-    add_string(newrec, 'type', 'WIRE')
-    add_string(newrec, 'description', '')
-    add_amount(newrec, 'amount', date, 'USD', -sent)
-    add_amount(newrec, 'fee', date, 'USD', -fee)
-
+def do_wire(record, source):
+    ''' {'date': datetime.date(2012, 12, 12), 'sent': 12805.27, 'received': 71975.86161600001,
+         'fee': 25.0}'''
     # Sent & Received
+    return Wire(type=EntryTypeEnum.WIRE,
+                date=record['date'],
+                description='RSU',
+                fee=Amount(amountdate=record['date'], currency='USD', value=-record['fee']),
+                amount=Amount(amountdate=record['date'], currency='USD', value=-record['sent']),
+                source=source)
 
-    records.append(newrec)
+def do_fee(record, source):
+    ''' FEE: {'date': datetime.date(2018, 7, 9), 'amount': 25.0} '''
+    return Fee(type=EntryTypeEnum.FEE,
+               date=record['date'],
+               amount=Amount(amountdate=record['date'], currency='USD', value=-record['amount']),
+               source=source)
 
-def do_fee(record):
-    # FEE: {'date': datetime.date(2018, 7, 9), 'amount': 25.0}
-    date = record['date']
-    fee = Decimal(record['amount'])
-
-    newrec = {}
-
-    add_date(newrec, 'date', date)
-    add_string(newrec, 'type', 'FEE')
-    add_amount(newrec, 'amount', date, 'USD', -fee)
-
-    records.append(newrec)
+methods = {
+    'DEPOSIT': do_deposit,
+    'REINVEST': do_reinvest,
+    'DIVIDEND': do_dividend,
+    'TAX': do_tax,
+    'RSU': do_rsu,
+    'PURCHASE': do_rsu,
+    'WIRE': do_wire,
+    'FEE': do_fee,
+    'TRANSFER': do_transfer,
+    'TRANS': do_trans,
+    'JOURNAL': do_wire,
+}
 
 def read(pickle_file, filename='') -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
-    global records
-
     records = []
+    source = f'pickle:{filename}'
 
     # Read the pickle-file
     p = UnpicklerESPP(pickle_file).load()
     # Print the data of the raw pickle-file data for debugging
-    if False:
-        print('Pickle-file dump:')
-        pprint(p.__dict__)
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug('Raw pickle-file data: %s', pformat(p.__dict__))
 
     for key in sorted(p.rawData):
         # Simple sanity-check, first item in key must be a date object
         if not isinstance(key[0], datetime.date):
-            raise Exception(f'Transaction key not starting with a date {key}')
+            raise ValueError(f'Transaction key not starting with a date {key}')
 
         rectype = key[1]
         record = p.rawData[key]
         logger.debug('Processing record: %s', (rectype, record))
 
-        if rectype == 'DEPOSIT':
-            do_deposit(record)
-            continue
+        try:
+            records.append(methods[rectype](record, source))
+        except KeyError as e:
+            raise ValueError(f'Error: Unexpected pickle-file record: {rectype}') from e
 
-        if rectype == 'REINVEST':
-            do_reinvest(record)
-            continue
-
-        if rectype == 'DIVIDEND':
-            do_dividend(record)
-            continue
-
-        if rectype == 'TAX':
-            do_tax(record)
-            continue
-
-        if rectype in ('RSU', 'PURCHASE'):
-            do_rsu(record)
-            continue
-
-        if rectype == 'TRANSFER':
-            do_transfer(record)
-            continue
-
-        if rectype == 'TRANS':
-            do_trans(record)
-            continue
-
-        if rectype == 'JOURNAL':
-            do_wire(record)
-            continue
-
-        if rectype == 'FEE':
-            do_fee(record)
-            continue
-
-        if rectype == 'WIRE':
-            do_wire(record)
-            continue
-        raise ValueError(f'Error: Unexpected pickle-file record: {rectype}')
-
-    for r in records:
-        r['source'] = f'pickle:{filename}'
-    sorted_transactions = sorted(records, key=lambda d: d['date'])
-    return Transactions(transactions=sorted_transactions)
+    return Transactions(transactions=records)
