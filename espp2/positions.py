@@ -96,7 +96,6 @@ class Ledger():
             return 0
         for i, e in enumerate(self.entries[symbol]):
             if e[0] > untildate:
-                print('LEDGER ENTRY:', symbol, e, i, untildate, e[2], self.entries[symbol][i-1][2])
                 return self.entries[symbol][i-1][2]
                 # return e[2]
             last = e[2]
