@@ -14,6 +14,9 @@ import dateutil.parser as dt
 from pydantic import parse_obj_as
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum
+import logging
+
+logger = logging.getLogger(__name__)
 
 def fixup_date(datestr):
     '''Fixup date'''
@@ -92,7 +95,7 @@ def action_to_type(value):
         return None
     raise ValueError(f'Unknown transaction entry {value}')
 
-def read(raw_data, filename='', logger=None):
+def read(raw_data, filename=''):
     '''Main entry point of plugin. Return normalized Python data structure.'''
 
     csv_data = td_csv_import(raw_data)
