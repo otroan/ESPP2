@@ -30,7 +30,7 @@ tax_deduction_rates = {
 import logging
 from itertools import groupby
 from copy import deepcopy
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from math import isclose
 from decimal import Decimal, getcontext
 from espp2.fmv import FMV
@@ -63,6 +63,7 @@ def todate(datestr: str) -> date:
     '''Convert string to datetime'''
     return datetime.strptime(datestr, '%Y-%m-%d').date()
 
+
 class Ledger():
     '''Ledger of transactions and holdings'''
     def __init__(self, holdings, transactions):
@@ -87,19 +88,35 @@ class Ledger():
         total = sum(e[1] for e in self.entries[symbol])
         self.entries[symbol].append((transactiondate, qty, total+qty))
 
-    def total_shares(self, symbol, untildate, until=True):
-        '''Return total shares for symbol at date'''
+    def total_shares(self, symbol, untildate):
+        '''Return total shares for symbol at end of day given by untildate'''
         last = 0
+
         if symbol not in self.entries:
             return 0
         for i, e in enumerate(self.entries[symbol]):
-            if e[0] >= untildate:
-                if until:
-                    return self.entries[symbol][i-1][2]
-                return e[2]
+            if e[0] > untildate:
+                print('LEDGER ENTRY:', symbol, e, i, untildate, e[2], self.entries[symbol][i-1][2])
+                return self.entries[symbol][i-1][2]
+                # return e[2]
             last = e[2]
         return last
 
+
+tax_deduction_rates = {year: Decimal(
+    str(i[0])) for year, i in tax_deduction_rates.items()}
+
+def get_tax_deduction_rate(year):
+    '''Return tax deduction rate for year'''
+
+    if year < 2006:
+        logger.error('The tax deduction rate was introduced in 2006, no support for years prior to that. %s', year)
+        return 0
+
+    if year not in tax_deduction_rates:
+        raise Exception(f'No tax deduction rate for year {year}')
+
+    return tax_deduction_rates[year]
 class Positions():
     '''
     Keep track of stock positions. Expect transactions for this year and holdings from previous year.
@@ -115,7 +132,7 @@ class Positions():
                         year)] * p.purchase_price.nok_value)/100
                     logger.debug(
                         'Adding tax deduction for ESPP from last year %s', p)
-
+        
     def __init__(self, year, opening_balance: Holdings, transactions, received_wires=None,
                  validate_year='exact'):
         # if validate_year == 'exact':
@@ -128,8 +145,6 @@ class Positions():
         self.year = year
         # if not isinstance(cash, Cash):
         #     raise ValueError('Cash must be instance of Cash')
-        self.tax_deduction_rate = {year: Decimal(
-            str(i[0])) for year, i in tax_deduction_rates.items()}
 
         self.new_holdings = [
             t for t in transactions if t.type in ('BUY', 'DEPOSIT')]
@@ -151,6 +166,7 @@ class Positions():
             logger.warning(
                 "No previous holdings or stocks in holding file. Requires the complete transaction history.")
             self.positions = self.new_holdings
+
         self.tax_deduction = []
         for i, p in enumerate(self.positions):
             p.idx = i
@@ -221,7 +237,7 @@ class Positions():
         posidx = 0
         if symbol in self.sale_by_symbols:
             for s in self.sale_by_symbols[symbol]:
-                if s.date >= balancedate:
+                if s.date > balancedate:
                     # We are including positions sold on this day too.
                     break
                 if posview[posidx].date > balancedate:
@@ -307,12 +323,20 @@ class Positions():
             except KeyError:
                 tax_usd = tax_nok = 0
             for d in dividends:
-                total_shares = self.total_shares(self[:d.exdate, symbol])
+                # To qualify for dividend, we need to have owned the stock the day before the exdate
+                exdate = d.exdate - timedelta(days=1)
+                total_shares = self.total_shares(self[:exdate, symbol])
                 if self.ledger:
-                    ledger_shares = self.ledger.total_shares(symbol, d.exdate)
+                    ledger_shares = self.ledger.total_shares(symbol, exdate)
+                    if not isclose(total_shares, ledger_shares, abs_tol=10**-2):
+                        logger.warning('Total shares don\'t match %s != %s on %s / %s', total_shares, ledger_shares, d.date, exdate)
+                        from espp2.report import print_ledger
+                        from rich.console import Console
+                        print_ledger(self.ledger.entries, Console())
+
                     assert isclose(total_shares, ledger_shares, abs_tol=10**-
-                                   2), f"Total shares don't match {total_shares} != {ledger_shares} on {d.date} / {d.exdate}"
-                if total_shares == 0: # and not d.amount_ps:
+                                   2), f"Total shares don't match {total_shares} (position balance) != {ledger_shares} (ledger) on {d.date} / {exdate}"
+                if total_shares == 0:  # and not d.amount_ps:
                     raise InvalidPositionException(
                         f'Dividends: Total shares at dividend date is zero: {d}')
 
@@ -330,8 +354,8 @@ class Positions():
 
                 logger.info(
                     'Total shares of %s at dividend date: %s dps: %s reported: %s', symbol, total_shares, dps, d.dividend_dps)
-                assert isclose(dps, d.dividend_dps, abs_tol=10**-2), f"Dividend for {d.exdate}/{d.date} per share calculated does not match reported {dps} vs {d.dividend_dps} for {total_shares} {d.amount.value}"
-                for entry in self[:d.exdate, symbol]:  # Creates a view
+                assert isclose(dps, d.dividend_dps, abs_tol=10**-2), f"Dividend for {exdate}/{d.date} per share calculated does not match reported {dps} vs {d.dividend_dps} for {total_shares} {d.amount.value}"
+                for entry in self[:exdate, symbol]:  # Creates a view
                     entry.dps = dps if 'dps' not in entry else entry.dps + dps
                     tax_deduction = self.tax_deduction[entry.idx]
                     if tax_deduction > entry.dps:
@@ -416,7 +440,7 @@ class Positions():
         sales_report = []
 
         for s in sales:
-            if s.fee.value < 0:
+            if s.fee and s.fee.value < 0:
                 self.cash.credit(s.date, s.fee.copy(), 'sale fee')
             is_sale = s.type == EntryTypeEnum.SELL
             if is_sale:
@@ -557,8 +581,9 @@ class Positions():
                 if item.qty == 0:
                     continue
                 tax_deduction = self.tax_deduction[item.idx]
+                tax_deduction_rate = get_tax_deduction_rate(year)
                 tax_deduction += (item.purchase_price.nok_value *
-                                  self.tax_deduction_rate[year])/100
+                                  tax_deduction_rate)/100
                 hitem = Stock(date=item.date, symbol=item.symbol, qty=item.qty,
                               purchase_price=item.purchase_price.copy(), tax_deduction=tax_deduction)
                 stocks.append(hitem)

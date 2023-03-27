@@ -271,6 +271,7 @@ def read(pickle_file, filename='', logger=None) -> Transactions:
 
         rectype = key[1]
         record = p.rawData[key]
+        logger.debug('Processing record: %s', (rectype, record))
 
         if rectype == 'DEPOSIT':
             do_deposit(record)

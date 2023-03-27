@@ -195,7 +195,9 @@ def print_report_tax_summary(summary: TaxSummary, console:Console):
 
     console.print(table)
 
-def print_report(year: int, summary: TaxSummary, report: TaxReport, holdings: Holdings, verbose: bool):
+
+def print_report(year: int, summary: TaxSummary, report: TaxReport,
+                 holdings: Holdings, verbose: bool):
     '''Pretty print tax report to console'''
     console = Console()
 

@@ -76,8 +76,8 @@ def guess_format(filename, data) -> str:
     if extension == '.xlsx':
         if 'My_ESPP_Purchases' in fname:
             return 'csco_espp_purchases'
-        elif 'My_ESPP_Transactions' in fname:
-            return 'csco_espp_transactions'
+        elif 'My_Stock_Transactions' in fname:
+            return 'csco_stock_transactions'
 
     # Assume CSV
     data.seek(0)
