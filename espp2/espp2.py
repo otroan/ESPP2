@@ -7,7 +7,7 @@ ESPPv2 Wrapper
 import logging
 from enum import Enum
 import typer
-from espp2.main import do_taxes
+from espp2.main import do_taxes, do_holdings_2
 from espp2.datamodels import TaxReport, Holdings, Wires
 from espp2.report import print_report
 from pydantic import parse_obj_as
@@ -62,8 +62,11 @@ def main(transaction_files: list[typer.FileBinaryRead],
         opening_balance = parse_obj_as(Holdings, opening_balance)
 
     holdings: Holdings
-    result = do_taxes(broker, transaction_files, inholdings, wires, year, verbose=verbose,
-                      opening_balance=opening_balance, expected_balance=expected_balance)
+    if expected_balance:
+        result = do_holdings_2(broker, transaction_files, year, expected_balance, verbose=verbose)
+    else:
+        result = do_taxes(broker, transaction_files, inholdings, wires, year, verbose=verbose,
+                        opening_balance=opening_balance)
     if isinstance(result, Holdings):
         holdings = result
     else:

@@ -215,7 +215,7 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
 
 
 def do_taxes(broker, transaction_files: list, holdfile,
-             wirefile, year, verbose=False, opening_balance=None, expected_balance=None) -> Tuple[TaxReport, Holdings, TaxSummary]:
+             wirefile, year, verbose=False, opening_balance=None) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Do taxes
     This function is run in two phases:
     1. Process transactions and older holdings to generate holdings for previous year
@@ -253,23 +253,49 @@ def do_taxes(broker, transaction_files: list, holdfile,
 
     # Phase 1. Return our approximation for previous year holdings for review
     logger.info('Changes in holdings for previous year')
-    holdings = generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
+    return generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
 
-    if expected_balance:
-        logger.info('Expected balance: %s', expected_balance)
-        symbol, qty = expected_balance.split(':')
-        sum_qty = sum(e.qty for e in holdings.stocks if e.symbol == symbol)
-        logger.info('Current balance: %s/%s', sum_qty, qty)
-        if sum_qty != int(qty):
-            logger.info('Artifically selling: %s', sum_qty - int(qty))
-            sell_trans = Sell(type=EntryTypeEnum.SELL, symbol=symbol, qty=-(sum_qty - int(
-                qty)), date=datetime.date(year-1, 12, 31), price=0.0, description='', amount=Amount(0), source='artificial')
-            transactions.transactions.append(sell_trans)
-            t = sorted(transactions.transactions, key=lambda d: d.date)
-            transactions = Transactions(transactions=t)
-            holdings = generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
-            tax_deduction_rate = get_tax_deduction_rate(year-1)
-            # Reset tax deduction
-            for i, h in enumerate(holdings.stocks):
-                holdings.stocks[i].tax_deduction = (h.purchase_price.nok_value * tax_deduction_rate)/100
+
+def do_holdings_2(broker, transaction_files: list, year, expected_balance, verbose=False) -> Holdings:
+    '''Calculate a holdings based on an expected balance and the ESPP and RSU transaction files'''
+
+    transes = []
+
+    for tf in transaction_files:
+        t = normalize(tf)
+        transes += t.transactions
+
+    # Determine from which file to use for which year
+
+    t = sorted(transes, key=lambda d: d.date)
+
+    years = {}
+    first = t[0].date.year
+    last = t[-1].date.year
+    years = {y: 0 for y in range(first, last+1)}
+    transactions = Transactions(transactions=t)
+
+    # Phase 1. Return our approximation for previous year holdings for review
+    logger.info('Changes in holdings for previous year')
+    holdings = generate_previous_year_holdings(broker, years, year, None, transactions, verbose)
+    logger.debug('Holdings for previous year: %s', holdings.json(indent=2))
+
+    logger.info('Expected balance: %s', expected_balance)
+    symbol, qty = expected_balance.split(':')
+    qty = Decimal(qty)
+    sum_qty = sum(e.qty for e in holdings.stocks if e.symbol == symbol)
+    logger.info('Current balance: %s/%s', sum_qty, qty)
+    if sum_qty != qty:
+        logger.info('Artifically selling: %s', sum_qty - qty)
+        sell_trans = Sell(type=EntryTypeEnum.SELL, symbol=symbol, qty=-(sum_qty - qty),
+                            date=datetime.date(year-1, 12, 31), price=0.0, description='',
+                            amount=Amount(0), source='artificial')
+        transactions.transactions.append(sell_trans)
+        t = sorted(transactions.transactions, key=lambda d: d.date)
+        transactions = Transactions(transactions=t)
+        holdings = generate_previous_year_holdings(broker, years, year, None, transactions, verbose)
+        tax_deduction_rate = get_tax_deduction_rate(year-1)
+        # Reset tax deduction
+        for i, h in enumerate(holdings.stocks):
+            holdings.stocks[i].tax_deduction = (h.purchase_price.nok_value * tax_deduction_rate)/100
     return holdings
