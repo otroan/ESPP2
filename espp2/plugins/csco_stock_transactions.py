@@ -45,8 +45,8 @@ def stock_transactions_xls_import(fd, filename):
             description='RSU Vest',
             purchase_price=Amount(
                 todate(t['Date of Transaction']), currency='USD', value=t['Sale Price/FMV']),
-            source='csco',
-            )
+            source=f'csco_rsu:{filename}',
+        )
         transes.append(d)
     return Transactions(transactions=sorted(transes, key=lambda d: d.date))
 

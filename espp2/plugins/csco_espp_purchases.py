@@ -34,6 +34,7 @@ def espp_purchases_xls_import(fd, filename):
     records = dfs.to_dict(orient='records')
     transes=[]
     for t in records:
+        logger.debug('Processing %s', t)
         if t['Offering Date'] == 'Total':
             break
         d = Deposit(type=EntryTypeEnum.DEPOSIT,
@@ -42,11 +43,11 @@ def espp_purchases_xls_import(fd, filename):
                     symbol='CSCO',
                     description='ESPP Purchase',
                     purchase_price=Amount(
-                        todate(t['Purchase Date']), currency='USD', value=t['Purchase Date FMV']),
-                    source='csco',
+                        todate(t['Purchase Date']), currency='ESPPUSD', value=t['Purchase Date FMV']),
+                    source=f'csco_espp:{filename}',
                     )
         transes.append(d)
-    return Transactions(transactions=sorted(transes, key=lambda d: d.date))
+    return Transactions(transactions=transes)
 
 def read(fd, filename='') -> Transactions:
     '''Main entry point of plugin. Return normalized Python data structure.'''
