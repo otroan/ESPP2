@@ -62,8 +62,8 @@ async def generate_holdings_2(
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-@app.post("/files/", response_model=ESPPResponse)
-async def create_files(
+@app.post("/taxreport/", response_model=ESPPResponse)
+async def taxreport(
         transaction_files: list[UploadFile],
         broker: str = Form(...),
         holdfile: UploadFile | None = None,
