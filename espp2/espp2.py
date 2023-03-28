@@ -63,7 +63,9 @@ def main(transaction_files: list[typer.FileBinaryRead],
 
     if inholdings:
         # TODO: Check inholdings are valid for previous yax year
-        result = do_taxes(broker, transaction_files, inholdings, wires, year, verbose=verbose,
+        if len(transaction_files) > 1:
+            raise typer.BadParameter('Cannot use inholdings with multiple transaction files')
+        result = do_taxes(broker, transaction_files[0], inholdings, wires, year, verbose=verbose,
                         opening_balance=opening_balance)
         print_report(year, result.summary, result.report, result.holdings, verbose)
     else:
@@ -72,7 +74,15 @@ def main(transaction_files: list[typer.FileBinaryRead],
             holdings = do_holdings_2(broker, transaction_files, year, expected_balance, verbose=verbose)
         else:
             holdings = do_holdings_1(broker, transaction_files, inholdings, year, verbose=verbose)
-        
+        if not holdings:
+            logger.error('No holdings found')
+            if len(transaction_files) > 1:
+                raise typer.BadParameter('Cannot use inholdings with multiple transaction files')
+
+            result = do_taxes(broker, transaction_files[0], inholdings, wires, year, verbose=verbose,
+                            opening_balance=opening_balance)
+            print_report(year, result.summary, result.report, result.holdings, verbose)
+
     # New holdings
     if outholdings:
         logger.info('Writing new holdings to %s', outholdings.name)
