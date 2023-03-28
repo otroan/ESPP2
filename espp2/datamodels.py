@@ -54,7 +54,9 @@ class Amount(BaseModel):
         if self.currency == 'USD':
             return f'${self.value}'
         return f'{self.currency}{self.value}'
-    
+    def __format__(self, format_spec):
+        return f'${self.value:{format_spec}}'
+
     def __mul__(self, qty: Decimal):
         result = self.copy()
         result.value = result.value * qty
