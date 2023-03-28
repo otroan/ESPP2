@@ -28,7 +28,7 @@ async def generate_holdings_1(
         holdfile: UploadFile | None = None,
 #        opening_balance: str = Form(...),
         year: int = Form(...)):
-    '''Generate holdings endpoint'''
+    '''Generate previous year holdings from a plethora of transaction files'''
     opening_balance = None
 
     if opening_balance:
@@ -49,22 +49,23 @@ async def generate_holdings_1(
 async def generate_holdings_2(
         transaction_files: list[UploadFile],
         broker: str = Form(...),
-        year: int = Form(...)):
-    '''Generate holdings endpoint'''
+        year: int = Form(...),
+        expected_balance: str = Form(...)):
+    '''Generate holdings from complete purchase history from stocks web site'''
     opening_balance = None
 
     if opening_balance:
         opening_balance = json.loads(opening_balance)
         opening_balance = parse_obj_as(Holdings, opening_balance)
     try:
-        return do_holdings_2(broker, transaction_files, year)
+        return do_holdings_2(broker, transaction_files, year, expected_balance=expected_balance)
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 @app.post("/taxreport/", response_model=ESPPResponse)
 async def taxreport(
-        transaction_files: list[UploadFile],
+        transaction_file: UploadFile,
         broker: str = Form(...),
         holdfile: UploadFile | None = None,
         wires: str = Form(""),
@@ -86,7 +87,7 @@ async def taxreport(
         holdfile = holdfile.file
     try:
         report, holdings, summary = do_taxes(
-            broker, transaction_files, holdfile, wires, year)
+            broker, transaction_file, holdfile, wires, year)
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
