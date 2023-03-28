@@ -116,25 +116,14 @@ def do_dividend(record, source):
 
 def do_tax(record, source):
     ''' Dividend tax'''
-    if record['amount'] >= 0:
-        # This is a tax refund, so we need to add a new record with the
-        # same date, but with a positive amount
-        return Tax(type=EntryTypeEnum.TAX,
-                   date=record['date'],
-                   symbol='CSCO',
-                   description='',
-                   amount=Amount(amountdate=record['date'], currency='USD',
-                                 value=-record['amount']),
-                   source=source)
-
-    return Taxsub(type=EntryTypeEnum.TAXSUB,
-                    date=record['date'],
-                    symbol='CSCO',
-                    description='',
-                    amount=Amount(amountdate=record['date'], currency='USD',
-                                  value=record['amount']),
-                    source=source)
-
+    amount = abs(record['amount'])
+    return Tax(type=EntryTypeEnum.TAX,
+                date=record['date'],
+                symbol='CSCO',
+                description='',
+                amount=Amount(amountdate=record['date'], currency='USD',
+                                value=-amount),
+                source=source)
 
 def do_rsu(record, source):
     ''' RSU '''
