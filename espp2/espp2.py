@@ -7,7 +7,7 @@ ESPPv2 Wrapper
 import logging
 from enum import Enum
 import typer
-from espp2.main import do_taxes, do_holdings_2
+from espp2.main import do_taxes, do_holdings_2, do_holdings_1
 from espp2.datamodels import TaxReport, Holdings, Wires
 from espp2.report import print_report
 from pydantic import parse_obj_as
@@ -61,18 +61,18 @@ def main(transaction_files: list[typer.FileBinaryRead],
         opening_balance = json.loads(opening_balance)
         opening_balance = parse_obj_as(Holdings, opening_balance)
 
-    holdings: Holdings
-    if expected_balance:
-        logger.warning("This does not work with reinvested dividends!")
-        result = do_holdings_2(broker, transaction_files, year, expected_balance, verbose=verbose)
-    else:
+    if inholdings:
+        # TODO: Check inholdings are valid for previous yax year
         result = do_taxes(broker, transaction_files, inholdings, wires, year, verbose=verbose,
                         opening_balance=opening_balance)
-    if isinstance(result, Holdings):
-        holdings = result
-    else:
         print_report(year, result.summary, result.report, result.holdings, verbose)
-
+    else:
+        if expected_balance:
+            logger.warning("This does not work with reinvested dividends!")
+            holdings = do_holdings_2(broker, transaction_files, year, expected_balance, verbose=verbose)
+        else:
+            holdings = do_holdings_1(broker, transaction_files, inholdings, year, verbose=verbose)
+        
     # New holdings
     if outholdings:
         logger.info('Writing new holdings to %s', outholdings.name)

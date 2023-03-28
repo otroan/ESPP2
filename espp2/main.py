@@ -214,7 +214,7 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
     return holdings
 
 
-def do_taxes(broker, transaction_files: list, holdfile,
+def do_taxes(broker, transaction_file, holdfile,
              wirefile, year, verbose=False, opening_balance=None) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Do taxes
     This function is run in two phases:
@@ -225,7 +225,10 @@ def do_taxes(broker, transaction_files: list, holdfile,
     '''
     wires = []
     prev_holdings = []
-    transactions, years = merge_transactions(transaction_files)
+
+    t = normalize(transaction_file)
+    t = sorted(t.transactions, key=lambda d: d.date)
+    transactions = Transactions(transactions=t)
 
     if holdfile and opening_balance:
         raise ESPPErrorException('Cannot specify both opening balance and holdings file')
@@ -244,14 +247,29 @@ def do_taxes(broker, transaction_files: list, holdfile,
     elif opening_balance:
         prev_holdings = opening_balance
 
-    if (prev_holdings and prev_holdings.year == year-1) or (not prev_holdings and year in years and len(years) == 1):
-        # Phase 2
-        # Previous holdings or all transactions from the tax year (new user)
-        logger.info('Holdings file for previous year found, calculating tax')
-        return tax_report(
-            year, broker, transactions, wires, prev_holdings, verbose=verbose)
+    if (prev_holdings and prev_holdings.year != year-1):
+        raise ESPPErrorException('Holdings file for previous year not found')        
 
-    # Phase 1. Return our approximation for previous year holdings for review
+    return tax_report(
+        year, broker, transactions, wires, prev_holdings, verbose=verbose)
+
+
+def do_holdings_1(broker, transaction_files: list, holdfile,
+                  year, verbose=False, opening_balance=None) -> Holdings:
+    '''Generate holdings file'''
+    prev_holdings = []
+    transactions, years = merge_transactions(transaction_files)
+
+    if holdfile and opening_balance:
+        raise ESPPErrorException('Cannot specify both opening balance and holdings file')
+
+    if holdfile:
+        prev_holdings = json_load(holdfile)
+        prev_holdings = Holdings(**prev_holdings)
+        logger.info('Holdings file read')
+    elif opening_balance:
+        prev_holdings = opening_balance
+
     logger.info('Changes in holdings for previous year')
     return generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
 
@@ -266,7 +284,6 @@ def do_holdings_2(broker, transaction_files: list, year, expected_balance, verbo
         transes += t.transactions
 
     # Determine from which file to use for which year
-
     t = sorted(transes, key=lambda d: d.date)
 
     years = {}
