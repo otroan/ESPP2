@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from pydantic import parse_obj_as
 from fastapi.staticfiles import StaticFiles
-from espp2.main import do_taxes
+from espp2.main import do_taxes, do_holdings_1, do_holdings_2
 from espp2.datamodels import ESPPResponse, Wires, Holdings
 import json
 
@@ -20,6 +20,47 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+@app.post("/holdings_1/", response_model=Holdings)
+async def generate_holdings_1(
+        transaction_files: list[UploadFile],
+        broker: str = Form(...),
+        holdfile: UploadFile | None = None,
+#        opening_balance: str = Form(...),
+        year: int = Form(...)):
+    '''Generate holdings endpoint'''
+    opening_balance = None
+
+    if opening_balance:
+        opening_balance = json.loads(opening_balance)
+        opening_balance = parse_obj_as(Holdings, opening_balance)
+
+    if holdfile and holdfile.filename == '':
+        holdfile = None
+    elif holdfile:
+        holdfile = holdfile.file
+    try:
+        return do_holdings_1(broker, transaction_files, holdfile, year)
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+@app.post("/holdings_2/", response_model=Holdings)
+async def generate_holdings_2(
+        transaction_files: list[UploadFile],
+        broker: str = Form(...),
+        year: int = Form(...)):
+    '''Generate holdings endpoint'''
+    opening_balance = None
+
+    if opening_balance:
+        opening_balance = json.loads(opening_balance)
+        opening_balance = parse_obj_as(Holdings, opening_balance)
+    try:
+        return do_holdings_2(broker, transaction_files, year)
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 @app.post("/files/", response_model=ESPPResponse)
 async def create_files(
