@@ -190,7 +190,9 @@ def read(pickle_file, filename='') -> Transactions:
         logger.debug('Processing record: %s', (rectype, record))
 
         try:
-            records.append(methods[rectype](record, source))
+            r = methods[rectype](record, source)
+            if r:
+                records.append(r)
         except KeyError as e:
             raise ValueError(f'Error: Unexpected pickle-file record: {rectype}') from e
 
