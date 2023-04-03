@@ -8,7 +8,7 @@ Morgan Stanley HTML table transaction history normalizer.
 
 import math
 from decimal import Decimal
-from pandas import read_html, Index, MultiIndex
+import html5lib
 from pydantic import parse_obj_as
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
@@ -33,30 +33,26 @@ def setitem(rec, name, val):
     rec[name] = val
 
 class Table:
-    def __init__(self, dataframe):
-        self.dataframe = dataframe
+    def __init__(self, tablenode, idx):
+        self.tablenode = tablenode
+        self.data = decode_data(tablenode)
         self.colnames = []
         self.colname2idx = dict()
-        self.rows = dataframe.index
+        self.header = []
+        self.rows = []
+        self.idx = idx
 
-    def get(self, rownum, colname):
+    def get(self, row, colname):
         try:
             idx = self.colname2idx[colname]
         except KeyError:
             return None
-        return self.dataframe.iat[rownum, idx]
+        if idx >= len(row):
+            return None
+        return row[idx]
 
-    def to_dict(self, dlines=0):
+    def to_dict(self):
         rc = []
-        if dlines > 0:
-            end = len(self.header)
-            start = end - dlines
-            for hl in range(start, end):
-                rec = dict()
-                for name, val in zip(self.colnames, self.header[hl]):
-                    setitem(rec, name, val)
-                rc.append(rec)
-
         for row in self.rows:
             rec = dict()
             for colname in self.colname2idx.keys():
@@ -262,6 +258,13 @@ class ParseState:
         self.transactions.append(parse_obj_as(Entry, r))
         return True
 
+def find_all_tables(document):
+    nodes = document.findall('.//{http://www.w3.org/1999/xhtml}table', None)
+    rc = []
+    for e, n in zip(nodes, range(0, 10000)):
+        rc.append(Table(e, n))
+    return rc
+
 def morgan_price(price_str):
     '''Parse price string.'''
     # import IPython
@@ -307,8 +310,8 @@ def sum_amounts(amounts, negative=False):
     for a in amounts[1:]:
         if a.currency != currency:
             raise ValueError(f'Summing {currency} with {a.currency}')
-        total -= a.value
-        nok_total -= a.nok_value
+        total += sign * a.value
+        nok_total += sign * a.nok_value
 
     avg_nok_exchange_rate = nok_total / total
 
@@ -444,18 +447,18 @@ def parse_espp_table(state, recs):
 class Withdrawal:
     '''Given three tables for withdrawal, extract information we need'''
     def __init__(self, wd, sb, np):
-        self.wda = decode_data(wd)  # Array-representation of Withdrawal table
-        self.sba = decode_data(sb)  # The "Sales/Proceeds Breakdown" table
-        self.npa = decode_data(np)  # The final "Net Proceeds" table
+        self.wd = wd
+        self.sb = sb
+        self.np = np
 
         self.is_wire = False
         self.has_wire_fee = False
 
-        assert(self.wda[2][2] =='Settlement Date:')
-        self.entry_date = fixup_date(self.wda[2][3])
+        assert(self.wd.data[3][2] =='Settlement Date:')
+        self.entry_date = fixup_date(self.wd.data[3][3])
 
-        assert(self.wda[2][0] == 'Fund')
-        self.fund = self.wda[2][1]
+        assert(self.wd.data[3][0] == 'Fund')
+        self.fund = self.wd.data[3][1]
         m = re.fullmatch(r'''([A-Za-z]+)\s+-.*''', self.fund)
         if not m:
             raise ValueError(f'Unexpected symbol format: {self.fund}')
@@ -465,15 +468,15 @@ class Withdrawal:
         fees = []
         net = []
 
-        for line in self.sba:
-            if 'Gross Proceeds' in line[0]:
-                gross.append(create_amount(self.entry_date, line[1]))
-            if 'Fee' in line[0]:
-                fees.append(create_amount(self.entry_date, line[1]))
-            if 'Wire Fee' in line[0]:
+        for row in self.sb.rows:
+            if 'Gross Proceeds' in row[0]:
+                gross.append(create_amount(self.entry_date, row[1]))
+            if 'Fee' in row[0]:
+                fees.append(create_amount(self.entry_date, row[1]))
+            if 'Wire Fee' in row[0]:
                 has_wire_fee = True
 
-        m = re.fullmatch(r'''Net Proceeds: (.*)''', self.npa[0][0])
+        m = re.fullmatch(r'''Net Proceeds: (.*)''', self.np.data[0][0])
         if m:
             net.append(create_amount(self.entry_date, m.group(1)))
 
@@ -484,11 +487,11 @@ class Withdrawal:
         self.fees_amount = sum_amounts(fees)
         self.net_amount = sum_amounts(net, negative=True)
 
-        assert(self.wda[4][0] == 'Delivery Method:')
-        if 'Transfer funds via wire' in self.wda[4][1]:
+        assert(self.wd.data[5][0] == 'Delivery Method:')
+        if 'Transfer funds via wire' in self.wd.data[5][1]:
             self.is_wire = True
 
-        if 'Historical sale of shares' in self.wda[4][1] and has_wire_fee:
+        if 'Historical sale of shares' in self.wd.data[5][1] and has_wire_fee:
             self.is_wire = True
 
 def parse_withdrawal_sales(state, sales):
@@ -524,14 +527,83 @@ def decode_headers(mi):
         rc.append([str(x) for x in mi.values])
     return rc
 
+def istag(elem, tag):
+    if not isinstance(elem.tag, str):
+        return False
+    m = re.fullmatch(r'''\{(.*)\}(.*)''', elem.tag)
+    if m:
+        standard = m.group(1)
+        tagname = m.group(2)
+        if tagname == tag:
+            return True
+    return False
+
+def elem_enter(elem, tag):
+    for x in elem:
+        if istag(x, tag):
+            return x
+        return None
+    return None
+
+def elem_filter(elem, tag):
+    rc = []
+    for e in elem:
+        if istag(e, tag):
+            rc.append(e)
+    return rc
+
+def fixuptext(text):
+    if text is None:
+        return None
+
+    substitute = {
+        ord('\t'): ' ',
+        ord('\n'): ' ',
+        ord('\r'): ' '
+    }
+    rc = text.translate(substitute)
+    while True:
+        m = re.fullmatch(r'''(.*)\s\s+(.*)''', rc)
+        if m:
+            rc = f'{m.group(1)} {m.group(2)}'
+            continue
+        break
+
+    m = re.fullmatch(r'''\s*(.*\S)\s*''', rc)
+    if m:
+        rc = m.group(1)
+
+    if rc == ' ':
+        return ''
+    return rc
+
+def get_rawtext(elem):
+    rc = ''
+    if elem.text is not None:
+        rc += f' {elem.text}'
+    if elem.tail is not None:
+        rc += f' {elem.tail}'
+    for x in elem:
+        rc += f' {get_rawtext(x)}'
+    return rc
+
+def get_elem_text(elem):
+    return fixuptext(get_rawtext(elem))
+
 def decode_data(table):
     '''Place table-data into a plain array-of-arrays'''
+    tb = elem_enter(table, 'tbody')
+    if tb is None:
+        return None
+
     rc = []
-    for r in table.rows:
-        line = []
-        for c in range(0, len(table.colnames)):
-            line.append(str(table.dataframe.iat[r, c]))
-        rc.append(line)
+    for tr in elem_filter(tb, 'tr'):
+        row = []
+        for te in tr:
+            if istag(te, 'th') or istag(te, 'td'):
+                row.append(get_elem_text(te))
+        rc.append(row)
+
     return rc
 
 def array_match_2d(candidate, template):
@@ -539,10 +611,10 @@ def array_match_2d(candidate, template):
 
     The template may contain None entries, which will match any candidate
     entry, or it may contain a compiled regular expression - and the result
-    will be the condidata data covered by the regex parenthesis. A simple
+    will be the candidate data matched by the regex parenthesis. A simple
     string will need to match completely, incl. white-spaces.'''
 
-    if len(candidate) != len(template):
+    if candidate is None or len(candidate) < len(template):
         return None
 
     rc = []
@@ -568,98 +640,93 @@ def array_match_2d(candidate, template):
 
     return rc
 
-def header_match(df, search_header, hline=0):
+def header_match(table, search_header, hline=0):
     '''Use a search-template to look for tables with headers that match.
 
     The search-template is give to 'array_match_2d' above for matching.
     When a table is matched, the column-names are established from the
     header-line given by 'hline' (default 0).'''
-    hdrs = decode_headers(df.columns)
-    result = array_match_2d(hdrs, search_header)
+    result = array_match_2d(table.data, search_header)
     if result is None:
-        return None
-    table = Table(df)
+        return False
     table.header = result
     table.colnames = result[hline]
     for idx, colname in zip(range(0, 1000), table.colnames):
         table.colname2idx[colname] = idx
 
-    return table
+    numheaderlines = len(search_header)
+    table.rows = table.data[numheaderlines:]
 
-def find_tables_by_header(dfs, search_header, hline=0):
+    return True
+
+def find_tables_by_header(tables, search_header, hline=0):
     '''Given a header-template for matching, return all matching tables'''
     rc = []
-    for n, df in zip(range(0, 100000), dfs):
-        table = header_match(df, search_header, hline)
-        if table:
-            table.dfidx = n
-            rc.append(table)
-
+    for t in tables:
+        if header_match(t, search_header, hline):
+            rc.append(t)
     return rc
 
-def parse_rsu_html(all_dfs, state):
+def parse_rsu_html(all_tables, state):
     '''Look for the RSU table and parse it'''
-    any = re.compile(r'''(.*)''')
     search_rsu_header = [
         ['Activity'],
         ['Entry Date', 'Activity', 'Type of Money', 'Cash',
-         'Number of Shares', 'Share Price', 'Book Value', 'Market Value'],
-        [any]  # This will contain the 'Fund - CSCO' heading
+         'Number of Shares', 'Share Price', 'Book Value', 'Market Value']
     ]
 
-    rsu = find_tables_by_header(all_dfs, search_rsu_header, 1)
+    rsu = find_tables_by_header(all_tables, search_rsu_header, 1)
     assert len(rsu) == 1
 
-    parse_rsu_table(state, rsu[0].to_dict(1))
+    parse_rsu_table(state, rsu[0].to_dict())
 
-def parse_espp_html(all_dfs, state):
+def parse_espp_html(all_tables, state):
     '''Look for the ESPP table and parse it'''
     any = re.compile(r'''(.*)''')
     search_espp_header = [
         ['Activity'],
         ['Entry Date', 'Activity', 'Cash',
-         'Number of Shares', 'Share Price', 'Market Value', any],
-        [any]  # This will contain the 'Fund - CSCO' heading
+         'Number of Shares', 'Share Price', 'Market Value', any]
     ]
 
-    espp = find_tables_by_header(all_dfs, search_espp_header, 1)
+    espp = find_tables_by_header(all_tables, search_espp_header, 1)
     assert(len(espp) == 1)
 
-    parse_espp_table(state, espp[0].to_dict(1))
+    parse_espp_table(state, espp[0].to_dict())
 
-def parse_withdrawals_html(all_dfs, state):
+def parse_withdrawals_html(all_tables, state):
     search_withdrawal_header = [
-        [re.compile(r'''Withdrawal on (.*)'''), None, None, None]
+        [re.compile(r'''Withdrawal on (.*)''')]
     ]
     search_salebreakdown = [
-        [re.compile(r'''\s*(Sale Breakdown)'''), None]
+        [re.compile(r'''\s*(Sale Breakdown)''')]
     ]
     search_proceedsbreakdown = [
-        [re.compile(r'''\s*(Proceeds Breakdown)'''), None]
+        [re.compile(r'''\s*(Proceeds Breakdown)''')]
     ]
     search_net_proceeds = [
         [None]
     ]
 
-    withdrawals = find_tables_by_header(all_dfs, search_withdrawal_header)
+    withdrawals = find_tables_by_header(all_tables, search_withdrawal_header)
 
     sales = []
     proceeds = []
     netproceeds = []
     for wd in withdrawals:
-        nextfd = [all_dfs[wd.dfidx + 1]]
-        nextnextfd = [all_dfs[wd.dfidx + 2]]
+        nexttab = [all_tables[wd.idx + 1]]
+        nextnexttab = [all_tables[wd.idx + 2]]
 
-        np = find_tables_by_header(nextnextfd, search_net_proceeds)
+        np = find_tables_by_header(nextnexttab, search_net_proceeds)
         if len(np) != 1:
-            raise ValueException(f'Unable to parse net-proceeds: {nextnextfd}')
+            raise ValueException(f'Unable to parse net-proceeds: {nextnexttab}')
 
-        sb = find_tables_by_header(nextfd, search_salebreakdown)
+        sb = find_tables_by_header(nexttab, search_salebreakdown)
         if len(sb) == 1:
             sales.append((wd, sb[0], np[0]))
             continue
 
-        pb = find_tables_by_header(nextfd, search_proceedsbreakdown)
+        pb = find_tables_by_header(nexttab, search_proceedsbreakdown)
         if len(pb) == 1:
             proceeds.append((wd, pb[0], np[0]))
             continue
@@ -672,12 +739,14 @@ def parse_withdrawals_html(all_dfs, state):
 def morgan_html_import(html_fd, filename):
     '''Parse Morgan Stanley HTML table file.'''
 
-    all_dfs = read_html(html_fd)
+    document = html5lib.parse(html_fd)
+    all_tables = find_all_tables(document)
 
     state = ParseState(filename)
-    parse_rsu_html(all_dfs, state)
-    parse_espp_html(all_dfs, state)
-    parse_withdrawals_html(all_dfs, state)
+
+    parse_rsu_html(all_tables, state)
+    parse_espp_html(all_tables, state)
+    parse_withdrawals_html(all_tables, state)
 
     transes = sorted(state.transactions, key=lambda d: d.date)
 
