@@ -14,6 +14,7 @@ from pydantic import parse_obj_as
 from fastapi.staticfiles import StaticFiles
 from espp2.main import do_taxes, do_holdings_1, do_holdings_2
 from espp2.datamodels import ESPPResponse, Wires, Holdings
+from espp2.positions import Positions
 import json
 
 logging.basicConfig(level=logging.DEBUG)
@@ -40,7 +41,12 @@ async def generate_holdings_1(
     elif holdfile:
         holdfile = holdfile.file
     try:
-        return do_holdings_1(broker, transaction_files, holdfile, year)
+        holdings = do_holdings_1(broker, transaction_files, holdfile, year)
+        if type(holdings) == list:
+            p = Positions(year - 1, holdings, [], received_wires=Wires(__root__=[]))
+            p.process()
+            holdings = p.holdings(year - 1, broker)
+        return holdings
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -58,7 +64,12 @@ async def generate_holdings_2(
         opening_balance = json.loads(opening_balance)
         opening_balance = parse_obj_as(Holdings, opening_balance)
     try:
-        return do_holdings_2(broker, transaction_files, year, expected_balance=expected_balance)
+        holdings = do_holdings_2(broker, transaction_files, year, expected_balance=expected_balance)
+        if type(holdings) == list:
+            p = Positions(year - 1, holdings, [], received_wires=Wires(__root__=[]))
+            p.process()
+            holdings = p.holdings(year - 1, broker)
+        return holdings
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
