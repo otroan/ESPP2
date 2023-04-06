@@ -199,7 +199,7 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
             break
         this_year = [t for t in transactions.transactions if t.date.year == y]
         logger.info('Calculating tax for previous year: %s', y)
-        p = Positions(y, holdings, this_year, received_wires=Wires(__root__=[]))
+        p = Positions(y, holdings, this_year, received_wires=Wires(__root__=[]), generate_holdings=True)
 
         # Calculate taxes for the year
         p.process()

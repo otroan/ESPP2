@@ -7,6 +7,8 @@ from espp2.datamodels import Transactions
 from espp2.positions import Ledger
 from espp2.report import print_ledger
 from rich.console import Console
+from espp2.espp2 import app
+from typer.testing import CliRunner
 
 def test_cisco_import():
     trans = []
@@ -29,3 +31,16 @@ def test_cisco_import():
     ledger = Ledger([], all.transactions)
     console = Console()
     print_ledger(ledger.entries, console)
+
+
+
+runner = CliRunner()
+def test_full_run():
+    result = runner.invoke(
+        app, ['test/schwab.csv', 'test/espp.pickle', '--outholdings', '/tmp/outholdings-2021.json'])
+    assert result.exit_code == 0
+
+    result = runner.invoke(
+        app, ['test/schwab.csv', '--inholdings', '/tmp/outholdings-2021.json', '--outholdings', '/tmp/outholdings-2022.json'])
+    assert result.exit_code == 0
+    print('RESULT', result.stdout)
