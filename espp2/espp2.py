@@ -60,9 +60,9 @@ def main(transaction_files: list[typer.FileBinaryRead],
     if opening_balance:
         opening_balance = json.loads(opening_balance)
         opening_balance = parse_obj_as(Holdings, opening_balance)
-
+    result = None
     if inholdings:
-        # TODO: Check inholdings are valid for previous yax year
+        # TODO: Check inholdings are valid for previous tax year
         if len(transaction_files) > 1:
             raise typer.BadParameter('Cannot use inholdings with multiple transaction files')
         result = do_taxes(broker, transaction_files[0], inholdings, wires, year, verbose=verbose,
@@ -85,6 +85,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
 
     # New holdings
     if outholdings:
+        holdings = result.holdings if result else holdings
         logger.info('Writing new holdings to %s', outholdings.name)
         j = holdings.json(indent=4)
         with outholdings as f:

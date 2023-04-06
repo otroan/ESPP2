@@ -133,7 +133,7 @@ class Positions():
                         'Adding tax deduction for ESPP from last year %s', p)
         
     def __init__(self, year, opening_balance: Holdings, transactions, received_wires=None,
-                 validate_year='exact'):
+                 validate_year='exact', generate_holdings=False):
         # if validate_year == 'exact':
         #     transactions = [t for t in transactions if t.date.year == year]
         # elif validate_year == 'filter':
@@ -142,6 +142,7 @@ class Positions():
         # wrong_year = [t for t in transactions if t.date.year != year]
         # assert(len(wrong_year) == 0)
         self.year = year
+        self.generate_holdings = generate_holdings
         # if not isinstance(cash, Cash):
         #     raise ValueError('Cash must be instance of Cash')
 
@@ -149,9 +150,10 @@ class Positions():
             t for t in transactions if t.type in ('BUY', 'DEPOSIT')]
         # self._fixup_tax_deductions()
         if opening_balance:
-            self.cash = Cash(year, opening_balance.cash)
+            self.cash = Cash(year, opening_balance.cash,
+                             generate_holdings=generate_holdings)
         else:
-            self.cash = Cash(year)
+            self.cash = Cash(year, generate_holdings=generate_holdings)
         self.ledger = Ledger(opening_balance, transactions)
         if opening_balance and opening_balance.stocks:
             logger.info('Adding %d new holdings to %d previous holdings', len(
@@ -162,8 +164,9 @@ class Positions():
             self.new_holdings = [t for t in transactions if t.type in ('BUY', 'DEPOSIT')]
             self.positions = opening_balance.stocks + self.new_holdings
         else:
-            logger.warning(
-                "No previous holdings or stocks in holding file. Requires the complete transaction history.")
+            if not generate_holdings:
+                logger.warning(
+                    "No previous holdings or stocks in holding file. Requires the complete transaction history.")
             self.positions = self.new_holdings
 
         self.tax_deduction = []
@@ -611,10 +614,11 @@ class Positions():
 
 class Cash():
     '''Cash balance'''
-    def __init__(self, year, opening_balance=[]):
+    def __init__(self, year, opening_balance=[], generate_holdings=False):
         '''Initialize cash balance for a given year.'''
         self.year = year
         self.cash = CashModel().cash
+        self.generate_holdings = generate_holdings
 
         # Spin through and add the opening balance
         for e in opening_balance:
@@ -683,7 +687,7 @@ class Cash():
             if w.fee:
                 self.credit(w.date, w.fee, 'wire fee')
 
-        if unmatched:
+        if unmatched and not self.generate_holdings:
             logger.warning(
                 'Wire Transfer missing corresponding received record: %s', unmatched)
         return unmatched
