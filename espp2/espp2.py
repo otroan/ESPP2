@@ -62,7 +62,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
         opening_balance = parse_obj_as(Holdings, opening_balance)
     result = None
     if inholdings:
-        # TODO: Check inholdings are valid for previous tax year
+        # Check inholdings are valid for previous tax year
         if len(transaction_files) > 1:
             raise typer.BadParameter('Cannot use inholdings with multiple transaction files')
         result = do_taxes(broker, transaction_files[0], inholdings, wires, year, verbose=verbose,
@@ -73,7 +73,8 @@ def main(transaction_files: list[typer.FileBinaryRead],
             logger.warning("This does not work with reinvested dividends!")
             holdings = do_holdings_2(broker, transaction_files, year, expected_balance, verbose=verbose)
         else:
-            holdings = do_holdings_1(broker, transaction_files, inholdings, year, verbose=verbose)
+            holdings = do_holdings_1(broker, transaction_files, inholdings,
+                                     year, opening_balance=opening_balance, verbose=verbose)
         if not holdings:
             logger.error('No holdings found')
             if len(transaction_files) > 1:

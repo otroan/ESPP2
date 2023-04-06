@@ -277,6 +277,17 @@ class Stock(BaseModel):
     qty: Decimal
     tax_deduction: Decimal
     purchase_price: Amount
+
+    # @validator('purchase_price', pre=True, always=True)
+    @validator('purchase_price', pre=True, always=True)
+    def set_purchase_price(cls, value, values):
+        if isinstance(value, Amount):
+            return value
+        if 'nok_exchange_rate' not in value:
+            return Amount(amountdate=values['date'], currency=value['currency'],
+                          value=value['value'])
+        return value
+
     class Config:
         extra = Extra.allow
 

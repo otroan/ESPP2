@@ -27,7 +27,7 @@ async def generate_holdings_1(
         transaction_files: list[UploadFile],
         broker: str = Form(...),
         holdfile: UploadFile | None = None,
-#        opening_balance: str = Form(...),
+        opening_balance: str = Form(...),
         year: int = Form(...)):
     '''Generate previous year holdings from a plethora of transaction files'''
     opening_balance = None
@@ -41,7 +41,8 @@ async def generate_holdings_1(
     elif holdfile:
         holdfile = holdfile.file
     try:
-        holdings = do_holdings_1(broker, transaction_files, holdfile, year)
+        holdings = do_holdings_1(
+            broker, transaction_files, holdfile, year, opening_balance=opening_balance)
         if type(holdings) == list:
             p = Positions(year - 1, holdings, [], received_wires=Wires(__root__=[]))
             p.process()
