@@ -414,3 +414,8 @@ class Fundamentals(BaseModel):
     isin: str
     country: str
     symbol: str
+
+class ExpectedBalance(BaseModel):
+    '''Expected balance. Note only supports a single symbol'''
+    symbol: str
+    qty: Decimal

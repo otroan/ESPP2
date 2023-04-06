@@ -59,11 +59,9 @@ async def generate_holdings_2(
         year: int = Form(...),
         expected_balance: str = Form(...)):
     '''Generate holdings from complete purchase history from stocks web site'''
-    opening_balance = None
-
-    if opening_balance:
-        opening_balance = json.loads(opening_balance)
-        opening_balance = parse_obj_as(Holdings, opening_balance)
+    if expected_balance:
+        expected_balance = json.loads(expected_balance)
+        expected_balance = parse_obj_as(ExpectedBalance, expected_balance)
     try:
         holdings = do_holdings_2(broker, transaction_files, year, expected_balance=expected_balance)
         if type(holdings) == list:
