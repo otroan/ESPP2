@@ -195,6 +195,9 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
 
     holdings = prev_holdings
     for y in years:
+        # Start from the year after the holdings year
+        if holdings and y <= holdings.year:
+            continue
         if y >= year:
             break
         this_year = [t for t in transactions.transactions if t.date.year == y]
@@ -225,7 +228,6 @@ def do_taxes(broker, transaction_file, holdfile,
     '''
     wires = []
     prev_holdings = []
-
     t = normalize(transaction_file)
     t = sorted(t.transactions, key=lambda d: d.date)
     transactions = Transactions(transactions=t)
