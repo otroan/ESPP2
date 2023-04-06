@@ -8,7 +8,7 @@ import logging
 from enum import Enum
 import typer
 from espp2.main import do_taxes, do_holdings_2, do_holdings_1
-from espp2.datamodels import TaxReport, Holdings, Wires
+from espp2.datamodels import TaxReport, Holdings, Wires, ExpectedBalance
 from espp2.report import print_report
 from pydantic import parse_obj_as
 import json
@@ -70,6 +70,8 @@ def main(transaction_files: list[typer.FileBinaryRead],
         print_report(year, result.summary, result.report, result.holdings, verbose)
     else:
         if expected_balance:
+            expected_balance = json.loads(expected_balance)
+            expected_balance = parse_obj_as(ExpectedBalance, expected_balance)
             logger.warning("This does not work with reinvested dividends!")
             holdings = do_holdings_2(broker, transaction_files, year, expected_balance, verbose=verbose)
         else:

@@ -300,8 +300,8 @@ def do_holdings_2(broker, transaction_files: list, year, expected_balance, verbo
     logger.debug('Holdings for previous year: %s', holdings.json(indent=2))
 
     logger.info('Expected balance: %s', expected_balance)
-    symbol, qty = expected_balance.split(':')
-    qty = Decimal(qty)
+    symbol = expected_balance.symbol
+    qty = expected_balance.qty
     sum_qty = sum(e.qty for e in holdings.stocks if e.symbol == symbol)
     logger.info('Current balance: %s/%s', sum_qty, qty)
     if sum_qty != qty:
