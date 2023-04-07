@@ -139,24 +139,24 @@ def print_report_tax_summary(summary: TaxSummary, console:Console):
     table.add_column("Number of shares as of 31. December", style="magenta", justify="right")
     table.add_column("Wealth", style="magenta", justify="right")
     table.add_column("Taxable dividend", style="magenta", justify="right")
-    table.add_column("Taxable gain", style="magenta", justify="right")
+    table.add_column("Taxable gain/loss", style="magenta", justify="right")
     table.add_column("Risk-free return utilised", style="magenta", justify="right")
 
     # All shares that have been held at some point throughout the year
     for e in summary.foreignshares:
         if summary.year == 2022:
             table.add_row("", "", "", "", "", "",
-                        f'{e.pre_tax_inc_dividend:.2f}',
-                        f'{e.taxable_pre_tax_inc_gain:.2f}',
+                        f'{e.pre_tax_inc_dividend}',
+                        f'{e.taxable_pre_tax_inc_gain}',
                         "")
             dividend = e.dividend - e.pre_tax_inc_dividend
             gain = e.taxable_gain - e.taxable_pre_tax_inc_gain
         else:
             dividend = e.dividend
             gain = e.taxable_gain
-        table.add_row(e.symbol, e.isin, e.country, e.account, f'{e.shares:.2f}', f'{e.wealth:.2f}',
-                    f'{dividend:.2f}', f'{gain:.2f}',
-                    f'{e.tax_deduction_used:.2f}')
+        table.add_row(e.symbol, e.isin, e.country, e.account, f'{e.shares:.2f}', f'{e.wealth}',
+                    f'{dividend}', f'{gain}',
+                    f'{e.tax_deduction_used}')
 
     console.print(table)
 
@@ -169,8 +169,8 @@ def print_report_tax_summary(summary: TaxSummary, console:Console):
 
     # Tax paid in the US on dividends
     for e in summary.credit_deduction:
-        table.add_row(e.symbol, e.country, f'{e.income_tax:.2f}',
-                      f'{e.gross_share_dividend:.2f}', f'{e.tax_on_gross_share_dividend:.2f}')
+        table.add_row(e.symbol, e.country, f'{e.income_tax}',
+                      f'{e.gross_share_dividend}', f'{e.tax_on_gross_share_dividend}')
     console.print(table)
 
     # Transfer gain/loss
@@ -180,9 +180,9 @@ def print_report_tax_summary(summary: TaxSummary, console:Console):
     table.add_column("Received", justify="right", style="cyan", no_wrap=True)
     table.add_column("Gain", justify="right", style="cyan", no_wrap=True)
     for e in summary.cashsummary.transfers:
-        table.add_row(str(e.date), f'{e.amount_sent:.2f}', f'{e.amount_received:.2f}', f'{e.gain:.2f}')
+        table.add_row(str(e.date), f'{e.amount_sent}', f'{e.amount_received}', f'{e.gain}')
     gain = summary.cashsummary.gain
-    table.add_row('', '', '', f'{gain:.2f}', style="bold green" if gain > 0 else "bold red")
+    table.add_row('', '', '', f'{gain}', style="bold green" if gain > 0 else "bold red")
 
     console.print(table)
 

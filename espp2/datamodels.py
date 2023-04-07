@@ -365,27 +365,27 @@ class ForeignShares(BaseModel):
     country: str
     account: str
     shares: Decimal
-    wealth: Decimal
-    pre_tax_inc_dividend: Optional[Decimal]
-    dividend: Decimal
-    taxable_gain: Decimal
-    taxable_pre_tax_inc_gain: Optional[Decimal]
-    tax_deduction_used: Decimal
+    wealth: condecimal(gt=0, decimal_places=0)
+    pre_tax_inc_dividend: Optional[condecimal(gt=0, decimal_places=0)]
+    dividend: condecimal(gt=0, decimal_places=0)
+    taxable_gain: condecimal(decimal_places=0)
+    taxable_pre_tax_inc_gain: Optional[condecimal(decimal_places=0)]
+    tax_deduction_used: condecimal(gt=0, decimal_places=0)
 
 class CreditDeduction(BaseModel):
     '''Credit deduction'''
     symbol: str
     country: str
-    income_tax: Decimal
-    gross_share_dividend: Decimal
-    tax_on_gross_share_dividend: Decimal
+    income_tax: condecimal(gt=0, decimal_places=0)
+    gross_share_dividend: condecimal(gt=0, decimal_places=0)
+    tax_on_gross_share_dividend: condecimal(gt=0, decimal_places=0)
 
 class TransferRecord(BaseModel):
     '''Transfers'''
     date: date
-    amount_sent: Decimal
-    amount_received: Decimal
-    gain: Decimal
+    amount_sent: condecimal(gt=0, decimal_places=0)
+    amount_received: condecimal(gt=0, decimal_places=0)
+    gain: condecimal(decimal_places=0)
     description: str
 class CashSummary(BaseModel):
     '''Cash account'''
