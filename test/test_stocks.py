@@ -1,7 +1,6 @@
 
 
 import espp2.plugins.csco_espp_purchases as csco_espp_purchases
-import espp2.plugins.csco_espp_transactions as csco_espp_transactions
 import espp2.plugins.csco_stock_transactions as csco_stock_transactions
 from espp2.datamodels import Transactions
 from espp2.positions import Ledger
