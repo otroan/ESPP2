@@ -734,10 +734,10 @@ class Cash():
             # Only care about tranfers
             if is_transfer:
                 transfers.append(TransferRecord(date=e.date,
-                                                amount_sent=total_paid_price_nok,
-                                                amount_received=total_received_price_nok,
+                                                amount_sent=round(total_paid_price_nok),
+                                                amount_received=round(total_received_price_nok),
                                                 description=e.description,
-                                 gain=total_received_price_nok - total_paid_price_nok))
+                                 gain=round(total_received_price_nok - total_paid_price_nok)))
         remaining_usd = sum([c.amount.value for c in debit if c.amount.value > 0])
         eoy = datetime(self.year, 12, 31)
         exchange_rate = f.get_currency('USD', eoy)

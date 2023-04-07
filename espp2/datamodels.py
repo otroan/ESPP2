@@ -383,7 +383,7 @@ class CreditDeduction(BaseModel):
 class TransferRecord(BaseModel):
     '''Transfers'''
     date: date
-    amount_sent: condecimal(gt=0, decimal_places=0)
+    amount_sent: condecimal(ge=0, decimal_places=0)
     amount_received: condecimal(gt=0, decimal_places=0)
     gain: condecimal(decimal_places=0)
     description: str
