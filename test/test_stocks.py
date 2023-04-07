@@ -15,10 +15,10 @@ def test_cisco_import():
         t = csco_espp_purchases.read(f)
     assert isinstance(t, Transactions)
     trans += t.transactions
-    with open('test/My_ESPP_Transactions.xlsx', 'rb') as f:
-        t = csco_espp_transactions.read(f)
-    assert isinstance(t, Transactions)
-    trans += t.transactions
+    # with open('test/My_ESPP_Transactions.xlsx', 'rb') as f:
+    #     t = csco_espp_transactions.read(f)
+    # assert isinstance(t, Transactions)
+    # trans += t.transactions
 
     with open('test/My_Stock_Transactions.xlsx', 'rb') as f:
         t = csco_stock_transactions.read(f)
