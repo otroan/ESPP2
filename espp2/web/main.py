@@ -13,7 +13,7 @@ from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from pydantic import parse_obj_as
 from fastapi.staticfiles import StaticFiles
 from espp2.main import do_taxes, do_holdings_1, do_holdings_2
-from espp2.datamodels import ESPPResponse, Wires, Holdings
+from espp2.datamodels import ESPPResponse, Wires, Holdings, ExpectedBalance
 from espp2.positions import Positions
 import json
 
