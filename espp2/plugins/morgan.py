@@ -12,9 +12,9 @@ import html5lib
 from pydantic import parse_obj_as
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
-import simplejson as json
 import re
 import logging
+from pandas import MultiIndex, Index
 
 logger = logging.getLogger(__name__)
 currency_converter = FMV()
@@ -719,7 +719,7 @@ def parse_withdrawals_html(all_tables, state):
 
         np = find_tables_by_header(nextnexttab, search_net_proceeds)
         if len(np) != 1:
-            raise ValueException(f'Unable to parse net-proceeds: {nextnexttab}')
+            raise ValueError(f'Unable to parse net-proceeds: {nextnexttab}')
 
         sb = find_tables_by_header(nexttab, search_salebreakdown)
         if len(sb) == 1:

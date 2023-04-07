@@ -130,7 +130,7 @@ def print_ledger(ledger: dict, console: Console):
 
 def print_report_tax_summary(summary: TaxSummary, console:Console):
     '''Tax summary'''
-    console.print(f'Tax Summary for {summary.year}:', style="bold magenta")
+    console.print(f'Tax Summary for {summary.year}:\n', style="bold magenta")
     table = Table(title="Finance -> Shares -> Foreign shares:", title_justify="left")
     table.add_column("Symbol", justify="center", style="cyan", no_wrap=True)
     table.add_column("ISIN", justify="center", style="cyan", no_wrap=True)
@@ -159,6 +159,7 @@ def print_report_tax_summary(summary: TaxSummary, console:Console):
                     f'{e.tax_deduction_used}')
 
     console.print(table)
+    console.print()
 
     table = Table(title="Method in the event of double taxation -> Credit deduction / tax paid abroad:", title_justify="left")
     table.add_column("Symbol", justify="center", style="cyan", no_wrap=True)
@@ -172,6 +173,7 @@ def print_report_tax_summary(summary: TaxSummary, console:Console):
         table.add_row(e.symbol, e.country, f'{e.income_tax}',
                       f'{e.gross_share_dividend}', f'{e.tax_on_gross_share_dividend}')
     console.print(table)
+    console.print()
 
     # Transfer gain/loss
     table = Table(title="Transfer gain/loss:", title_justify="left")
@@ -185,6 +187,7 @@ def print_report_tax_summary(summary: TaxSummary, console:Console):
     table.add_row('', '', '', f'{gain}', style="bold green" if gain > 0 else "bold red")
 
     console.print(table)
+    console.print()
 
     table = Table(title="Cash account balance:", title_justify="left")
     table.add_column("USD", justify="right", style="cyan", no_wrap=True)
