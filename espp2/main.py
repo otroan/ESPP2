@@ -127,26 +127,27 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
             foreignshares.append(ForeignShares(symbol=e.symbol, isin=fundamentals[e.symbol].isin,
                                             country=fundamentals[e.symbol].country, account=broker,
                                             shares=e.qty, wealth=e.amount.nok_value,
-                                            dividend=dividend_nok_value,
-                                            pre_tax_inc_dividend=dividend_pre_tax_inc_nok_value,
-                                            taxable_pre_tax_inc_gain=total_gain_pre_tax_inc_nok,
-                                            taxable_gain=total_gain_nok,
-                                            tax_deduction_used=tax_deduction_used))
+                                            dividend=round(dividend_nok_value),
+                                            pre_tax_inc_dividend=round(dividend_pre_tax_inc_nok_value),
+                                            taxable_pre_tax_inc_gain=round(total_gain_pre_tax_inc_nok),
+                                            taxable_gain=round(total_gain_nok),
+                                            tax_deduction_used=round(tax_deduction_used)))
         else:
             foreignshares.append(ForeignShares(symbol=e.symbol, isin=fundamentals[e.symbol].isin,
                                             country=fundamentals[e.symbol].country, account=broker,
-                                            shares=e.qty, wealth=e.amount.nok_value,
-                                            dividend=dividend_nok_value,
-                                            taxable_gain=total_gain_nok,
-                                            tax_deduction_used=tax_deduction_used))
+                                            shares=e.qty, wealth=round(e.amount.nok_value),
+                                            dividend=round(dividend_nok_value),
+                                            taxable_gain=round(total_gain_nok),
+                                            tax_deduction_used=round(tax_deduction_used)))
 
     # Tax paid in the US on dividends
     credit_deductions = []
     for e in report['dividends']:
         credit_deductions.append(CreditDeduction(symbol=e.symbol, country='USA',
-                                                 income_tax=e.tax.nok_value,
-                                                 gross_share_dividend=e.amount.nok_value,
-                                                 tax_on_gross_share_dividend=e.tax.nok_value))
+                                                 income_tax=round(
+                                                     abs(e.tax.nok_value)),
+                                                 gross_share_dividend=round(e.amount.nok_value),
+                                                 tax_on_gross_share_dividend=round(abs(e.tax.nok_value))))
 
     # Tax summary:
     # - Cash held in the US account
