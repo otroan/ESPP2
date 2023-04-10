@@ -74,7 +74,7 @@ def do_reinvest(record, source):
                           symbol='CSCO',
                           description='',
                           amount=Amount(amountdate=record['date'],
-                                        currency='USD', value=record['amount']),
+                                        currency='USD', value=-record['amount']),
                           source=source)
 
 def do_trans(record, source):
@@ -83,12 +83,16 @@ def do_trans(record, source):
         # Old pickle file has a bug where it sometimes has a zero quanity for sale. Ignore it.
         logger.warning("Zero quantity for sale, ignoring it: %s", record)
         return None
+    if 'fee' in record:
+        fee = Amount(amountdate=record['date'], currency='USD', value=-record['fee'])
+    else:
+        fee = None
     return Sell(type=EntryTypeEnum.SELL,
                 date=record['date'],
                 symbol='CSCO',
                 description='',
                 qty=-record['n'],
-                fee=Amount(amountdate=record['date'], currency='USD', value=-record['fee']),
+                fee=fee,
                 amount=Amount(amountdate=record['date'], currency='USD',
                               value=record['price'] * record['n']),
                 source=source)
@@ -166,6 +170,7 @@ methods = {
     'FEE': do_fee,
     'TRANSFER': do_transfer,
     'TRANS': do_trans,
+    'SALES': do_trans,
     'JOURNAL': do_wire,
 }
 
@@ -188,12 +193,12 @@ def read(pickle_file, filename='') -> Transactions:
         rectype = key[1]
         record = p.rawData[key]
         logger.debug('Processing record: %s', (rectype, record))
-
+        print('RECORD:', rectype, record)
         try:
             r = methods[rectype](record, source)
             if r:
                 records.append(r)
         except KeyError as e:
-            raise ValueError(f'Error: Unexpected pickle-file record: {rectype}') from e
+            raise ValueError(f'Error: Unexpected pickle-file record: {rectype} {record}') from e
 
     return Transactions(transactions=records)

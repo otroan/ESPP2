@@ -339,9 +339,13 @@ class Positions():
                     assert isclose(total_shares, ledger_shares, abs_tol=10**-
                                    2), f"Total shares don't match {total_shares} (position balance) != {ledger_shares} (ledger) on {d.date} / {exdate}"
                 if total_shares == 0:  # and not d.amount_ps:
-                    raise InvalidPositionException(
-                        f'Dividends: Total shares at dividend date is zero: {d}')
-
+                    if not self.generate_holdings:
+                        raise InvalidPositionException(
+                            f'Dividends: Total shares at dividend date is zero: {d}')
+                    else:
+                        logger.warning(
+                            'Dividend for %s on %s has no shares', symbol, d.date)
+                        continue
                 if d.amount_ps:
                     # Inherit problem from pickle. Might not even have gotten dividends here.
                     dps = d.amount_ps.value
