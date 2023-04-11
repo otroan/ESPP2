@@ -7,7 +7,7 @@ ESPPv2 Wrapper
 import logging
 from enum import Enum
 import typer
-from espp2.main import do_taxes, do_holdings_2, do_holdings_1, preheat_cache, console
+from espp2.main import do_taxes, do_holdings_2, do_holdings_1, do_holdings_3, preheat_cache, console
 from espp2.datamodels import TaxReport, Holdings, Wires, ExpectedBalance
 from espp2.report import print_report
 from pydantic import parse_obj_as
@@ -52,7 +52,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
     lognames = logging.getLevelNamesMapping()
     if loglevel not in lognames:
         raise typer.BadParameter(f'Invalid loglevel: {loglevel}')
-    logging.basicConfig(level=lognames[loglevel], handlers=[RichHandler()])
+    logging.basicConfig(level=lognames[loglevel], handlers=[RichHandler(rich_tracebacks=False)])
 
     if opening_balance:
         opening_balance = json.loads(opening_balance)
@@ -75,7 +75,10 @@ def main(transaction_files: list[typer.FileBinaryRead],
             expected_balance = parse_obj_as(ExpectedBalance, expected_balance)
             logger.warning("This does not work with reinvested dividends!")
             console.print('Generating holdings from expected balance', style='bold green')
-            holdings = do_holdings_2(broker, transaction_files, year, expected_balance, verbose=verbose)
+            if len(transaction_files) > 1:
+                holdings = do_holdings_2(broker, transaction_files, year, expected_balance, verbose=verbose)
+            else:
+                holdings = do_holdings_3(broker, transaction_files[0], year, expected_balance=expected_balance, verbose=verbose)
         else:
             console.print(
                 f'Generating holdings for previous tax year {year-1}', style='bold green')

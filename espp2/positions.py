@@ -87,6 +87,7 @@ class Ledger():
         if symbol not in self.entries:
             self.entries[symbol] = []
         total = sum(e[1] for e in self.entries[symbol])
+        # assert total >= 0, f'Invalid total {total} for {symbol} on {transactiondate}'
         self.entries[symbol].append((transactiondate, qty, total+qty))
 
     def total_shares(self, symbol, untildate):
@@ -170,6 +171,13 @@ class Positions():
                     "No previous holdings or stocks in holding file. Requires the complete transaction history.")
             self.positions = self.new_holdings
 
+        if not generate_holdings:
+            # Validate that all positions for the tax year has a valid purchase price.
+            # A purchase price of zero indicates an auto-generated opening balance.
+            zero_purchase_price = [p for p in self.positions if p.purchase_price.value == 0]
+            assert len(
+                zero_purchase_price) == 0, f'Found {len(zero_purchase_price)} positions with zero purchase price. {zero_purchase_price}'
+
         self.tax_deduction = []
         for i, p in enumerate(self.positions):
             p.idx = i
@@ -199,6 +207,7 @@ class Positions():
         self.db_taxsub = [t for t in transactions if t.type == 'TAXSUB']
 
         self.tax_by_symbols = position_groupby(self.db_tax)
+        self.taxsub_by_symbols = position_groupby(self.db_taxsub)
 
         # Wires
         self.db_wires = [t for t in transactions if t.type == 'WIRE']

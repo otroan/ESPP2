@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from pydantic import parse_obj_as
 from fastapi.staticfiles import StaticFiles
-from espp2.main import do_taxes, do_holdings_1, do_holdings_2, preheat_cache
+from espp2.main import do_taxes, do_holdings_1, do_holdings_2, do_holdings_3, preheat_cache
 from espp2.datamodels import ESPPResponse, Wires, Holdings, ExpectedBalance
 from espp2.positions import Positions
 import json
@@ -69,6 +69,25 @@ async def generate_holdings_2(
             p.process()
             holdings = p.holdings(year - 1, broker)
         return holdings
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+@app.post("/holdings_3/", response_model=Holdings)
+async def generate_holdings_3(
+        transaction_file: UploadFile,
+        broker: str = Form(...),
+        year: int = Form(...),
+        expected_balance: str = Form()):
+    '''
+    Calculate a holdings based on an expected balance and a single transaction file.
+    This will only work if any position prior to the beginngin of the transaction file has been
+    sold before the tax year. This has only been tested with Schwab.
+    '''
+    expected_balance = json.loads(expected_balance)
+    expected_balance = parse_obj_as(ExpectedBalance, expected_balance)
+    try:
+        return do_holdings_3(broker, transaction_file, year, expected_balance=expected_balance)
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
