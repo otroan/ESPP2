@@ -365,12 +365,12 @@ class ForeignShares(BaseModel):
     country: str
     account: str
     shares: Decimal
-    wealth: condecimal(gt=0, decimal_places=0)
+    wealth: condecimal(ge=0)
     post_tax_inc_dividend: Optional[condecimal(ge=0, decimal_places=0)]
     dividend: condecimal(gt=0, decimal_places=0)
     taxable_gain: condecimal(decimal_places=0)
     taxable_post_tax_inc_gain: Optional[condecimal(decimal_places=0)]
-    tax_deduction_used: condecimal(gt=0, decimal_places=0)
+    tax_deduction_used: condecimal(ge=0, decimal_places=0)
 
 class CreditDeduction(BaseModel):
     '''Credit deduction'''
