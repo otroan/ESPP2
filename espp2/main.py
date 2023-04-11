@@ -9,7 +9,7 @@ import simplejson as json
 from espp2.console import console
 from espp2.positions import Positions, Cash, InvalidPositionException, Ledger, get_tax_deduction_rate
 from espp2.transactions import normalize
-from espp2.datamodels import TaxReport, Transactions, Wires, Holdings, ForeignShares, TaxSummary, CreditDeduction, Sell, EntryTypeEnum, Amount
+from espp2.datamodels import TaxReport, Transactions, Wires, Holdings, ForeignShares, TaxSummary, CreditDeduction, Sell, EntryTypeEnum, Amount, Buy
 from espp2.report import print_ledger, print_cash_ledger, print_report_holdings
 from espp2.fmv import FMV, FMVTypeEnum
 from typing import Tuple
@@ -184,6 +184,7 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
             break
         this_year = [t for t in transactions.transactions if t.date.year == y]
         logger.info('Calculating tax for previous year: %s', y)
+
         p = Positions(y, holdings, this_year, received_wires=Wires(
             __root__=[]), generate_holdings=True)
 
@@ -300,6 +301,59 @@ def do_holdings_2(broker, transaction_files: list, year, expected_balance, verbo
         # Reset tax deduction
         for i, h in enumerate(holdings.stocks):
             holdings.stocks[i].tax_deduction = (h.purchase_price.nok_value * tax_deduction_rate)/100
+    return holdings
+
+def do_holdings_3(broker, transaction_file, year, expected_balance, verbose=False) -> Holdings:
+    '''
+    Calculate a holdings based on an expected balance and a single transaction file.
+    This will only work if any position prior to the beginngin of the transaction file has been
+    sold before the tax year
+    '''
+
+    t = normalize(transaction_file)
+    transes = t.transactions
+
+    symbol = expected_balance.symbol
+    qty = expected_balance.qty
+    delta = 0
+    l = Ledger(None, transes)
+    buydate = None
+
+    for s, entries in l.entries.items():
+        total_shares = l.total_shares(s, datetime.date(year-1, 12, 31))
+        if s == symbol:
+            delta = abs(total_shares - qty)
+            buyyear = entries[0][0].year - 1
+            buydate = datetime.date(buyyear, 1, 1)
+            break
+
+    if delta > 0:
+        # Artifically buy the number of missing shares
+        purchase_price = Amount(amountdate=buydate, currency='USD', value=0)
+        buy_trans = Buy(type=EntryTypeEnum.BUY, symbol=symbol, qty=delta,
+                            date=buydate, description='Artifical Buy',
+                            purchase_price=purchase_price, source='artificial')
+        transes.insert(0, buy_trans)
+
+    t = sorted(transes, key=lambda d: d.date)
+
+    # Determine from which file to use for which year
+    t = sorted(transes, key=lambda d: d.date)
+
+    years = {}
+    first = t[0].date.year
+    last = t[-1].date.year
+    years = {y: 0 for y in range(first, last+1)}
+    transactions = Transactions(transactions=t)
+
+
+    logger.info('Expected balance: %s', expected_balance)
+    logger.info('Current balance: %s/%s', delta, qty)
+    holdings = generate_previous_year_holdings(broker, years, year, None, transactions, verbose)
+    tax_deduction_rate = get_tax_deduction_rate(year-1)
+        # Reset tax deduction
+    for i, h in enumerate(holdings.stocks):
+        holdings.stocks[i].tax_deduction = (h.purchase_price.nok_value * tax_deduction_rate)/100
     return holdings
 
 def preheat_cache():
