@@ -35,6 +35,7 @@ from math import isclose
 from decimal import Decimal, getcontext
 from espp2.fmv import FMV
 from espp2.datamodels import *
+from espp2.console import console
 
 getcontext().prec = 6
 
@@ -311,13 +312,13 @@ class Positions():
             dividend_nok = 0 #sum(item.amount.nok_value for item in dividends)
             if self.year == 2022:
                 # Need to separately calculate pre and post tax increase for 2022.
-                pre_tax_inc_usd = sum(
-                    item.amount.value for item in dividends if item.declarationdate <= norwegian_dividend_split)
-                pre_tax_inc_nok = sum(
-                    item.amount.nok_value for item in dividends if item.declarationdate <= norwegian_dividend_split)
+                post_tax_inc_usd = sum(
+                    item.amount.value for item in dividends if item.declarationdate > norwegian_dividend_split)
+                post_tax_inc_nok = sum(
+                    item.amount.nok_value for item in dividends if item.declarationdate > norwegian_dividend_split)
             else:
-                pre_tax_inc_usd = None
-                pre_tax_inc_nok = None
+                post_tax_inc_usd = None
+                post_tax_inc_nok = None
             # Note, in some cases taxes have not been withheld. E.g. dividends too small
             try:
                 tax_usd = sum(item.amount.value for item in self.tax_by_symbols[symbol])
@@ -333,8 +334,7 @@ class Positions():
                     if not isclose(total_shares, ledger_shares, abs_tol=10**-2):
                         logger.warning('Total shares don\'t match %s != %s on %s / %s', total_shares, ledger_shares, d.date, exdate)
                         from espp2.report import print_ledger
-                        from rich.console import Console
-                        print_ledger(self.ledger.entries, Console())
+                        print_ledger(self.ledger.entries, console)
 
                     assert isclose(total_shares, ledger_shares, abs_tol=10**-
                                    2), f"Total shares don't match {total_shares} (position balance) != {ledger_shares} (ledger) on {d.date} / {exdate}"
@@ -371,15 +371,15 @@ class Positions():
                         tax_deduction_used += (tax_deduction * entry.qty)
                         self.tax_deduction[entry.idx] = 0
                     self.update(entry.idx, 'dps', entry.dps)
-            if pre_tax_inc_usd:
+            if post_tax_inc_usd:
                 r.append(EOYDividend(symbol=symbol,
                                     amount=Amount(currency="USD",
                                                 value=dividend_usd,
                                                 nok_value=dividend_nok,
                                                 nok_exchange_rate=0),
-                                    pre_tax_inc_amount=Amount(currency="USD",
-                                                            value=pre_tax_inc_usd,
-                                                            nok_value=pre_tax_inc_nok,
+                                    post_tax_inc_amount=Amount(currency="USD",
+                                                            value=post_tax_inc_usd,
+                                                            nok_value=post_tax_inc_nok,
                                                             nok_exchange_rate=0),
                                     tax=Amount(currency="USD",
                                                 value=tax_usd,
@@ -476,12 +476,12 @@ class Positions():
             total_gain = sum(item.gain_ps * item.qty
                              for item in s_record.from_positions)
             if self.year == 2022:
-                total_gain_pre_tax_inc = sum(item.gain_ps * item.qty
-                                             for item in s_record.from_positions if s_record.date <= date(2022, 10, 5))
-                if not total_gain_pre_tax_inc:
-                    total_gain_pre_tax_inc = Amount(0)
+                total_gain_post_tax_inc = sum(item.gain_ps * item.qty
+                                             for item in s_record.from_positions if s_record.date > date(2022, 10, 5))
+                if not total_gain_post_tax_inc:
+                    total_gain_post_tax_inc = Amount(0)
             else:
-                total_gain_pre_tax_inc = Amount(0)
+                total_gain_post_tax_inc = Amount(0)
             total_tax_ded = sum(item.tax_deduction_used
                                 for item in s_record.from_positions)
             total_purchase_price = sum(
@@ -489,7 +489,7 @@ class Positions():
             if s.fee:
                 total_purchase_price += s.fee
             totals = {'gain': total_gain,
-                      'pre_tax_inc_gain': total_gain_pre_tax_inc,
+                      'post_tax_inc_gain': total_gain_post_tax_inc,
                       'purchase_price': total_purchase_price,
                       'tax_ded_used': total_tax_ded,
                       }

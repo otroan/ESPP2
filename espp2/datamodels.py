@@ -318,7 +318,7 @@ class EOYDividend(BaseModel):
     '''EOY dividend'''
     symbol: str
     amount: Amount
-    pre_tax_inc_amount: Optional[Amount]
+    post_tax_inc_amount: Optional[Amount]
     tax: Amount # Negative
     tax_deduction_used: Decimal # NOK
 
@@ -366,10 +366,10 @@ class ForeignShares(BaseModel):
     account: str
     shares: Decimal
     wealth: condecimal(gt=0, decimal_places=0)
-    pre_tax_inc_dividend: Optional[condecimal(gt=0, decimal_places=0)]
+    post_tax_inc_dividend: Optional[condecimal(ge=0, decimal_places=0)]
     dividend: condecimal(gt=0, decimal_places=0)
     taxable_gain: condecimal(decimal_places=0)
-    taxable_pre_tax_inc_gain: Optional[condecimal(decimal_places=0)]
+    taxable_post_tax_inc_gain: Optional[condecimal(decimal_places=0)]
     tax_deduction_used: condecimal(gt=0, decimal_places=0)
 
 class CreditDeduction(BaseModel):
