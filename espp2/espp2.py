@@ -99,7 +99,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
             f.write(j)
     else:
         console.print('No new holdings file specified', style='bold red')
-    if outwires and result.report.unmatched_wires:
+    if outwires and result and result.report and result.report.unmatched_wires:
         logger.info('Writing unmatched wires to %s', outwires.name)
         outw = Wires(__root__=result.report.unmatched_wires)
         for w in outw.__root__:
