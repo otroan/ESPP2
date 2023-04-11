@@ -5,6 +5,7 @@ from rich.console import Console
 from rich.table import Table
 from espp2.datamodels import TaxReport, TaxSummary, Holdings, EOYDividend
 from espp2.positions import Ledger
+from espp2.console import console
 
 def print_report_dividends(dividends: list[EOYDividend], console:Console):
     '''Dividends'''
@@ -128,7 +129,7 @@ def print_ledger(ledger: dict, console: Console):
             table.add_row(str(e[0]), symbols, f'{e[1]:.2f}', f'{e[2]:.2f}')
         console.print(table)
 
-def print_report_tax_summary(summary: TaxSummary, console:Console):
+def print_report_tax_summary(summary: TaxSummary, console: Console):
     '''Tax summary'''
     console.print(f'Tax Summary for {summary.year}:\n', style="bold magenta")
     table = Table(title="Finance -> Shares -> Foreign shares:", title_justify="left")
@@ -144,19 +145,16 @@ def print_report_tax_summary(summary: TaxSummary, console:Console):
 
     # All shares that have been held at some point throughout the year
     for e in summary.foreignshares:
-        if summary.year == 2022:
-            table.add_row("", "", "", "", "", "",
-                        f'{e.pre_tax_inc_dividend}',
-                        f'{e.taxable_pre_tax_inc_gain}',
-                        "")
-            dividend = e.dividend - e.pre_tax_inc_dividend
-            gain = e.taxable_gain - e.taxable_pre_tax_inc_gain
-        else:
-            dividend = e.dividend
-            gain = e.taxable_gain
+        dividend = e.dividend
+        gain = e.taxable_gain
         table.add_row(e.symbol, e.isin, e.country, e.account, f'{e.shares:.2f}', f'{e.wealth}',
                     f'{dividend}', f'{gain}',
                     f'{e.tax_deduction_used}')
+        if summary.year == 2022:
+            table.add_row("", "", "", "", "", "",
+                        f'{e.post_tax_inc_dividend}',
+                        f'{e.taxable_post_tax_inc_gain}',
+                        "")
 
     console.print(table)
     console.print()
@@ -174,7 +172,7 @@ def print_report_tax_summary(summary: TaxSummary, console:Console):
                       f'{e.gross_share_dividend}', f'{e.tax_on_gross_share_dividend}')
     console.print(table)
     console.print()
-
+    
     # Transfer gain/loss
     table = Table(title="Transfer gain/loss:", title_justify="left")
     table.add_column("Date", justify="center", style="cyan", no_wrap=True)
@@ -202,7 +200,6 @@ def print_report_tax_summary(summary: TaxSummary, console:Console):
 def print_report(year: int, summary: TaxSummary, report: TaxReport,
                  holdings: Holdings, verbose: bool):
     '''Pretty print tax report to console'''
-    console = Console()
 
     if verbose:
         # Print previous year holdings

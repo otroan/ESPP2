@@ -7,7 +7,7 @@ ESPPv2 Wrapper
 import logging
 from enum import Enum
 import typer
-from espp2.main import do_taxes, do_holdings_2, do_holdings_1
+from espp2.main import do_taxes, do_holdings_2, do_holdings_1, preheat_cache, console
 from espp2.datamodels import TaxReport, Holdings, Wires, ExpectedBalance
 from espp2.report import print_report
 from pydantic import parse_obj_as
@@ -19,10 +19,6 @@ from rich.logging import RichHandler
 
 app = typer.Typer()
 
-class ExpectedBalance(BaseModel):
-    '''Expected balance'''
-    symbol: str
-    qty: Decimal
 class BrokerEnum(str, Enum):
     '''BrokerEnum'''
     schwab = 'schwab'
@@ -49,6 +45,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
          opening_balance: str = None,
          loglevel: str = typer.Option("WARNING", help='Logging level'),
          version: bool = typer.Option(None, "--version", callback=version_callback, is_eager=True),
+         preheat_cache: bool = False,
          expected_balance: str = None):
 
     '''ESPPv2 tax reporting tool'''
@@ -61,6 +58,10 @@ def main(transaction_files: list[typer.FileBinaryRead],
         opening_balance = json.loads(opening_balance)
         opening_balance = parse_obj_as(Holdings, opening_balance)
     result = None
+
+    if preheat_cache:
+        preheat_cache()
+
     if inholdings:
         # Check inholdings are valid for previous tax year
         if len(transaction_files) > 1:
@@ -73,8 +74,11 @@ def main(transaction_files: list[typer.FileBinaryRead],
             expected_balance = json.loads(expected_balance)
             expected_balance = parse_obj_as(ExpectedBalance, expected_balance)
             logger.warning("This does not work with reinvested dividends!")
+            console.print('Generating holdings from expected balance', style='bold green')
             holdings = do_holdings_2(broker, transaction_files, year, expected_balance, verbose=verbose)
         else:
+            console.print(
+                f'Generating holdings for previous tax year {year-1}', style='bold green')
             holdings = do_holdings_1(broker, transaction_files, inholdings,
                                      year, opening_balance=opening_balance, verbose=verbose)
         if not holdings:
@@ -93,6 +97,8 @@ def main(transaction_files: list[typer.FileBinaryRead],
         j = holdings.json(indent=4)
         with outholdings as f:
             f.write(j)
+    else:
+        console.print('No new holdings file specified', style='bold red')
     if outwires and result.report.unmatched_wires:
         logger.info('Writing unmatched wires to %s', outwires.name)
         outw = Wires(__root__=result.report.unmatched_wires)

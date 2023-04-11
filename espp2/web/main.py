@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from pydantic import parse_obj_as
 from fastapi.staticfiles import StaticFiles
-from espp2.main import do_taxes, do_holdings_1, do_holdings_2
+from espp2.main import do_taxes, do_holdings_1, do_holdings_2, preheat_cache
 from espp2.datamodels import ESPPResponse, Wires, Holdings, ExpectedBalance
 from espp2.positions import Positions
 import json
@@ -108,4 +108,5 @@ app.mount("/", StaticFiles(directory=realpath(
     f'{realpath(__file__)}/../public'), html=True), name='public')
 
 if __name__ == "__main__":
+    preheat_cache()
     uvicorn.run(app, host="0.0.0.0", port=8000)

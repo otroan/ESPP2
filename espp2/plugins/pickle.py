@@ -193,7 +193,7 @@ def read(pickle_file, filename='') -> Transactions:
         rectype = key[1]
         record = p.rawData[key]
         logger.debug('Processing record: %s', (rectype, record))
-        print('RECORD:', rectype, record)
+
         try:
             r = methods[rectype](record, source)
             if r:

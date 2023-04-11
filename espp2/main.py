@@ -6,13 +6,15 @@ ESPPv2 main entry point
 import logging
 from decimal import Decimal
 import simplejson as json
-from rich.console import Console
+from espp2.console import console
 from espp2.positions import Positions, Cash, InvalidPositionException, Ledger, get_tax_deduction_rate
 from espp2.transactions import normalize
 from espp2.datamodels import TaxReport, Transactions, Wires, Holdings, ForeignShares, TaxSummary, CreditDeduction, Sell, EntryTypeEnum, Amount
 from espp2.report import print_ledger, print_cash_ledger, print_report_holdings
+from espp2.fmv import FMV, FMVTypeEnum
 from typing import Tuple
 import datetime
+from typing import NamedTuple
 
 logger = logging.getLogger(__name__)
 
@@ -24,29 +26,6 @@ def json_load(fp):
     data = json.load(fp, parse_float=Decimal, encoding='utf-8')
     return data
 
-# def validate_holdings(broker, year, prev_holdings, transactions):
-#     '''Validate holdings and filter transactions'''
-#     if prev_holdings:
-#         if broker != prev_holdings.broker:
-#             raise ESPPErrorException(f'Broker mismatch: {broker} != {prev_holdings.broker}')
-#     # # Remove duplicate transactions
-#     # transactions = deduplicate(transactions)
-#     if prev_holdings and prev_holdings.stocks and prev_holdings.year == year - 1:
-#         # Filter out transactions from previous year
-#         # TODO: Cash?
-#         transactions = [t for t in transactions if t.date.year == year]
-#         return prev_holdings, transactions
-
-#     # No holdings, or holdings are from wrong year
-#     c = Cash(year-1, transactions, None)
-#     p = Positions(year-1, prev_holdings, transactions, c)
-#     print('***Cash from previous year***')
-#     print_cash_ledger(c.ledger(), Console())
-#     holdings = p.holdings(year-1, broker)
-#     transactions = [t for t in transactions if t.date.year == year]
-#     return holdings, transactions
-
-from typing import NamedTuple
 class TaxReportReturn(NamedTuple):  # inherit from typing.NamedTuple
     report: TaxReport
     holdings: Holdings
@@ -115,21 +94,23 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
         except KeyError:
             sales = []
         total_gain_nok = 0
-        total_gain_pre_tax_inc_nok = 0
+        total_gain_post_tax_inc_nok = 0
         for s in sales:
             total_gain_nok += s.totals['gain'].nok_value
-            total_gain_pre_tax_inc_nok += s.totals['pre_tax_inc_gain'].nok_value
+            total_gain_post_tax_inc_nok += s.totals['post_tax_inc_gain'].nok_value
             tax_deduction_used += s.totals['tax_ded_used']
         if year == 2022:
-            dividend_pre_tax_inc_nok_value = 0
+            dividend_post_tax_inc_nok_value = 0
             if dividend:
-                dividend_pre_tax_inc_nok_value = dividend[0].pre_tax_inc_amount.nok_value
+                if dividend[0].post_tax_inc_amount:
+                    dividend_post_tax_inc_nok_value = dividend[0].post_tax_inc_amount.nok_value
+                # dividend_post_tax_inc_nok_value = dividend[0].post_tax_inc_amount.nok_value
             foreignshares.append(ForeignShares(symbol=e.symbol, isin=fundamentals[e.symbol].isin,
                                             country=fundamentals[e.symbol].country, account=broker,
                                             shares=e.qty, wealth=e.amount.nok_value,
                                             dividend=round(dividend_nok_value),
-                                            pre_tax_inc_dividend=round(dividend_pre_tax_inc_nok_value),
-                                            taxable_pre_tax_inc_gain=round(total_gain_pre_tax_inc_nok),
+                                            post_tax_inc_dividend=round(dividend_post_tax_inc_nok_value),
+                                            taxable_post_tax_inc_gain=round(total_gain_post_tax_inc_nok),
                                             taxable_gain=round(total_gain_nok),
                                             tax_deduction_used=round(tax_deduction_used)))
         else:
@@ -203,16 +184,17 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
             break
         this_year = [t for t in transactions.transactions if t.date.year == y]
         logger.info('Calculating tax for previous year: %s', y)
-        p = Positions(y, holdings, this_year, received_wires=Wires(__root__=[]), generate_holdings=True)
+        p = Positions(y, holdings, this_year, received_wires=Wires(
+            __root__=[]), generate_holdings=True)
 
         # Calculate taxes for the year
         p.process()
         holdings = p.holdings(y, broker)
 
         if verbose:
-            print_ledger(p.ledger.entries, Console())
-            print_cash_ledger(p.cash.ledger(), Console())
-            print_report_holdings(holdings, Console())
+            print_ledger(p.ledger.entries, console)
+            print_cash_ledger(p.cash.ledger(), console)
+            print_report_holdings(holdings, console)
 
     # Return holdings for previous year
     return holdings
@@ -251,7 +233,7 @@ def do_taxes(broker, transaction_file, holdfile,
         prev_holdings = opening_balance
 
     if (prev_holdings and prev_holdings.year != year-1):
-        raise ESPPErrorException('Holdings file for previous year not found')        
+        raise ESPPErrorException('Holdings file for previous year not found')
 
     return tax_report(
         year, broker, transactions, wires, prev_holdings, verbose=verbose)
@@ -319,3 +301,18 @@ def do_holdings_2(broker, transaction_files: list, year, expected_balance, verbo
         for i, h in enumerate(holdings.stocks):
             holdings.stocks[i].tax_deduction = (h.purchase_price.nok_value * tax_deduction_rate)/100
     return holdings
+
+def preheat_cache():
+    '''Initialize caches'''
+    today = datetime.date.today()
+    symbol = 'CSCO'
+    f = FMV()
+
+    with console.status(" [blue]Refreshing currency information") as status:
+        f.refresh('USD', today, FMVTypeEnum.CURRENCY)
+        status.update(status=" [blue]Fetching stocks information")
+        f.refresh(symbol, today, FMVTypeEnum.STOCK)
+        status.update(status=" [blue] Fetching dividends information")
+        f.refresh(symbol, today, FMVTypeEnum.DIVIDENDS)
+        status.update(status=" [blue] Fetching fundamentals information")
+        f.refresh(symbol, today, FMVTypeEnum.FUNDAMENTALS)
