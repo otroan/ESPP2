@@ -380,7 +380,11 @@ class Positions():
                         tax_deduction_used += (tax_deduction * entry.qty)
                         self.tax_deduction[entry.idx] = 0
                     self.update(entry.idx, 'dps', entry.dps)
-            tax_returned = sum(item.amount.value for item in self.taxsub_by_symbols[symbol])
+
+            if symbol in self.taxsub_by_symbols:
+                tax_returned = sum(item.amount.value for item in self.taxsub_by_symbols[symbol])
+            else:
+                tax_returned = 0
             if tax_returned:
                 exchange_rate = tax_nok / tax_usd
                 tax_usd += tax_returned
