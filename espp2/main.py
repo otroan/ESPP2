@@ -198,6 +198,9 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
             print_report_holdings(holdings, console)
 
     # Return holdings for previous year
+    if not holdings:
+        # Empty list
+        return Holdings(year=year-1, broker='', stocks=[], cash=[])
     return holdings
 
 

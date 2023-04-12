@@ -84,7 +84,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
                 f'Generating holdings for previous tax year {year-1}', style='bold green')
             holdings = do_holdings_1(broker, transaction_files, inholdings,
                                      year, opening_balance=opening_balance, verbose=verbose)
-        if not holdings:
+        if not holdings or not holdings.stocks:
             logger.error('No holdings found')
             if len(transaction_files) > 1:
                 raise typer.BadParameter('Cannot use inholdings with multiple transaction files')
