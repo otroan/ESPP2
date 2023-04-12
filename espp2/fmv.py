@@ -113,19 +113,20 @@ class FMV():
         http = urllib3.PoolManager()
         # The REST api is described here: https://app.norges-bank.no/query/index.html#/no/
         # url = f'https://data.norges-bank.no/api/data/EXR/B.{currency}.NOK.SP?startPeriod=2000&format=sdmx-json'
-        url = f'https://data.norges-bank.no/api/data/EXR/B.{currency}.NOK.SP?startPeriod=1998&format=csv-:-comma-false-y'
+        # url = f'https://data.norges-bank.no/api/data/EXR/B.{currency}.NOK.SP?startPeriod=1998&format=csv-:-comma-false-y'
+        url = f'https://data.norges-bank.no/api/data/EXR/B.{currency}.NOK.SP?format=csv&startPeriod=1998&locale=us&bom=include'
         r = http.request('GET', url)
+        # B;Business;USD;US dollar;NOK;Norwegian krone;SP;Spot;4;false;0;Units;C;ECB concertation time 14:15 CET;2022-05-24;9.5979
         if r.status != 200:
             raise FMVException(
                 f'Fetching currency data for {currency} failed {r.status}')
         cur = {}
         for i, line in enumerate(r.data.decode('utf-8').split('\n')):
-            if i == 0 or ',' not in line:
+            if i == 0 or ';' not in line:
                 continue  # Skip header and blank lines
-            d, exr = line.strip().split(',')
-            c = float(exr.strip('"'))
-            d = d.strip('"')
-            cur[d] = c
+            fields = line.strip().split(';')
+            d = fields[-2]
+            cur[d] = float(fields[-1])
         return cur
 
     def fetch_dividends(self, symbol):
