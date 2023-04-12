@@ -380,6 +380,13 @@ class Positions():
                         tax_deduction_used += (tax_deduction * entry.qty)
                         self.tax_deduction[entry.idx] = 0
                     self.update(entry.idx, 'dps', entry.dps)
+            tax_returned = sum(item.amount.value for item in self.taxsub_by_symbols[symbol])
+            if tax_returned:
+                exchange_rate = tax_nok / tax_usd
+                tax_usd += tax_returned
+                assert abs(tax_usd) > 0, f"Dividend tax after tax return is negative {tax_usd}"
+                tax_nok = tax_usd * exchange_rate
+
             if post_tax_inc_usd:
                 r.append(EOYDividend(symbol=symbol,
                                     amount=Amount(currency="USD",

@@ -15,7 +15,7 @@ from espp2.fmv import FMV, FMVTypeEnum
 from typing import Tuple
 import datetime
 from typing import NamedTuple
-
+from math import isclose
 logger = logging.getLogger(__name__)
 
 class ESPPErrorException(Exception):
@@ -124,11 +124,13 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     # Tax paid in the US on dividends
     credit_deductions = []
     for e in report['dividends']:
+        expected_tax = round(Decimal('.15') * e.amount.nok_value)
+        if isclose(expected_tax, abs(round(e.tax.nok_value)), abs_tol=0.05):
+            logger.error('Expected source tax: %s got: %s', expected_tax, abs(round(e.tax.nok_value)))
         credit_deductions.append(CreditDeduction(symbol=e.symbol, country='USA',
-                                                 income_tax=round(
-                                                     abs(e.tax.nok_value)),
+                                                 income_tax=expected_tax,
                                                  gross_share_dividend=round(e.amount.nok_value),
-                                                 tax_on_gross_share_dividend=round(abs(e.tax.nok_value))))
+                                                 tax_on_gross_share_dividend=expected_tax))
 
     # Tax summary:
     # - Cash held in the US account
