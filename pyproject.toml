@@ -24,7 +24,7 @@ dynamic = ["version"]
 dependencies = [
     "simplejson", "numpy", "pydantic",
     "urllib3", "python-dateutil", "uvicorn", "fastapi",
-    "python-multipart", "tabulate", "pandas", "lxml", "pytest", "httpx",
+    "python-multipart", "tabulate", "pandas", "pytest", "httpx",
     "rich", "typing", "html5lib", "typer", "openpyxl",
 ]
 authors = [
