@@ -203,6 +203,7 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
     if not holdings:
         # Empty list
         return Holdings(year=year-1, broker='', stocks=[], cash=[])
+
     return holdings
 
 
@@ -302,10 +303,6 @@ def do_holdings_2(broker, transaction_files: list, year, expected_balance, verbo
         t = sorted(transactions.transactions, key=lambda d: d.date)
         transactions = Transactions(transactions=t)
         holdings = generate_previous_year_holdings(broker, years, year, None, transactions, verbose)
-        tax_deduction_rate = get_tax_deduction_rate(year-1)
-        # Reset tax deduction
-        for i, h in enumerate(holdings.stocks):
-            holdings.stocks[i].tax_deduction = (h.purchase_price.nok_value * tax_deduction_rate)/100
     return holdings
 
 def do_holdings_3(broker, transaction_file, year, expected_balance, verbose=False) -> Holdings:
@@ -355,10 +352,6 @@ def do_holdings_3(broker, transaction_file, year, expected_balance, verbose=Fals
     logger.info('Expected balance: %s', expected_balance)
     logger.info('Current balance: %s/%s', delta, qty)
     holdings = generate_previous_year_holdings(broker, years, year, None, transactions, verbose)
-    tax_deduction_rate = get_tax_deduction_rate(year-1)
-        # Reset tax deduction
-    for i, h in enumerate(holdings.stocks):
-        holdings.stocks[i].tax_deduction = (h.purchase_price.nok_value * tax_deduction_rate)/100
     return holdings
 
 def preheat_cache():
