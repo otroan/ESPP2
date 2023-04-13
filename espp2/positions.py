@@ -389,10 +389,11 @@ class Positions():
                 assert isclose(dps, d.dividend_dps, abs_tol=10**-2), f"Dividend for {exdate}/{d.date} per share calculated does not match reported {dps} vs {d.dividend_dps} for {total_shares} {d.amount.value}"
                 for entry in self[:exdate, symbol]:  # Creates a view
                     entry.dps = dps if 'dps' not in entry else entry.dps + dps
+                    dps_nok = dps * d.amount.nok_exchange_rate
                     tax_deduction = self.tax_deduction[entry.idx]
-                    if tax_deduction > entry.dps:
-                        tax_deduction_used += (entry.dps * entry.qty)
-                        self.tax_deduction[entry.idx] -= entry.dps
+                    if tax_deduction > dps_nok:
+                        tax_deduction_used += (dps_nok * entry.qty)
+                        self.tax_deduction[entry.idx] -= dps_nok
                     elif tax_deduction > 0:
                         tax_deduction_used += (tax_deduction * entry.qty)
                         self.tax_deduction[entry.idx] = 0
