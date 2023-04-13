@@ -62,3 +62,4 @@ uvicorn==0.20.0
 wcwidth==0.2.6
 wrapt==1.14.1
 yarg==0.1.9
+openpyxl==3.1.2
