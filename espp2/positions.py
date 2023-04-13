@@ -136,6 +136,7 @@ class Positions():
 
     def add_tax_deductions(self):
         '''Add tax deductions for the shares we hold end of year'''
+        total_tax_deduction = 0
         end_of_year = f'{self.year}-12-31'
         for symbol in self.symbols:
             eoy_balance = self[:end_of_year, symbol]
@@ -146,6 +147,8 @@ class Positions():
                 tax_deduction = (item.purchase_price.nok_value *
                                  tax_deduction_rate)/100
                 self.tax_deduction[item.idx] += tax_deduction
+                total_tax_deduction += (tax_deduction * item.qty)
+        logger.info('Total tax deduction this year %s', total_tax_deduction)
 
     def __init__(self, year, opening_balance: Holdings, transactions, received_wires=None,
                  validate_year='exact', generate_holdings=False):
@@ -192,11 +195,14 @@ class Positions():
                 zero_purchase_price) == 0, f'Found {len(zero_purchase_price)} positions with zero purchase price. {zero_purchase_price}'
 
         # Collect last years accumulated tax deduction
+        total_accumulated_tax_deduction = 0
         self.tax_deduction = []
         for i, p in enumerate(self.positions):
             p.idx = i
             tax_deduction = p.dict().get('tax_deduction', 0)
             self.tax_deduction.insert(i, tax_deduction)
+            total_accumulated_tax_deduction += (tax_deduction * p.qty)
+        logger.info('Total tax deduction accumulated from previous years %s', total_accumulated_tax_deduction)
 
         self.positions_by_symbols = position_groupby(self.positions)
 
@@ -357,11 +363,6 @@ class Positions():
                 total_shares = self.total_shares(self[:exdate, symbol])
                 if self.ledger:
                     ledger_shares = self.ledger.total_shares(symbol, exdate)
-                    if not isclose(total_shares, ledger_shares, abs_tol=10**-2):
-                        logger.warning('Total shares don\'t match %s != %s on %s / %s', total_shares, ledger_shares, d.date, exdate)
-                        from espp2.report import print_ledger
-                        print_ledger(self.ledger.entries, console)
-
                     assert isclose(total_shares, ledger_shares, abs_tol=10**-
                                    2), f"Total shares don't match {total_shares} (position balance) != {ledger_shares} (ledger) on {d.date} / {exdate}"
                 if total_shares == 0:  # and not d.amount_ps:
@@ -520,7 +521,7 @@ class Positions():
                     total_gain_post_tax_inc = Amount(0)
             else:
                 total_gain_post_tax_inc = Amount(0)
-            total_tax_ded = sum(item.tax_deduction_used
+            total_tax_ded = sum(item.tax_deduction_used * item.qty
                                 for item in s_record.from_positions)
             total_purchase_price = sum(
                 item.purchase_price * item.qty for item in s_record.from_positions)
