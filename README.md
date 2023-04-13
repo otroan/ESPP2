@@ -49,7 +49,6 @@ Dividend dates and fundamentals are fetched from the EOD Historical Data provide
 ### Tax calculation
 The espp2 tool takes a normalized transaction history for the current year, a holdings file listing all held positions at the end of the previous year, and a list of "wires" received all in JSON format. Then it calculates the gains/losses and outputs that in a tax-report file and a holdings file for the current year.
 
-
 ## Installation
 
 ```
@@ -63,32 +62,42 @@ pip install git+https://github.com/otroan/ESPP2.git#egg=espp2
 The tool runs in two phases. First it uses the available transaction files to generate a holdings file for the previous tax year. Then it is run again with the holdings file from the previous year to generate the tax report for the current year.
 
 The various more or less supported use cases are described below.
-### Schwab - Complete transaction history
+### Case 1: Schwab - Complete transaction history
 
 If you have a complete transaction history from Schwab, you can just run the tool with the Schwab transaction file as input.
 If you have made transfers to a Norwegian bank account, run the tool with the --outwires option to generate a template file for the wires.
 
 ```
-espp2 <schwab-2022.csv> --outwires schwab-wires-2022.json
-espp2 <schwab-2022.csv> --wires <schwab-wires-2022.json> --outholdings <schwab-holdings-2022.json>
+espp2 <schwab-all-transactions.csv> --outwires schwab-wires-2022.json
+espp2 <schwab-all-transactions.csv> --wires <schwab-wires-2022.json> --outholdings <schwab-holdings-2022.json>
 ```
 
-### Schwab - Incomplete transaction history + Pickle file from the old tool
+### Case 2: Schwab - Incomplete transaction history. Not holding shares acquired prior to the transaction history in current tax year
+
+If all the shares held prior to the transaction history (4 years), have been sold prior to the tax year, then the tool does not need to deal with those stocks.
+
+Given an expected balance for the end of the previous tax year (2021-12-31 in this case), the tool walks the ledger backwards and inserts an artifical buy record at the beginning.
+
+```
+espp2 <schwab-all-transactions.csv> --expected-balance '{"symbol": "CSCO", "qty": 936.5268 }' --outholdings <schwab-holdings-2021.json>
+espp2 <schwab-all-transactions.csv> --inholdings <schwab-holdings-2021.json> --outholdings <schwab-holdings-2022.json>
+```
+
+### Case 3: Schwab - Incomplete transaction history + Pickle file from the old tool
 
 The tool will combine the transaction history from the pickle file with the CSV file, to generate a holdings file for the previous year.
 Then the tool must be run again with this holdings file to generate the tax report.
 
 ```
-espp2 <schwab-2022.csv> <espp1.pickle> --wires <schwab-wires-2022.json> --outholdings <schwab-holdings-2022.json>
+espp2 <schwab-all.csv> <espp1.pickle> --wires <schwab-wires-2022.json> --outholdings <schwab-holdings-2022.json>
 ```
 
-### Schwab - Incomplete transaction history and no pickle file
+### Case 4: Schwab - Incomplete transaction history and no pickle file
 
 This applies to a user who has so far done their foreign shares taxes manually.
 We can calculate the balance for the previous year by using the My_ESPP_Purchases.xls file and the My_Stock_Transactions.xls file from the stocks website. Combined with a manual record of the numbers of shares held at the end of the previous year.
 
 **NOTE:** This will not work if one has reinvested dividends in shares.
-
 
 ```
 To generate the holdings file:
@@ -98,7 +107,14 @@ To generate taxes:
 espp2 <schwab-2022.csv> --wires <schwab-wires-2022.json> --holdings <stocks-2021.json> --outholdings <schwab-holdings-2022.json>
 ```
 
+### Schwab: None of the above works
+If none of the above works, then your best may be to run case 2 above, that generates a holdings file for 2021, and gives an artifical buy entry with purchase price 0 for the missing shares. You then need to go back and try to find the purchase prices for the stock buys that make up this lot. That information may be available in Schwab statements.
+
+Another alternative is to try to manually create a Schwab CSV with all historical trades. Again from Schwab statements.
+
 ### Morgan Stanley - Complete transaction history
+
+Note: Morgan support is still under construction. Proceed with caution!
 
 Morgan Stanley provides a complete transaction history for all years. The tool can be run with the Morgan Stanley transaction file as input.
 
