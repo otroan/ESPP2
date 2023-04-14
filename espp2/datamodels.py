@@ -366,7 +366,9 @@ class ForeignShares(BaseModel):
     account: str
     shares: Decimal
     wealth: condecimal(ge=0)
+    # Share of taxable dividend after October 6.
     post_tax_inc_dividend: Optional[condecimal(ge=0, decimal_places=0)]
+    # Taxable dividend
     dividend: condecimal(gt=0, decimal_places=0)
     taxable_gain: condecimal(decimal_places=0)
     taxable_post_tax_inc_gain: Optional[condecimal(decimal_places=0)]
