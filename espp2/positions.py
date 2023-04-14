@@ -487,6 +487,7 @@ class Positions():
         for s in sales:
             if s.fee and s.fee.value < 0:
                 self.cash.credit(s.date, s.fee.copy(), 'sale fee')
+            # Distinguish between real sale and a transfer
             is_sale = s.type == EntryTypeEnum.SELL
             if is_sale:
                 s_record = EOYSales(date=s.date, symbol=symbol, qty=s.qty,
@@ -509,9 +510,9 @@ class Positions():
                         r = self.individual_sale(s, positions[posidx], qty_to_sell)
                     positions[posidx].qty -= qty_to_sell
                     qty_to_sell = 0
-            if not is_sale:
-                continue
-            s_record.from_positions.append(r)
+                if not is_sale:
+                    continue
+                s_record.from_positions.append(r)
             total_gain = sum(item.gain_ps * item.qty
                              for item in s_record.from_positions)
             if self.year == 2022:
