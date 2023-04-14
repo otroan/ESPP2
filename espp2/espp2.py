@@ -73,9 +73,9 @@ def main(transaction_files: list[typer.FileBinaryRead],
         if expected_balance:
             expected_balance = json.loads(expected_balance)
             expected_balance = parse_obj_as(ExpectedBalance, expected_balance)
-            logger.warning("This does not work with reinvested dividends!")
             console.print('Generating holdings from expected balance', style='bold green')
             if len(transaction_files) > 1:
+                logger.warning("This does not work with reinvested dividends!")
                 holdings = do_holdings_2(broker, transaction_files, year, expected_balance, verbose=verbose)
             else:
                 holdings = do_holdings_3(broker, transaction_files[0], year, expected_balance=expected_balance, verbose=verbose)
