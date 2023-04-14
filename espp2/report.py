@@ -140,22 +140,26 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
     table.add_column("Number of shares as of 31. December", style="magenta", justify="right")
     table.add_column("Wealth", style="magenta", justify="right")
     table.add_column("Taxable dividend", style="magenta", justify="right")
+    if summary.year == 2022:
+        table.add_column("Share of Taxable dividend after October 6", style="magenta", justify="right")
     table.add_column("Taxable gain/loss", style="magenta", justify="right")
+    if summary.year == 2022:
+        table.add_column("Share of Taxable gain/loss after October 6", style="magenta", justify="right")
+
     table.add_column("Risk-free return utilised", style="magenta", justify="right")
 
     # All shares that have been held at some point throughout the year
     for e in summary.foreignshares:
         dividend = e.dividend
         gain = e.taxable_gain
-        table.add_row(e.symbol, e.isin, e.country, e.account, f'{e.shares:.2f}', f'{e.wealth}',
-                    f'{dividend}', f'{gain}',
-                    f'{e.tax_deduction_used}')
         if summary.year == 2022:
-            table.add_row("", "", "", "", "", "",
-                        f'{e.post_tax_inc_dividend}',
-                        f'{e.taxable_post_tax_inc_gain}',
-                        "")
-
+            table.add_row(e.symbol, e.isin, e.country, e.account, f'{e.shares:.2f}', f'{e.wealth}',
+                        f'{dividend}', f'{e.post_tax_inc_dividend}', f'{gain}', f'{e.taxable_post_tax_inc_gain}',
+                        f'{e.tax_deduction_used}')
+        else:
+            table.add_row(e.symbol, e.isin, e.country, e.account, f'{e.shares:.2f}', f'{e.wealth}',
+                        f'{dividend}', f'{gain}',
+                        f'{e.tax_deduction_used}')
     console.print(table)
     console.print()
 
