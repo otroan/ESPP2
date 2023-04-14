@@ -55,6 +55,7 @@ def print_report_sales(report: TaxReport, console: Console):
     table.add_column("Qty", justify="right", style="magenta")
     table.add_column("Sale Date", justify="center", style="green")
     table.add_column("Sales Price", justify="right", style="green")
+    table.add_column("Total Sales Amount", justify="right", style="green")
     table.add_column("Gain/Loss", justify="right", style="green")
     table.add_column("Buy Positions", justify="right", style="green")
 
@@ -62,6 +63,8 @@ def print_report_sales(report: TaxReport, console: Console):
 
     for k, v in report.sales.items():
         for i, e in enumerate(v):
+            sale_price = abs(e.amount.value / e.qty)
+            sale_price_nok = abs(e.amount.nok_value / e.qty)
             if e.totals['gain'].value < 0:
                 style = 'red'
             else:
@@ -71,7 +74,7 @@ def print_report_sales(report: TaxReport, console: Console):
                 gain = b.gain_ps * b.qty
                 buy_positions.add_row(f'{b.qty:.2f}', f'{b.purchase_price:.2f}', f'{gain.nok_value:.2f}  ${gain.value:.2f}')
             buy_positions.add_row("")
-            table.add_row(k, f'{e.qty:.2f}', str(e.date),
+            table.add_row(k, f'{e.qty:.2f}', str(e.date), f'{sale_price_nok:.2f} ${sale_price:.2f}',
                           f'{e.amount.nok_value:.2f}  ${e.amount.value:.2f}',
                           f'{e.totals["gain"].nok_value:.2f}  ${e.totals["gain"].value:.2f}', buy_positions, style=style)
             first = False

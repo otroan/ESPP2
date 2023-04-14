@@ -89,6 +89,8 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
             assert len(dividend) == 1
             tax_deduction_used = dividend[0].tax_deduction_used
             dividend_nok_value = dividend[0].amount.nok_value
+
+
         try:
             sales = report['sales'][e.symbol]
         except KeyError:
@@ -99,6 +101,9 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
             total_gain_nok += s.totals['gain'].nok_value
             total_gain_post_tax_inc_nok += s.totals['post_tax_inc_gain'].nok_value
             tax_deduction_used += s.totals['tax_ded_used']
+
+
+
         if year == 2022:
             dividend_post_tax_inc_nok_value = 0
             if dividend:
