@@ -12,6 +12,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from pydantic import parse_obj_as
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import FileResponse
 from espp2.main import do_taxes, do_holdings_1, do_holdings_2, do_holdings_3, preheat_cache
 from espp2.datamodels import ESPPResponse, Wires, Holdings, ExpectedBalance
 from espp2.positions import Positions
@@ -112,6 +113,21 @@ async def taxreport(
         raise HTTPException(status_code=500, detail=str(e)) from e
     return ESPPResponse(tax_report=report, holdings=holdings, summary=summary)
 
+
+# This seems to keep us from caching the files too agressively.
+# Is there a simpler way to do cache control serverside?
+# Might require e.g. an nginx proxy?
+
+@app.get('/bundle.js')
+async def get_bundle():
+    logger.debug('bundle.js')
+    return FileResponse(
+        realpath(f'{realpath(__file__)}/../public/bundle.js'),
+        headers={
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+        })
 
 app.mount("/", StaticFiles(directory=realpath(
     f'{realpath(__file__)}/../public'), html=True), name='public')
