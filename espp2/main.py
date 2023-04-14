@@ -90,7 +90,6 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
             tax_deduction_used = dividend[0].tax_deduction_used
             dividend_nok_value = dividend[0].amount.nok_value
 
-
         try:
             sales = report['sales'][e.symbol]
         except KeyError:
@@ -101,8 +100,6 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
             total_gain_nok += s.totals['gain'].nok_value
             total_gain_post_tax_inc_nok += s.totals['post_tax_inc_gain'].nok_value
             tax_deduction_used += s.totals['tax_ded_used']
-
-
 
         if year == 2022:
             dividend_post_tax_inc_nok_value = 0
@@ -129,12 +126,12 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     # Tax paid in the US on dividends
     credit_deductions = []
     for e in report['dividends']:
-        expected_tax = round(Decimal('.15') * e.amount.nok_value)
+        expected_tax = round(Decimal('.15') * e.gross_amount.nok_value)
         if isclose(expected_tax, abs(round(e.tax.nok_value)), abs_tol=0.05):
             logger.error('Expected source tax: %s got: %s', expected_tax, abs(round(e.tax.nok_value)))
         credit_deductions.append(CreditDeduction(symbol=e.symbol, country='USA',
                                                  income_tax=expected_tax,
-                                                 gross_share_dividend=round(e.amount.nok_value),
+                                                 gross_share_dividend=round(e.gross_amount.nok_value),
                                                  tax_on_gross_share_dividend=expected_tax))
 
     # Tax summary:

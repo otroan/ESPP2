@@ -318,6 +318,7 @@ class EOYDividend(BaseModel):
     '''EOY dividend'''
     symbol: str
     amount: Amount
+    gross_amount: Amount
     post_tax_inc_amount: Optional[Amount]
     tax: Amount # Negative
     tax_deduction_used: Decimal # NOK
