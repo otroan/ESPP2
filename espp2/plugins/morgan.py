@@ -253,7 +253,7 @@ class ParseState:
         if not ok:
             raise ValueError(f'Expected Cash data for tax record: {row}')
 
-        print(f'parse_tax_withholding: date={self.entry_date} activity={self.activity} taxed={taxed}')
+        # print(f'parse_tax_withholding: date={self.entry_date} activity={self.activity} taxed={taxed}')
         amount = fixup_price(self.entry_date, 'USD', taxed)
 
         r = { 'type': EntryTypeEnum.TAX,
