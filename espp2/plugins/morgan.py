@@ -177,6 +177,10 @@ class ParseState:
         qty, price, ok = getitems(row, 'Number of Shares', 'Share Price')
         if not ok:
             raise ValueError(f'Missing columns for {row}')
+
+        if self.entry_date < '2022-01-01':
+            return True   # Don't deal with historic complications
+
         qty = Decimal(qty)
         price, currency = morgan_price(price)
 
@@ -223,6 +227,9 @@ class ParseState:
         if qty_ok and cash_ok:
             raise ValueError(f'Unexpected cash+shares for dividend: {row}')
 
+        if self.entry_date < '2022-01-01':
+            return True   # Don't deal with historic complications
+
         if qty_ok:
             qty = Decimal(qty)
             price = currency_converter[(self.symbol, self.entry_date)]
@@ -246,6 +253,7 @@ class ParseState:
         if not ok:
             raise ValueError(f'Expected Cash data for tax record: {row}')
 
+        print(f'parse_tax_withholding: date={self.entry_date} activity={self.activity} taxed={taxed}')
         amount = fixup_price(self.entry_date, 'USD', taxed)
 
         r = { 'type': EntryTypeEnum.TAX,
@@ -257,6 +265,22 @@ class ParseState:
 
         self.transactions.append(parse_obj_as(Entry, r))
         return True
+
+    def parse_opening_balance(self, row):
+        '''Opening balance for shares is used to add historic shares...'''
+        if self.activity != 'Opening Balance':
+            return False
+        qty, bookvalue, ok = \
+            getitems(row, 'Number of Shares', 'Book Value')
+        if ok:
+            qty = Decimal(qty)
+            #bookvalue = Decimal(bookvalue)
+            price = currency_converter[(self.symbol, self.entry_date)]
+            purchase_price = fixup_price2(self.entry_date, 'USD', price)
+
+            self.deposit(qty, purchase_price, 'RS', self.entry_date)
+            return True
+        raise ValueError(f'Unexpected opening balance: {row}')
 
 def find_all_tables(document):
     nodes = document.findall('.//{http://www.w3.org/1999/xhtml}table', None)
@@ -382,6 +406,17 @@ def parse_rsu_table(state, recs):
     ignore = {
         'Opening Value': True,
         'Closing Value': True,
+
+        # The following are ignored, but it should be ok:
+        # 'Cash Transfer Out' is for dividends moved from "Activity" table
+        # to the RSU cash header of that table, and the 'Cash Transfer In'
+        # is the counterpart in the RSU cash header.
+        # The 'Transfer out' also shows up as a withdrawal, which is handled,
+        # so we ignore that here too.
+        'Cash Transfer In': True,
+        'Cash Transfer Out': True,
+        'Transfer out': True,
+        'Historical Transaction': True, # TODO: This should update cash-balance
     }
 
     for row in recs:
@@ -401,6 +436,9 @@ def parse_rsu_table(state, recs):
             continue
 
         if state.parse_tax_withholding(row):
+            continue
+
+        if state.parse_opening_balance(row):
             continue
 
         if state.activity in ignore:
@@ -690,9 +728,10 @@ def parse_espp_html(all_tables, state):
     ]
 
     espp = find_tables_by_header(all_tables, search_espp_header, 1)
-    assert(len(espp) == 1)
-
-    parse_espp_table(state, espp[0].to_dict())
+    if len(espp) == 1:
+        parse_espp_table(state, espp[0].to_dict())
+    elif len(espp) != 0:
+        raise ValueError(f'Expected 0 or 1 ESPP tables, got {len(espp)}')
 
 def parse_withdrawals_html(all_tables, state):
     search_withdrawal_header = [
