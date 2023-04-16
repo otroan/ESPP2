@@ -51,6 +51,8 @@ The espp2 tool takes a normalized transaction history for the current year, a ho
 
 ## Installation
 
+Requires Python3.11
+
 ```
 python3 -m venv venv
 source venv/bin/activate
@@ -59,40 +61,59 @@ pip install git+https://github.com/otroan/ESPP2.git#egg=espp2
 
 ## How to run
 
-The tool runs in two phases. First it uses the available transaction files to generate a holdings file for the previous tax year. Then it is run again with the holdings file from the previous year to generate the tax report for the current year.
+The tool runs in multiple phases to collect all the required data. The various use cases are described below. Most support is for Schwab users, Morgan Stanley is experimental.
 
-The various more or less supported use cases are described below.
-### Case 1: Schwab - Complete transaction history
+The transaction history for Schwab can be downloaded from https://eac.schwab.com:  Go to _History_, choose _Equity Award Center_ from the blue drop down box, date range _All_, click _Search_. Then there is the export link in the upper right corner of the page.
 
-If you have a complete transaction history from Schwab, you can just run the tool with the Schwab transaction file as input.
+This transaction history only covers transactions from the last 4 years. The further process depends on if this file covers all your transactions or if you have a pickle file from running the legacy espp tool last year. 
+
+### Option 1: Schwab - Transaction history is complete
+
+If you have a complete transaction history from Schwab, you can just run the tool with the transaction file as input.
 If you have made transfers to a Norwegian bank account, run the tool with the --outwires option to generate a template file for the wires.
 
 ```
-espp2 <schwab-all-transactions.csv> --outwires schwab-wires-2022.json
-espp2 <schwab-all-transactions.csv> --wires <schwab-wires-2022.json> --outholdings <schwab-holdings-2022.json>
+espp2 <schwab-all-transactions.csv> --outwires wires-2022.json
 ```
 
-### Case 2: Schwab - Incomplete transaction history. Not holding shares acquired prior to the transaction history in current tax year
+Now edit ```wires-2022.json``` and fill in the actual amount you have received in your bank acount in NOK where you see 'NaN'. Save the changes and re-run with the wire file to generate the tax report and a new holdings file that you should store in a save place for next year.
+
+```
+espp2 <schwab-all-transactions.csv> --wires wires-2022.json --outholdings holdings-2022.json
+```
+
+### Option 2: Schwab - Incomplete transaction history and Pickle file from the old tool
+
+Combine the transaction history from the pickle file with the CSV file, to generate a holdings file for the previous year:
+
+```
+espp2 <schwab.csv> <espp1.pickle> --outholdings holdings-2021.json
+```
+
+Re-run to with the holdings file to generate a wire template.
+
+```
+espp2 <schwab.csv> --inholdings holdings-2021.json --outwires wires-2022.json
+```
+
+Now edit ```wires-2022.json``` and fill in the actual amount you have received in your bank acount in NOK where you see 'NaN'. Save the changes and re-run a last time with the holdings and wire file to generate the tax report and a new holdings file that you should store in a save place for next year.
+
+```
+espp2 <schwab.csv> --inholdings holdings-2021.json --wires wires-2022.json  --outholdings holdings-2022.json
+```
+
+### Option 3: Schwab - Incomplete transaction history and not holding shares acquired prior to the transaction history in current tax year
 
 If all the shares held prior to the transaction history (4 years), have been sold prior to the tax year, then the tool does not need to deal with those stocks.
 
 Given an expected balance for the end of the previous tax year (2021-12-31 in this case), the tool walks the ledger backwards and inserts an artifical buy record at the beginning.
 
 ```
-espp2 <schwab-all-transactions.csv> --expected-balance '{"symbol": "CSCO", "qty": 936.5268 }' --outholdings <schwab-holdings-2021.json>
-espp2 <schwab-all-transactions.csv> --inholdings <schwab-holdings-2021.json> --outholdings <schwab-holdings-2022.json>
+espp2 <schwab-all-transactions.csv> --expected-balance '{"symbol": "CSCO", "qty": 936.5268 }' --outholdings holdings-2021.json
+espp2 <schwab-all-transactions.csv> --inholdings holdings-2021.json --outholdings holdings-2022.json
 ```
 
-### Case 3: Schwab - Incomplete transaction history + Pickle file from the old tool
-
-The tool will combine the transaction history from the pickle file with the CSV file, to generate a holdings file for the previous year.
-Then the tool must be run again with this holdings file to generate the tax report.
-
-```
-espp2 <schwab-all.csv> <espp1.pickle> --wires <schwab-wires-2022.json> --outholdings <schwab-holdings-2022.json>
-```
-
-### Case 4: Schwab - Incomplete transaction history and no pickle file
+### Option 4: Schwab - Incomplete transaction history and no pickle file
 
 This applies to a user who has so far done their foreign shares taxes manually.
 We can calculate the balance for the previous year by using the My_ESPP_Purchases.xls file and the My_Stock_Transactions.xls file from the stocks website. Combined with a manual record of the numbers of shares held at the end of the previous year.
@@ -101,14 +122,14 @@ We can calculate the balance for the previous year by using the My_ESPP_Purchase
 
 ```
 To generate the holdings file:
-espp2 My_ESPP_Purchases.xlsx My_Stock_Transactions.xlsx --outholdings stocks-2021.json --expected-balance "CSCO: 936.527"
+espp2 My_ESPP_Purchases.xlsx My_Stock_Transactions.xlsx --outholdings holdings-2021.json --expected-balance "CSCO: 936.527"
 
 To generate taxes:
-espp2 <schwab-2022.csv> --wires <schwab-wires-2022.json> --holdings <stocks-2021.json> --outholdings <schwab-holdings-2022.json>
+espp2 <schwab-2022.csv> --wires wires-2022.json --holdings holdings-2021.json> --outholdings holdings-2022.json
 ```
 
-### Schwab: None of the above works
-If none of the above works, then your best may be to run case 2 above, that generates a holdings file for 2021, and gives an artifical buy entry with purchase price 0 for the missing shares. You then need to go back and try to find the purchase prices for the stock buys that make up this lot. That information may be available in Schwab statements.
+### Option 5: Schwab - None of the above works
+If none of the above works, then your best may be to run option 3 above, that generates a holdings file for 2021, and gives an artifical buy entry with purchase price 0 for the missing shares. You then need to go back and try to find the purchase prices for the stock buys that make up this lot. That information may be available in Schwab statements.
 
 Another alternative is to try to manually create a Schwab CSV with all historical trades. Again from Schwab statements.
 
@@ -127,48 +148,8 @@ espp2 --help
 ```
 Will show the available options. The --verbose option will show the tax calculations in more detail and it is important to verify that these are correct.
 
-*In partiulcar it is important to verify that the total stock positions match the statements from the stock broker. If these numbers do not match, the resulting tax calculation will be wrong.*
+*In particular it is important to verify that the total stock positions match the statements from the stock broker. If these numbers do not match, the resulting tax calculation will be wrong.*
 
-
-
-## Schwab: You have an incomplete transaction history and none of the methods above works
-
-You will need to create a holdings file giving the opening balance for the last year. Schwab gives only 3 years of transaction history, so you will need to manually create the holdings file for the year overlapping with that. Which for the tax year of 2022 means that you must provide the opening balance as of 2019-12-31 or later. Note that Schwab provides statements going back 10 years.
-
-The holdings file is a JSON file with the following format:
-
-```
-{
-    "stocks": [
-        {
-            "symbol": "CSCO",
-            "date": "2019-12-31",
-            "qty": 1000.0,
-            "purchase_price": {
-                "value": NaN,
-            }
-        }
-    ],
-    "cash": [],
-    "year": 2019,
-    "broker": "schwab"
-}
-```
-
-If all the positions held in 2019 was sold in prior tax years, the tool do not need the purchasing price. If that is not the case, that you hold or have sold positions that are held in 2019 or earlier, you need to provide the purchase date and purchase price for all the held positions.
-
-## Web frontend
-
-The web frontend is a separate project and can be found at https://github.com/MittBrukernavn/ESPP2-web.
-
-The web interface lets the user drag and drop transaction files and presents the tax report in a nice table. It also lets the user download the holdings file, that will be used for running the tool next year.
-
-It also allows the user to input the actual NOK values for received wires and to provide an opening balance.
-
-The web interface uses the same backend as the command line tool, so the same data formats are used.
-It is a single request / response REST API between the frontend and the backend. No data is stored on the server, and if the user makes a change to the input, the whole tax calculation is redone.
-
-While the server does some logging, the transaction files are not stored on the server.
 
 
 ## Release notes
