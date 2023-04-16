@@ -108,15 +108,24 @@ def do_transfer(record, source):
                     fee=Amount(amountdate=record['date'], currency='USD', value=-record['fee']),
                     source=source)
 
+dividends = {}
 def do_dividend(record, source):
     ''' Dividends '''
-    return Dividend(type=EntryTypeEnum.DIVIDEND,
+    d =  Dividend(type=EntryTypeEnum.DIVIDEND,
                     date=record['payDate'],
                     symbol='CSCO',
                     description='',
                     amount_ps=Amount(amountdate=record['payDate'], currency='USD',
                                      value=record['amount']),
                     source=source)
+    k = (d.date, d.symbol, d.amount_ps.value)
+    # Do deduplication of dividends (some old pickle files have duplicates)
+    if k in dividends:
+        logger.warning('Duplicate dividend entry in pickle file, ignoring it: %s', d)
+        return None
+    dividends[k] = True
+
+    return d
 
 def do_tax(record, source):
     ''' Dividend tax'''
