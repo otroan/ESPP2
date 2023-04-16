@@ -518,9 +518,11 @@ class Positions():
                         r = self.individual_sale(s, positions[posidx], qty_to_sell)
                     positions[posidx].qty -= qty_to_sell
                     qty_to_sell = 0
-                if not is_sale:
-                    continue
-                s_record.from_positions.append(r)
+                if is_sale:
+                    s_record.from_positions.append(r)
+            if not is_sale:
+                continue
+
             total_gain = sum(item.gain_ps * item.qty
                              for item in s_record.from_positions)
             if self.year == 2022:
