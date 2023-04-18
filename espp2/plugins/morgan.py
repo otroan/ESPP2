@@ -67,6 +67,7 @@ class ParseState:
         self.activity = '<unknown>'
         self.symbol = None
         self.entry_date = None
+        self.date2dividend = dict()
 
     def preparse_row(self, row):
         '''Parse common aspects of a row, return True for further parsing'''
@@ -119,14 +120,29 @@ class ParseState:
     def dividend(self, amount):
         assert self.symbol is not None
 
+        date = self.entry_date
+
         r = { 'type': EntryTypeEnum.DIVIDEND,
-              'date': self.entry_date,
+              'date': date,
               'symbol': self.symbol,
               'amount': amount,
               'source': self.source,
               'description': 'Credit' }
 
-        self.transactions.append(parse_obj_as(Entry, r))
+        if date in self.date2dividend:
+            rr = self.date2dividend[date]
+            assert(r['amount']['nok_exchange_rate'] == rr.amount.nok_exchange_rate)
+            rr.amount.value += r['amount']['value']
+            rr.amount.nok_value += r['amount']['nok_value']
+            print(f"### DIV: {date} +{r['amount']['value']} (Again)")
+            return
+
+        print(f"### DIV: {date} +{r['amount']['value']} (First)")
+        self.date2dividend[date] = parse_obj_as(Entry, r)
+
+    def flush_dividend(self):
+        for date in self.date2dividend.keys():
+            self.transactions.append(self.date2dividend[date])
 
     def dividend_reinvest(self, amount):
         assert self.symbol is not None
@@ -167,6 +183,7 @@ class ParseState:
         purchase_price = fixup_price2(self.entry_date, currency, book_value / qty)
 
         self.deposit(qty, purchase_price, 'RS', self.entry_date)
+        self.qty_delta = qty
         return True
 
     def parse_dividend_reinvest(self, row):
@@ -177,9 +194,6 @@ class ParseState:
         qty, price, ok = getitems(row, 'Number of Shares', 'Share Price')
         if not ok:
             raise ValueError(f'Missing columns for {row}')
-
-        if self.entry_date < '2022-01-01':
-            return True   # Don't deal with historic complications
 
         qty = Decimal(qty)
         price, currency = morgan_price(price)
@@ -226,9 +240,6 @@ class ParseState:
 
         if qty_ok and cash_ok:
             raise ValueError(f'Unexpected cash+shares for dividend: {row}')
-
-        if self.entry_date < '2022-01-01':
-            return True   # Don't deal with historic complications
 
         if qty_ok:
             qty = Decimal(qty)
@@ -278,7 +289,7 @@ class ParseState:
             price = currency_converter[(self.symbol, self.entry_date)]
             purchase_price = fixup_price2(self.entry_date, 'USD', price)
 
-            self.deposit(qty, purchase_price, 'RS', self.entry_date)
+            #self.deposit(qty, purchase_price, 'RS', self.entry_date)
             return True
         raise ValueError(f'Unexpected opening balance: {row}')
 
@@ -402,6 +413,35 @@ def getitems(row, *colnames):
     rc.append(ok)
     return tuple(rc)
 
+def parse_rsu_holdings_table(state, recs):
+    state.symbol = 'CSCO'   # Fail on other types of shares
+    for row in recs:
+        # print(f'RSU-Holdings: {row}')
+        fund, date, buy_price, qty, ok = getitems(row, 'Fund', 'Acquisition Date', 'Cost Basis Per Share *', 'Total Shares You Hold')
+        if ok:
+            if not re.fullmatch(r'''CSCO\s.*''', fund):
+                raise ValueError(f'Non-Cisco RSU shares: {fund}')
+            date = fixup_date(date)
+            qty = Decimal(qty)
+            price, currency = morgan_price(buy_price)
+            purchase_price = fixup_price2(date, currency, price)
+            state.entry_date = date
+            state.deposit(qty, purchase_price, 'RS', date)
+            # print(f'### RSU {qty} {date} {price}')
+
+def parse_espp_holdings_table(state, recs):
+    for row in recs:
+        # print(f'ESPP-Holdings: {row}')
+        date, buy_price, qty, ok = getitems(row, 'Purchase Date', 'Purchase Price', 'Total Shares You Hold')
+        if ok:
+            date = fixup_date(date)
+            qty = Decimal(qty)
+            price, currency = morgan_price(buy_price)
+            purchase_price = fixup_price2(date, currency, price)
+            state.entry_date = date
+            state.deposit(qty, purchase_price, 'ESPP', date)
+            # print(f'### ESPP {qty} {date} {price}')
+
 def parse_rsu_table(state, recs):
     ignore = {
         'Opening Value': True,
@@ -419,17 +459,23 @@ def parse_rsu_table(state, recs):
         'Historical Transaction': True, # TODO: This should update cash-balance
     }
 
+    # Record QTY deltas for RSUs so the RSU holdings table is only used for
+    # what is not recorded as proper transactions
+    transaction_qtys = []
+
     for row in recs:
         if not state.preparse_row(row):
             continue
 
         if state.parse_rsu_release(row):
+            transaction_qtys.append(state.qty_delta)
             continue
 
         if state.parse_dividend_reinvest(row):
             continue
 
         if state.parse_sale(row):
+            transaction_qtys.append(state.qty_delta)
             continue
 
         if state.parse_dividend_cash(row):
@@ -446,7 +492,9 @@ def parse_rsu_table(state, recs):
 
         raise ValueError(f'Unknown RSU activity: "{state.activity}"')
 
-def parse_espp_table(state, recs):
+    return transaction_qtys
+
+def parse_espp_activity_table(state, recs):
     ignore = {
         'Opening Value': True,
         'Closing Value': True,
@@ -454,6 +502,8 @@ def parse_espp_table(state, recs):
         'Transfer out': True,
         'Historical Transaction': True,
         'Wash Sale Adjustment': True,
+        'Cash Transfer In': True,
+        'Cash Transfer Out': True,
     }
 
     for row in recs:
@@ -597,7 +647,8 @@ def fixuptext(text):
     substitute = {
         ord('\t'): ' ',
         ord('\n'): ' ',
-        ord('\r'): ' '
+        ord('\r'): ' ',
+        0xA0: ' ', # Non-breaking space => Regular space
     }
     rc = text.translate(substitute)
     while True:
@@ -705,7 +756,63 @@ def find_tables_by_header(tables, search_header, hline=0):
             rc.append(t)
     return rc
 
-def parse_rsu_html(all_tables, state):
+def parse_account_summary_html(tables):
+    any = re.compile(r'''(.*)''')
+    search_account_summary = [
+        [''],
+        [any, '', re.compile(r'''Account Summary Statement(.*)''')]
+    ]
+    summary = find_tables_by_header(tables, search_account_summary, 1)
+    assert(len(summary) == 1)
+    period = summary[0].data[1][2]
+    #print(f'####### period={period} #######')
+    m = re.fullmatch(r'''.*Period\s*:\s+(\S+)\s+to\s+(\S+).*''', period)
+    if m:
+        return (fixup_date(m.group(1)), fixup_date(m.group(2)))
+    raise ValueError('Failed to parse Account Summary Statement')
+
+def parse_rsu_holdings_html(all_tables, state):
+    '''Look for RSU holdings table and include historic holdings as deposits'''
+    search_rsu_holdings = [
+        ['Summary of Stock/Shares Holdings'],
+        ['Fund', 'Acquisition Date', 'Lot', 'Capital Gain Impact',
+         'Gain/Loss', 'Cost Basis *', 'Cost Basis Per Share *',
+         'Total Shares You Hold', 'Current Price per Share', 'Current Value' ],
+        ['Type of Money: Employee']
+    ]
+
+    rsu_holdings = find_tables_by_header(all_tables, search_rsu_holdings, 1)
+    if len(rsu_holdings) == 0:
+        return
+
+    assert(len(rsu_holdings) == 1)
+
+    # print('#### Found RSU holdings')
+
+    parse_rsu_holdings_table(state, rsu_holdings[0].to_dict())
+
+def parse_espp_holdings_html(all_tables, state):
+    '''Parse ESPP holdings table and include historic holdings as deposits'''
+    search_espp_holdings = [
+        ['Purchase History for Stock/Shares'],
+        ['Grant Date', 'Subscription Date', 'Subscription Date FMV',
+         'Purchase Date', 'Purchase Date FMV', 'Purchase Price',
+         'Qualification Date *', 'Shares Purchased', 'Total Shares You Hold',
+         'Current Share Price', 'Current Value'],
+        ['Fund: CSCO - NASDAQ']
+    ]
+
+    espp_holdings = find_tables_by_header(all_tables, search_espp_holdings, 1)
+    if len(espp_holdings) == 0:
+        return
+
+    assert(len(espp_holdings) == 1)
+
+    #print('#### Found ESPP holdings')
+
+    parse_espp_holdings_table(state, espp_holdings[0].to_dict())
+
+def parse_rsu_activity_html(all_tables, state):
     '''Look for the RSU table and parse it'''
     search_rsu_header = [
         ['Activity'],
@@ -716,9 +823,9 @@ def parse_rsu_html(all_tables, state):
     rsu = find_tables_by_header(all_tables, search_rsu_header, 1)
     assert len(rsu) == 1
 
-    parse_rsu_table(state, rsu[0].to_dict())
+    return parse_rsu_table(state, rsu[0].to_dict())
 
-def parse_espp_html(all_tables, state):
+def parse_espp_activity_html(all_tables, state):
     '''Look for the ESPP table and parse it'''
     any = re.compile(r'''(.*)''')
     search_espp_header = [
@@ -728,8 +835,20 @@ def parse_espp_html(all_tables, state):
     ]
 
     espp = find_tables_by_header(all_tables, search_espp_header, 1)
+
+    if len(espp) == 0:
+        search_espp_header = [
+            ['Activity'],
+            ['Entry Date', 'Activity', 'Cash',
+             'Number of Shares', 'Share Price', 'Market Value']
+        ]
+
+        espp = find_tables_by_header(all_tables, search_espp_header, 1)
+
+    print(f'### ESPP tables found: {len(espp)}')
+
     if len(espp) == 1:
-        parse_espp_table(state, espp[0].to_dict())
+        parse_espp_activity_table(state, espp[0].to_dict())
     elif len(espp) != 0:
         raise ValueError(f'Expected 0 or 1 ESPP tables, got {len(espp)}')
 
@@ -783,9 +902,28 @@ def morgan_html_import(html_fd, filename):
 
     state = ParseState(filename)
 
-    parse_rsu_html(all_tables, state)
-    parse_espp_html(all_tables, state)
-    parse_withdrawals_html(all_tables, state)
+    start_period, end_period = parse_account_summary_html(all_tables)
+
+    if end_period == '2021-12-31':
+        # Parse the holdings tables to produce deposits to establish the
+        # holdings at the end of 2021.
+        print('Parse RSU holdings ...')
+        parse_rsu_holdings_html(all_tables, state)
+        print('Parse ESPP holdings ...')
+        parse_espp_holdings_html(all_tables, state)
+
+    elif start_period == '2022-01-01' and end_period == '2022-12-31':
+        print('Parse RSU activity ...')
+        parse_rsu_activity_html(all_tables, state)
+        print('Parse ESPP activity ...')
+        parse_espp_activity_html(all_tables, state)
+        print('Parse withdrawals ...')
+        parse_withdrawals_html(all_tables, state)
+        state.flush_dividend()
+    else:
+        raise ValueError(f'Period {start_period} - {end_period} is unexpected')
+
+    print('Done')
 
     transes = sorted(state.transactions, key=lambda d: d.date)
 
