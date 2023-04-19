@@ -168,6 +168,16 @@ class ParseState:
 
         self.transactions.append(parse_obj_as(Entry, r))
 
+    def cashadjust(self, date, amount, description):
+        '''Ad-hoc cash-adjustment (positive or negative)'''
+        r = { 'type': EntryTypeEnum.CASHADJUST,
+              'date': date,
+              'amount': amount,
+              'description': description,
+              'source': self.source }
+
+        self.transactions.append(parse_obj_as(Entry, r))
+
     def parse_rsu_release(self, row):
         '''Handle what appears to be RSUs added to account'''
         m = re.match(r'''^Release\s+\(([A-Z0-9]+)\)''', self.activity)
@@ -909,8 +919,8 @@ def parse_cash_holdings_html(all_tables, state):
                 total += Decimal(value)
                 print(f'### Cash: {value}')
     print(f'### Cash holdings: {total}')
-    if total != Decimal(0):
-        raise ValueError(f'TODO: Cash-balance out of 2021 not handled')
+    cash = fixup_price2('2021-12-31', 'USD', total)
+    state.cashadjust('2021-12-31', cash, 'Closing balance 2021')
 
 def morgan_html_import(html_fd, filename):
     '''Parse Morgan Stanley HTML table file.'''
