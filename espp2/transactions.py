@@ -65,11 +65,15 @@ def get_arguments():
 def guess_format(filename, data) -> str:
     '''Guess format'''
     fname, extension = os.path.splitext(filename)
+
+    data.seek(0)
+    filebytes = data.read(32)
+    data.seek(0)
+
     if extension == '.pickle':
         return 'pickle'
 
-    if extension == '.html' and data.read(1) == b'<':
-        data.seek(0)
+    if extension == '.html' and filebytes[0:1] == b'<':
         return 'morgan'
 
     if extension == '.xlsx':
@@ -79,16 +83,13 @@ def guess_format(filename, data) -> str:
             return 'csco_stock_transactions'
 
     # Assume CSV
-    data.seek(0)
-    if data.read(20) == b'"Transaction Details':
-        data.seek(0)
+    if filebytes[0:20] == b'"Transaction Details':
         return 'schwab'
 
-    data.seek(0)
-    if data.read(16) == b'DATE,TRANSACTION':
-        data.seek(0)
+    if filebytes[0:16] == b'DATE,TRANSACTION':
         return 'td'
-    raise ValueError('Unable to guess format', fname, extension)
+
+    raise ValueError('Unable to guess format', fname, extension, filebytes)
 
 def normalize(data: Union[UploadFile, typer.FileText]) -> Transactions:
     '''Normalize transactions'''
