@@ -236,6 +236,9 @@ class Positions():
         # Fees
         self.db_fees = [t for t in transactions if t.type == 'FEE']
 
+        # Cashadjusts
+        self.db_cashadjusts = [t for t in transactions if t.type == 'CASHADJUST']
+
         # Add tax deduction to the positions we still hold at the end of the year
         self.add_tax_deductions()
 
@@ -335,6 +338,11 @@ class Positions():
             self.cash.debit(t.date, t.amount, 'tax paid back')
         for i in self.db_dividend_reinv:
             self.cash.credit(i.date, i.amount, 'dividend reinvested')
+        for t in self.db_cashadjusts:
+            if t.amount.value > 0:
+                self.cash.debit(t.date, t.amount, t.description)
+            elif t.amount.value < 0:
+                self.cash.credit(t.date, t.amount, t.description)
 
         r=[]
         norwegian_dividend_split = datetime(2022, 10, 5).date()
