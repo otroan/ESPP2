@@ -26,6 +26,7 @@ class EntryTypeEnum(str, Enum):
     SELL = 'SELL'
     TRANSFER = 'TRANSFER'
     FEE = 'FEE'
+    CASHADJUST = 'CASHADJUST'
 
     def __str__(self):
         return self.value
@@ -245,9 +246,16 @@ class Transfer(TransactionEntry):
     fee: Optional[NegativeAmount] = 0
     source: str
     id: str = Optional[str]
- 
+
+class Cashadjust(TransactionEntry):
+    '''Adjust the cash-balance with a positive or negative adjustment'''
+    type: Literal[EntryTypeEnum.CASHADJUST]
+    date: date
+    amount: Amount
+    description: str
+
 Entry = Annotated[Union[Buy, Deposit, Tax, Taxsub, Dividend,
-                        Dividend_Reinv, Wire, Sell, Transfer, Fee], Field(discriminator="type")]
+                        Dividend_Reinv, Wire, Sell, Transfer, Fee, Cashadjust], Field(discriminator="type")]
 
 class Transactions(BaseModel):
     '''Transactions'''
