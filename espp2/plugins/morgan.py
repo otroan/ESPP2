@@ -894,6 +894,24 @@ def parse_withdrawals_html(all_tables, state):
     parse_withdrawal_sales(state, sales)
     parse_withdrawal_proceeds(state, proceeds)
 
+def parse_cash_holdings_html(all_tables, state):
+    search_cash_holding_header = [
+        ['Summary of Cash Holdings'],
+        ['Fund', 'Current Value'],
+    ]
+    cashtabs = find_tables_by_header(all_tables, search_cash_holding_header)
+    total = Decimal('0.00')
+    for ct in cashtabs:
+        for row in ct.rows:
+            if len(row) == 2 and row[0] == 'Cash - USD':
+                value, currency = morgan_price(row[1])
+                assert(currency == 'USD')
+                total += Decimal(value)
+                print(f'### Cash: {value}')
+    print(f'### Cash holdings: {total}')
+    if total != Decimal(0):
+        raise ValueError(f'TODO: Cash-balance out of 2021 not handled')
+
 def morgan_html_import(html_fd, filename):
     '''Parse Morgan Stanley HTML table file.'''
 
@@ -911,6 +929,8 @@ def morgan_html_import(html_fd, filename):
         parse_rsu_holdings_html(all_tables, state)
         print('Parse ESPP holdings ...')
         parse_espp_holdings_html(all_tables, state)
+        print('Parse Cash holdings ...')
+        parse_cash_holdings_html(all_tables, state)
 
     elif start_period == '2022-01-01' and end_period == '2022-12-31':
         print('Parse RSU activity ...')
