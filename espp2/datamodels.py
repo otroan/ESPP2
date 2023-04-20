@@ -387,9 +387,9 @@ class CreditDeduction(BaseModel):
     '''Credit deduction'''
     symbol: str
     country: str
-    income_tax: condecimal(gt=0, decimal_places=0)
-    gross_share_dividend: condecimal(gt=0, decimal_places=0)
-    tax_on_gross_share_dividend: condecimal(gt=0, decimal_places=0)
+    income_tax: condecimal(ge=0, decimal_places=0)
+    gross_share_dividend: condecimal(ge=0, decimal_places=0)
+    tax_on_gross_share_dividend: condecimal(ge=0, decimal_places=0)
 
 class TransferRecord(BaseModel):
     '''Transfers'''

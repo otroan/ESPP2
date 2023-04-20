@@ -161,6 +161,8 @@ class Positions():
         # assert(len(wrong_year) == 0)
         self.year = year
         self.generate_holdings = generate_holdings
+        self.dividend_validation = dividend_validation
+
         # if not isinstance(cash, Cash):
         #     raise ValueError('Cash must be instance of Cash')
 
@@ -395,7 +397,8 @@ class Positions():
 
                 logger.info(
                     'Total shares of %s at dividend date: %s dps: %s reported: %s', symbol, total_shares, dps, d.dividend_dps)
-                assert isclose(dps, d.dividend_dps, abs_tol=10**-2), f"Dividend for {exdate}/{d.date} per share calculated does not match reported {dps} vs {d.dividend_dps} for {total_shares} {d.amount.value}"
+                if not isclose(dps, d.dividend_dps, abs_tol=10**-2):
+                    logger.error(f"Dividend for {exdate}/{d.date} per share calculated does not match reported {dps} vs {d.dividend_dps} for {total_shares} shares. Dividend: {d.amount.value}. Dividend payment indicates you had: {d.amount.value / d.dividend_dps} shares.")
                 for entry in self[:exdate, symbol]:  # Creates a view
                     entry.dps = dps if 'dps' not in entry else entry.dps + dps
                     dps_nok = dps * d.amount.nok_exchange_rate
