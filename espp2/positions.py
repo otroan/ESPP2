@@ -161,7 +161,6 @@ class Positions():
         # assert(len(wrong_year) == 0)
         self.year = year
         self.generate_holdings = generate_holdings
-        self.dividend_validation = dividend_validation
 
         # if not isinstance(cash, Cash):
         #     raise ValueError('Cash must be instance of Cash')
