@@ -13,14 +13,30 @@ The tax processing pipeline looks something like this:
 
 ```mermaid
 graph LR;
-    Holdings-2021-->ESPP2{{ESPP2}}
+    Schwab["schwab-transactions-all.csv"]-->schwab-importer{{schwab-importer}}
+    ExpectedBalance2["ExpectedBalance"]-.->schwab-importer
+    schwab-importer-->Holdings-2021
+    schwab-importer-->ESPP2{{ESPP2}}
+    
+    My_ESPP_Purchases.xlsx-->stocks-importer{{stocks-importer}}
+    My_Stock_Transactions.xlsx-->stocks-importer
+    ExpectedBalance-->stocks-importer
+    stocks-importer-->Holdings-2021
+
+    TD["td-ameritrade-transactions-all.csv"]-->td-importer{{td-importer}}
+    td-importer-->Holdings-2021
+    td-importer-->ESPP2
+
+    Morgan["Morgan userStatement.html"]-->morgan-importer{{morgan-importer}}
+    morgan-importer-->ESPP2
+    morgan-importer-->Holdings-2021
+
+    ESPPv1-Pickle-->pickle-importer{{pickle-imporer}}
+    pickle-importer-->Holdings-2021
+
+    Holdings-2021-.->ESPP2{{ESPP2}}
     ESPP2-->Tax-Report-2022
     ESPP2-->Holdings-2022
-    Schwab["schwab-transactions-all.csv"]-->ESPP2{{ESPP2}}
-    TD["td-ameritrade-transactions-all.csv"]-->ESPP2{{ESPP2}}
-    Morgan["morgan-transactions-complete.html"]-->ESPP2{{ESPP2}}
-    ESPPv1-Pickle-.->ESPP2{{ESPP2}}
-    Manual["Manually Entered opening balance"]-.->ESPP2{{ESPP2}}
 ```
 
 In case you are transitioning from the old tool or having not used a tool at all, see the section "if you have no holdings file" below.
@@ -155,6 +171,7 @@ Will show the available options. The --verbose option will show the tax calculat
 ## Release notes
 
 - We only have ESPP exchange rates back to 2013. If you sell ESPP shares that are purchased prior to 2013, you will need to manually enter the exchange rate for those shares.
+- ESPP shares purchased on the last day of the year, although they are received in the trading account in the next year, use the purchase date.
 - The tax-free deduction was introduced in 2006. If you hold shares purchased prior to 2006, you will need to manually enter the purchase price for those shares.
 - ESPP shares purchases on the last day of the year receives the tax free deduction and counts against wealth tax. Even though they are not in the broker account yet.
 - For exchange rate gains/losses within the same year as the stock sale, those can be added to the stock gains/losses.
