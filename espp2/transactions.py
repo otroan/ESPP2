@@ -65,6 +65,7 @@ def get_arguments():
 def guess_format(filename, data) -> str:
     '''Guess format'''
     fname, extension = os.path.splitext(filename)
+    extension = extension.lower()
 
     data.seek(0)
     filebytes = data.read(32)
@@ -73,8 +74,9 @@ def guess_format(filename, data) -> str:
     if extension == '.pickle':
         return 'pickle'
 
-    if extension == '.html' and filebytes[0:1] == b'<':
-        return 'morgan'
+    if extension == '.html' or extension == '.htm':
+        if filebytes[0:1] == b'<':
+            return 'morgan'
 
     if extension == '.xlsx':
         if 'My_ESPP_Purchases' in fname:
