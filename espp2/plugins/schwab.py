@@ -68,6 +68,7 @@ def action_to_type(value, description):
          'Sale': 'SELL',
          'Quick Sale': 'SELL',
          'Journal': 'WIRE',
+         'Adjustment': 'CASHADJUST',
          }
     # if value == 'Deposit' and description == 'Div Reinv':
     #     return 'BUY'
