@@ -69,25 +69,28 @@ class ParseState:
         self.entry_date = None
         self.date2dividend = dict()
 
-    def preparse_row(self, row):
-        '''Parse common aspects of a row, return True for further parsing'''
-        # Set entry-date, or symbol for special header-lines
+    def parse_activity(self, row):
+        '''Parse the "Activity" column'''
+        self.activity = getitem(row, 'Activity')
+
+    def parse_entry_date(self, row):
+        '''Parse the "Entry Date" date, common to many tables'''
         date = getitem(row, 'Entry Date')
         if date is None:
             raise ValueError(f'Entry-date is not provided for {row}')
-
-        # Check for indication of which stock is to follow
-        m = re.match(r'''^Fund:\s+([A-Za-z]+)\s''', date)
-        if m:
-            self.symbol = m.group(1)
-            if self.symbol == 'Cash':
-                self.symbol = None
-            return False    # No more parsing needed
-
         self.entry_date = fixup_date(date)
-        self.activity = getitem(row, 'Activity')
 
-        return True
+    def parse_fund_symbol(self, row, column):
+        '''Parse the "Fund: CSCO - NASDAQ" type headers'''
+        item, ok = getitems(row, column)
+        if ok:
+            m = re.match(r'''^Fund:\s+([A-Za-z]+)\s''', item)
+            if m:
+                self.symbol = m.group(1)
+                if self.symbol == 'Cash':
+                    self.symbol = None
+                return True    # No more parsing needed
+        return False
 
     def deposit(self, qty, purchase_price, description, purchase_date=None):
         assert self.symbol is not None
@@ -236,7 +239,7 @@ class ParseState:
             raise ValueError(f'Missing columns for {row}')
         qty = Decimal(qty)
         price = currency_converter[(self.symbol, self.entry_date)]
-        purchase_price = fixup_price2(self.entry_date, 'USD', price)
+        purchase_price = fixup_price2(self.entry_date, 'ESPPUSD', price)
 
         self.deposit(qty, purchase_price, 'ESPP', self.entry_date)
         return True
@@ -423,6 +426,14 @@ def getitems(row, *colnames):
     rc.append(ok)
     return tuple(rc)
 
+def getoptcolitem(row, column, default_value):
+    '''If a column exist, return its value, otherwise the default value'''
+    if column in row:
+        item = row[column]
+        if item is not None and item != '':
+            return item
+    return default_value
+
 def parse_rsu_holdings_table(state, recs):
     state.symbol = 'CSCO'   # Fail on other types of shares
     for row in recs:
@@ -442,17 +453,30 @@ def parse_rsu_holdings_table(state, recs):
 def parse_espp_holdings_table(state, recs):
     for row in recs:
         # print(f'ESPP-Holdings: {row}')
-        date, buy_price, qty, ok = getitems(row, 'Purchase Date', 'Purchase Price', 'Total Shares You Hold')
-        if ok:
-            date = fixup_date(date)
-            qty = Decimal(qty)
-            price, currency = morgan_price(buy_price)
-            purchase_price = fixup_price2(date, currency, price)
-            state.entry_date = date
-            state.deposit(qty, purchase_price, 'ESPP', date)
-            # print(f'### ESPP {qty} {date} {price}')
+        if state.parse_fund_symbol(row, 'Grant Date'):
+            continue
 
-def parse_rsu_table(state, recs):
+        offeringtype = getoptcolitem(row, 'Offering Type', 'Contribution')
+        date, qty, ok = getitems(row, 'Purchase Date', 'Total Shares You Hold')
+        if ok:
+            assert(state.symbol == 'CSCO')
+            date = fixup_date(date)
+            state.entry_date = date
+            qty = Decimal(qty)
+            price = currency_converter[(state.symbol, state.entry_date)]
+            if offeringtype == 'Contribution':
+                # Regular ESPP buy at reduced price
+                purchase_price = fixup_price2(date, 'ESPPUSD', price)
+                state.deposit(qty, purchase_price, 'ESPP', date)
+                # print(f'### ESPP {qty} {date} {price}')
+            elif offeringtype == 'Dividend':
+                # Reinvested dividend from ESPP shares at regular price
+                purchase_price = fixup_price2(date, 'USD', price)
+                state.deposit(qty, purchase_price, 'Reinvest', date)
+            else:
+                raise ValueError(f'Unexpected offering type: {offeringtype}')
+
+def parse_rsu_activity_table(state, recs):
     ignore = {
         'Opening Value': True,
         'Closing Value': True,
@@ -474,8 +498,10 @@ def parse_rsu_table(state, recs):
     transaction_qtys = []
 
     for row in recs:
-        if not state.preparse_row(row):
+        if state.parse_fund_symbol(row, 'Entry Date'):
             continue
+        state.parse_entry_date(row)
+        state.parse_activity(row)
 
         if state.parse_rsu_release(row):
             transaction_qtys.append(state.qty_delta)
@@ -517,8 +543,10 @@ def parse_espp_activity_table(state, recs):
     }
 
     for row in recs:
-        if not state.preparse_row(row):
+        if state.parse_fund_symbol(row, 'Entry Date'):
             continue
+        state.parse_entry_date(row)
+        state.parse_activity(row)
 
         if state.parse_dividend_reinvest(row):
             continue
@@ -795,6 +823,7 @@ def parse_rsu_holdings_html(all_tables, state):
     if len(rsu_holdings) == 0:
         return
 
+    print(f'### LEN(rsu_holdings)={len(rsu_holdings)}')
     assert(len(rsu_holdings) == 1)
 
     # print('#### Found RSU holdings')
@@ -803,17 +832,29 @@ def parse_rsu_holdings_html(all_tables, state):
 
 def parse_espp_holdings_html(all_tables, state):
     '''Parse ESPP holdings table and include historic holdings as deposits'''
-    search_espp_holdings = [
+
+    search1 = [
         ['Purchase History for Stock/Shares'],
         ['Grant Date', 'Subscription Date', 'Subscription Date FMV',
          'Purchase Date', 'Purchase Date FMV', 'Purchase Price',
          'Qualification Date *', 'Shares Purchased', 'Total Shares You Hold',
-         'Current Share Price', 'Current Value'],
-        ['Fund: CSCO - NASDAQ']
+         'Current Share Price', 'Current Value']
     ]
 
-    espp_holdings = find_tables_by_header(all_tables, search_espp_holdings, 1)
+    search2 = [
+        ['Purchase History for Stock/Shares'],
+        ['Grant Date', 'Offering Type', 'Subscription Date',
+         'Subscription Date FMV', 'Purchase Date', 'Purchase Date FMV',
+         'Purchase Price', 'Qualification Date *', 'Shares Purchased',
+         'Total Shares You Hold', 'Current Share Price', 'Current Value']
+    ]
+
+    espp_holdings = find_tables_by_header(all_tables, search1, 1)
     if len(espp_holdings) == 0:
+        espp_holdings = find_tables_by_header(all_tables, search2, 1)
+
+    if len(espp_holdings) == 0:
+        print('No ESPP holdings found for 2021')
         return
 
     assert(len(espp_holdings) == 1)
@@ -831,9 +872,11 @@ def parse_rsu_activity_html(all_tables, state):
     ]
 
     rsu = find_tables_by_header(all_tables, search_rsu_header, 1)
-    assert len(rsu) == 1
+    if len(rsu) == 0:
+        return
 
-    return parse_rsu_table(state, rsu[0].to_dict())
+    assert len(rsu) == 1
+    parse_rsu_activity_table(state, rsu[0].to_dict())
 
 def parse_espp_activity_html(all_tables, state):
     '''Look for the ESPP table and parse it'''
