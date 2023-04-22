@@ -249,7 +249,8 @@ def do_taxes(broker, transaction_file, holdfile,
 
 
 def do_holdings_1(broker, transaction_files: list, holdfile,
-                  year, verbose=False, opening_balance=None) -> Holdings:
+                  year, verbose=False, opening_balance=None,
+                  force_tax_deduct_reset=False) -> Holdings:
     '''Generate holdings file'''
     prev_holdings = []
     transactions, years = merge_transactions(transaction_files)
@@ -265,8 +266,30 @@ def do_holdings_1(broker, transaction_files: list, holdfile,
         prev_holdings = opening_balance
 
     logger.info('Changes in holdings for previous year')
-    return generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
+    holdings = generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
 
+    if force_tax_deduct_reset:
+        #
+        # Force tax-deduct reset. This is needed if the history is
+        # incomplete and we can only make an assumption that tax-deduction
+        # have been applied, and that we can't apply it a second time.
+        # This is for the year 2021 specifically - to bootstrap holdings
+        # for Morgan users. The cut-off date below is the exdate for
+        # the last dividend payout in 2021: For held shares aquired after this
+        # date, no shielding could have been claimed for 2021 tax, so
+        # we bring the shielding forward in the holdings (for use next year).
+        # For shares bought before the exdate, the dividend payout would have
+        # consumed the shielding (if shielding tax-deduction was claimed), so
+        # we can't safely assume any accumulated shielding for such shares
+        #
+        for x in holdings.stocks:
+            if str(x.date) >= '2021-10-04' and year == 2022:
+                skjerming = Decimal('0.005') * x.purchase_price.nok_value
+                x.tax_deduction = skjerming
+            else:
+                x.tax_deduction = Decimal('0.00')
+
+    return holdings
 
 def do_holdings_2(broker, transaction_files: list, year, expected_balance, verbose=False) -> Holdings:
     '''Calculate a holdings based on an expected balance and the ESPP and RSU transaction files'''
