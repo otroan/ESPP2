@@ -387,8 +387,8 @@ def do_holdings_4(broker, transaction_file, year, verbose=False) -> Holdings:
     # consumed the shielding (if shielding tax-deduction was claimed), so
     # we can't safely assume any accumulated shielding for such shares
     #
-    last_dividend_date = datetime.strptime('2021-10-04', '%Y-%m-%d').date()
-    tax_deduction_rate = get_tax_deduction_rate(year-1)
+    last_dividend_date = datetime.date(2021, 10, 4)
+    tax_deduction_rate = get_tax_deduction_rate(year-1) * Decimal('0.01')
     for x in holdings.stocks:
         assert x.symbol == 'CSCO'
         if x.date >= last_dividend_date:
