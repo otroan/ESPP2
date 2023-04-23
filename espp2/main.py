@@ -249,8 +249,7 @@ def do_taxes(broker, transaction_file, holdfile,
 
 
 def do_holdings_1(broker, transaction_files: list, holdfile,
-                  year, verbose=False, opening_balance=None,
-                  force_tax_deduct_reset=False) -> Holdings:
+                  year, verbose=False, opening_balance=None) -> Holdings:
     '''Generate holdings file'''
     prev_holdings = []
     transactions, years = merge_transactions(transaction_files)
@@ -267,27 +266,6 @@ def do_holdings_1(broker, transaction_files: list, holdfile,
 
     logger.info('Changes in holdings for previous year')
     holdings = generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
-
-    if force_tax_deduct_reset:
-        #
-        # Force tax-deduct reset. This is needed if the history is
-        # incomplete and we can only make an assumption that tax-deduction
-        # have been applied, and that we can't apply it a second time.
-        # This is for the year 2021 specifically - to bootstrap holdings
-        # for Morgan users. The cut-off date below is the exdate for
-        # the last dividend payout in 2021: For held shares aquired after this
-        # date, no shielding could have been claimed for 2021 tax, so
-        # we bring the shielding forward in the holdings (for use next year).
-        # For shares bought before the exdate, the dividend payout would have
-        # consumed the shielding (if shielding tax-deduction was claimed), so
-        # we can't safely assume any accumulated shielding for such shares
-        #
-        for x in holdings.stocks:
-            if str(x.date) >= '2021-10-04' and year == 2022:
-                skjerming = Decimal('0.005') * x.purchase_price.nok_value
-                x.tax_deduction = skjerming
-            else:
-                x.tax_deduction = Decimal('0.00')
 
     return holdings
 
@@ -362,8 +340,6 @@ def do_holdings_3(broker, transaction_file, year, expected_balance, verbose=Fals
                             purchase_price=purchase_price, source='artificial')
         transes.insert(0, buy_trans)
 
-    t = sorted(transes, key=lambda d: d.date)
-
     # Determine from which file to use for which year
     t = sorted(transes, key=lambda d: d.date)
 
@@ -377,6 +353,50 @@ def do_holdings_3(broker, transaction_file, year, expected_balance, verbose=Fals
     logger.info('Expected balance: %s', expected_balance)
     logger.info('Current balance: %s/%s', delta, qty)
     holdings = generate_previous_year_holdings(broker, years, year, None, transactions, verbose)
+    return holdings
+
+def do_holdings_4(broker, transaction_file, year, verbose=False) -> Holdings:
+    '''Generate holdings file for Morgan'''
+
+    assert year == 2022
+    assert broker == 'morgan'
+
+    prev_holdings = []
+
+    transactions = normalize(transaction_file)
+
+    years = {}
+    first = transactions.transactions[0].date.year
+    last = transactions.transactions[-1].date.year
+    years = {y: 0 for y in range(first, last+1)}
+
+
+    logger.info('Changes in holdings for previous year')
+    holdings = generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
+
+    #
+    # Force tax-deduct reset. This is needed if the history is
+    # incomplete and we can only make an assumption that tax-deduction
+    # have been applied, and that we can't apply it a second time.
+    # This is for the year 2021 specifically - to bootstrap holdings
+    # for Morgan users. The cut-off date below is the exdate for
+    # the last dividend payout in 2021: For held shares aquired after this
+    # date, no shielding could have been claimed for 2021 tax, so
+    # we bring the shielding forward in the holdings (for use next year).
+    # For shares bought before the exdate, the dividend payout would have
+    # consumed the shielding (if shielding tax-deduction was claimed), so
+    # we can't safely assume any accumulated shielding for such shares
+    #
+    last_dividend_date = datetime.strptime('2021-10-04', '%Y-%m-%d').date()
+    tax_deduction_rate = get_tax_deduction_rate(year-1)
+    for x in holdings.stocks:
+        assert x.symbol == 'CSCO'
+        if x.date >= last_dividend_date:
+            tax_free_deduction = tax_deduction_rate * x.purchase_price.nok_value
+            x.tax_deduction = tax_free_deduction
+        else:
+            x.tax_deduction = Decimal('0.00')
+
     return holdings
 
 def preheat_cache():
