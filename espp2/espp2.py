@@ -7,7 +7,7 @@ ESPPv2 Wrapper
 import logging
 from enum import Enum
 import typer
-from espp2.main import do_taxes, do_holdings_2, do_holdings_1, do_holdings_3, preheat_cache, console
+from espp2.main import do_taxes, do_holdings_2, do_holdings_1, do_holdings_3, do_holdings_4, preheat_cache, console
 from espp2.datamodels import TaxReport, Holdings, Wires, ExpectedBalance
 from espp2.report import print_report
 from pydantic import parse_obj_as
@@ -70,7 +70,10 @@ def main(transaction_files: list[typer.FileBinaryRead],
                         opening_balance=opening_balance)
         print_report(year, result.summary, result.report, result.holdings, verbose)
     else:
-        if expected_balance:
+        if broker == BrokerEnum.morgan:
+            holdings = do_holdings_4(broker, transaction_files[0], year, verbose=verbose)
+
+        elif expected_balance:
             expected_balance = json.loads(expected_balance)
             expected_balance = parse_obj_as(ExpectedBalance, expected_balance)
             console.print('Generating holdings from expected balance', style='bold green')
