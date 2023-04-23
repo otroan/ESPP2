@@ -142,18 +142,34 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
                          cashsummary=cashsummary)
     return TaxReportReturn(TaxReport(**report), holdings, summary)
 
+# Helper to merge auxiliary data from multiple transaction files.
+# Give an error if the transaction files disagrees on a particular value.
+def merge_auxiliary(auxiliary_merged, aux):
+    for a in aux.keys():
+        a1 = aux[a]
+        if a in auxiliary_merged:
+            a2 = auxiliary_merged[a]
+            if a1 != a2:
+                # Two transaction files disagrees about the aux data
+                raise ValueError(f'Auxiliary merge of key {a}: {a1} vs. {a2}')
+        else:
+            auxiliary_merged[a] = a1
+
 # Merge transaction files
 # - "Concatenate" transaction on year bounaries
 # - Pickle and others represent sales differently so a simple "key" based deduplication fails
 # - Prefer last file in list then fill in up to first complete year
 # - Limit to two files?
-def merge_transactions(transaction_files: list) -> Transactions:
+def merge_transactions(transaction_files: list) -> Tuple[Transactions, dict]:
     '''Merge transaction files'''
     sets = []
+    auxiliary_merged = dict()
     for tf in transaction_files:
-        t = normalize(tf)
+        t, aux = normalize(tf)
         t = sorted(t.transactions, key=lambda d: d.date)
         sets.append((t[0].date.year, t[-1].date.year, t))
+        merge_auxiliary(auxiliary_merged, aux)
+
     # Determine from which file to use for which year
     years = {}
     overlap_done = False
@@ -172,10 +188,11 @@ def merge_transactions(transaction_files: list) -> Transactions:
         t = [t for t in per_year_t if t.date.year == i]
         transactions += t
 
-    return Transactions(transactions=transactions), years
+    return Transactions(transactions=transactions), years, auxiliary_merged
 
 
-def generate_previous_year_holdings(broker, years, year, prev_holdings, transactions,
+def generate_previous_year_holdings(broker, years, year, prev_holdings,
+                                    transactions, auxiliary,
                                     verbose=False):
     '''Start from earliest year and generate taxes for every year until previous year.'''
 
@@ -195,6 +212,32 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
         # Calculate taxes for the year
         p.process()
         holdings = p.holdings(y, broker)
+
+        if 'reset-tax-2021' in auxiliary and auxiliary['reset-tax-2021']:
+            #
+            # Force tax-deduct reset. This is needed if the history is
+            # incomplete and we can only make an assumption that
+            # tax-deduction has been applied, and that we can't apply
+            # it a second time.  This feature is for the year 2021
+            # specifically - to bootstrap holdings for Morgan Stanley
+            # users. The cut-off date below is the exdate for the last
+            # dividend payout in 2021: For held shares aquired after
+            # this date, no shielding could have been claimed for 2021
+            # tax, so we bring the shielding forward in the holdings
+            # (for use next year).  For shares bought before the
+            # exdate, the dividend payout would have consumed the
+            # shielding (if shielding tax-deduction was claimed), so
+            # we can't safely assume any accumulated shielding for
+            # such shares. We are assuming the official shielding
+            # of 0.5% for 2021 below.
+            #
+            for x in holdings.stocks:
+                if str(x.date) <= '2021-12-31' and year == 2022:
+                    if str(x.date) >= '2021-10-04':
+                        skjerming = Decimal('0.005') * x.purchase_price.nok_value
+                        x.tax_deduction = skjerming
+                    else:
+                        x.tax_deduction = Decimal('0.00')
 
         if verbose:
             print_ledger(p.ledger.entries, console)
@@ -220,7 +263,7 @@ def do_taxes(broker, transaction_file, holdfile,
     '''
     wires = []
     prev_holdings = []
-    t = normalize(transaction_file)
+    t, auxiliary = normalize(transaction_file)
     t = sorted(t.transactions, key=lambda d: d.date)
     transactions = Transactions(transactions=t)
 
@@ -249,11 +292,10 @@ def do_taxes(broker, transaction_file, holdfile,
 
 
 def do_holdings_1(broker, transaction_files: list, holdfile,
-                  year, verbose=False, opening_balance=None,
-                  force_tax_deduct_reset=False) -> Holdings:
+                  year, verbose=False, opening_balance=None) -> Holdings:
     '''Generate holdings file'''
     prev_holdings = []
-    transactions, years = merge_transactions(transaction_files)
+    transactions, years, auxiliary = merge_transactions(transaction_files)
 
     if holdfile and opening_balance:
         raise ESPPErrorException('Cannot specify both opening balance and holdings file')
@@ -266,39 +308,18 @@ def do_holdings_1(broker, transaction_files: list, holdfile,
         prev_holdings = opening_balance
 
     logger.info('Changes in holdings for previous year')
-    holdings = generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, verbose)
-
-    if force_tax_deduct_reset:
-        #
-        # Force tax-deduct reset. This is needed if the history is
-        # incomplete and we can only make an assumption that tax-deduction
-        # have been applied, and that we can't apply it a second time.
-        # This is for the year 2021 specifically - to bootstrap holdings
-        # for Morgan users. The cut-off date below is the exdate for
-        # the last dividend payout in 2021: For held shares aquired after this
-        # date, no shielding could have been claimed for 2021 tax, so
-        # we bring the shielding forward in the holdings (for use next year).
-        # For shares bought before the exdate, the dividend payout would have
-        # consumed the shielding (if shielding tax-deduction was claimed), so
-        # we can't safely assume any accumulated shielding for such shares
-        #
-        for x in holdings.stocks:
-            if str(x.date) >= '2021-10-04' and year == 2022:
-                skjerming = Decimal('0.005') * x.purchase_price.nok_value
-                x.tax_deduction = skjerming
-            else:
-                x.tax_deduction = Decimal('0.00')
-
-    return holdings
+    return generate_previous_year_holdings(broker, years, year, prev_holdings, transactions, auxiliary, verbose)
 
 def do_holdings_2(broker, transaction_files: list, year, expected_balance, verbose=False) -> Holdings:
     '''Calculate a holdings based on an expected balance and the ESPP and RSU transaction files'''
 
     transes = []
+    auxiliary_merged = dict()
 
     for tf in transaction_files:
-        t = normalize(tf)
+        t, aux = normalize(tf)
         transes += t.transactions
+        merge_auxiliary(auxiliary_merged, aux)
 
     # Determine from which file to use for which year
     t = sorted(transes, key=lambda d: d.date)
@@ -311,7 +332,7 @@ def do_holdings_2(broker, transaction_files: list, year, expected_balance, verbo
 
     # Phase 1. Return our approximation for previous year holdings for review
     logger.info('Changes in holdings for previous year')
-    holdings = generate_previous_year_holdings(broker, years, year, None, transactions, verbose)
+    holdings = generate_previous_year_holdings(broker, years, year, None, transactions, auxiliary_merged, verbose)
     logger.debug('Holdings for previous year: %s', holdings.json(indent=2))
 
     logger.info('Expected balance: %s', expected_balance)
@@ -327,7 +348,7 @@ def do_holdings_2(broker, transaction_files: list, year, expected_balance, verbo
         transactions.transactions.append(sell_trans)
         t = sorted(transactions.transactions, key=lambda d: d.date)
         transactions = Transactions(transactions=t)
-        holdings = generate_previous_year_holdings(broker, years, year, None, transactions, verbose)
+        holdings = generate_previous_year_holdings(broker, years, year, None, transactions, dict(), verbose)
     return holdings
 
 def do_holdings_3(broker, transaction_file, year, expected_balance, verbose=False) -> Holdings:
@@ -337,7 +358,7 @@ def do_holdings_3(broker, transaction_file, year, expected_balance, verbose=Fals
     sold before the tax year
     '''
 
-    t = normalize(transaction_file)
+    t, auxiliary = normalize(transaction_file)
     transes = t.transactions
 
     symbol = expected_balance.symbol
@@ -376,7 +397,7 @@ def do_holdings_3(broker, transaction_file, year, expected_balance, verbose=Fals
 
     logger.info('Expected balance: %s', expected_balance)
     logger.info('Current balance: %s/%s', delta, qty)
-    holdings = generate_previous_year_holdings(broker, years, year, None, transactions, verbose)
+    holdings = generate_previous_year_holdings(broker, years, year, None, transactions, auxiliary, verbose)
     return holdings
 
 def preheat_cache():

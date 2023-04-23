@@ -8,6 +8,7 @@ import pickle
 import logging
 import datetime
 import codecs
+from typing import Tuple
 from pprint import pformat    # Pretty-print objects for debugging
 from espp2.datamodels import Transactions, Amount, Deposit, EntryTypeEnum, Sell, Tax, Dividend_Reinv
 from espp2.datamodels import Dividend, Taxsub, Wire, Fee, Transfer
@@ -183,7 +184,7 @@ methods = {
     'JOURNAL': do_wire,
 }
 
-def read(pickle_file, filename='') -> Transactions:
+def read(pickle_file, filename='') -> Tuple[Transactions, dict]:
     '''Main entry point of plugin. Return normalized Python data structure.'''
     records = []
     source = f'pickle:{filename}'
@@ -210,4 +211,4 @@ def read(pickle_file, filename='') -> Transactions:
         except KeyError as e:
             raise ValueError(f'Error: Unexpected pickle-file record: {rectype} {record}') from e
 
-    return Transactions(transactions=records)
+    return Transactions(transactions=records), dict()

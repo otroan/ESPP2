@@ -6,6 +6,7 @@ Schwab CSV normalizer.
 
 import csv
 from decimal import Decimal
+from typing import Tuple
 import codecs
 import io
 import logging
@@ -163,7 +164,7 @@ def subdata(action, description, date, value):
         newlist.append(newv)
     return newlist
 
-def read(csv_file, filename='') -> Transactions:
+def read(csv_file, filename='') -> Tuple[Transactions, dict]:
     '''Main entry point of plugin. Return normalized Python data structure.'''
 
     key_conv = {'DATE': 'date',
@@ -221,4 +222,4 @@ def read(csv_file, filename='') -> Transactions:
         newlist.append(newv)
 
     sorted_transactions = sorted(newlist, key=lambda d: d['date'])
-    return Transactions(transactions=sorted_transactions)
+    return Transactions(transactions=sorted_transactions), dict()

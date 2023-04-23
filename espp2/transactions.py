@@ -15,7 +15,7 @@ import os
 import importlib
 import argparse
 import logging
-from typing import Union
+from typing import Union, Tuple
 import typer
 from fastapi import UploadFile
 import starlette
@@ -93,8 +93,8 @@ def guess_format(filename, data) -> str:
 
     raise ValueError('Unable to guess format', fname, extension, filebytes)
 
-def normalize(data: Union[UploadFile, typer.FileText]) -> Transactions:
-    '''Normalize transactions'''
+def normalize(data: Union[UploadFile, typer.FileText]) -> Tuple[Transactions, dict]:
+    '''Normalize transactions, return transactions and status/info string'''
     if isinstance(data, starlette.datastructures.UploadFile):
         filename = data.filename
         fd = data.file
@@ -112,7 +112,7 @@ def main():
     '''Main function'''
     args = get_arguments()
     logger.debug('Arguments: %s', args)
-    trans_obj = normalize(args.transaction_file)
+    trans_obj, auxiliary = normalize(args.transaction_file)
     logger.info('Converting to JSON')
     j = trans_obj.json(indent=4)
 

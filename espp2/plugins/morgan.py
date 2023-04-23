@@ -14,7 +14,7 @@ from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
 import re
 import logging
-from pandas import MultiIndex, Index
+from typing import Tuple
 
 logger = logging.getLogger(__name__)
 currency_converter = FMV()
@@ -231,7 +231,7 @@ class ParseState:
         self.sell(qty, price)
         return True
 
-    def parse_deposit(self, row):
+    def parse_espp_deposit(self, row):
         if self.activity != 'Share Deposit' and self.activity != 'Historical Purchase':
             return False
         qty, ok = getitems(row, 'Number of Shares')
@@ -554,7 +554,7 @@ def parse_espp_activity_table(state, recs):
         if state.parse_sale(row):
             continue
 
-        if state.parse_deposit(row):
+        if state.parse_espp_deposit(row):
             continue
 
         if state.parse_dividend_cash(row):
@@ -975,6 +975,7 @@ def morgan_html_import(html_fd, filename):
 
     start_period, end_period = parse_account_summary_html(all_tables)
 
+    auxiliary = dict()
     if end_period == '2021-12-31':
         # Parse the holdings tables to produce deposits to establish the
         # holdings at the end of 2021.
@@ -984,6 +985,7 @@ def morgan_html_import(html_fd, filename):
         parse_espp_holdings_html(all_tables, state)
         print('Parse Cash holdings ...')
         parse_cash_holdings_html(all_tables, state)
+        auxiliary['reset-tax-2021'] = True
 
     elif start_period == '2022-01-01' and end_period == '2022-12-31':
         print('Parse RSU activity ...')
@@ -993,15 +995,14 @@ def morgan_html_import(html_fd, filename):
         print('Parse withdrawals ...')
         parse_withdrawals_html(all_tables, state)
         state.flush_dividend()
+        auxiliary['reset-tax-2021'] = False
     else:
         raise ValueError(f'Period {start_period} - {end_period} is unexpected')
 
-    print('Done')
-
     transes = sorted(state.transactions, key=lambda d: d.date)
 
-    return Transactions(transactions=transes)
+    return Transactions(transactions=transes), auxiliary
 
-def read(html_file, filename='') -> Transactions:
+def read(html_file, filename='') -> Tuple[Transactions, dict]:
     '''Main entry point of plugin. Return normalized Python data structure.'''
     return morgan_html_import(html_file, filename)

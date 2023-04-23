@@ -209,4 +209,4 @@ def read(raw_data, filename=''):
         r['source'] = f'td:{filename}'
         trans.append(parse_obj_as(Entry, r))
 
-    return Transactions(transactions=trans)
+    return Transactions(transactions=trans), dict()
