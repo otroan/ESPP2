@@ -127,7 +127,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     credit_deductions = []
     for e in report['dividends']:
         expected_tax = round(Decimal('.15') * e.gross_amount.nok_value)
-        if isclose(expected_tax, abs(round(e.tax.nok_value)), abs_tol=0.05):
+        if not isclose(expected_tax, abs(round(e.tax.nok_value)), abs_tol=0.05):
             logger.error('Expected source tax: %s got: %s', expected_tax, abs(round(e.tax.nok_value)))
         credit_deductions.append(CreditDeduction(symbol=e.symbol, country='USA',
                                                  income_tax=expected_tax,
