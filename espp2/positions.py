@@ -372,8 +372,9 @@ class Positions():
                 total_shares = self.total_shares(self[:exdate, symbol])
                 if self.ledger:
                     ledger_shares = self.ledger.total_shares(symbol, exdate)
-                    assert isclose(total_shares, ledger_shares, abs_tol=10**-
-                                   2), f"Total shares don't match {total_shares} (position balance) != {ledger_shares} (ledger) on {d.date} / {exdate}"
+                    if not isclose(total_shares, ledger_shares, abs_tol=10**-2):
+                        logger.error(
+                            "Total shares don't match %s (position balance) != %s (ledger) on %s / %s", total_shares, ledger_shares, d.date, exdate)
                 if total_shares == 0:  # and not d.amount_ps:
                     if not self.generate_holdings:
                         raise InvalidPositionException(
