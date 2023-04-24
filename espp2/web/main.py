@@ -83,6 +83,20 @@ async def generate_holdings_3(
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
+@app.post("/holdings_4/", response_model=Holdings)
+async def generate_holdings_4(
+        transaction_file: UploadFile,
+        broker: str = Form(...),
+        year: int = Form(...)):
+    '''
+    Calculate holdings based on the Morgan HTML file.
+    '''
+    try:
+        return do_holdings_4(broker, transaction_file, year)
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
 @app.post("/taxreport/", response_model=ESPPResponse)
 async def taxreport(
         transaction_file: UploadFile,
