@@ -69,10 +69,10 @@ def print_report_sales(report: TaxReport, console: Console):
                 style = 'red'
             else:
                 style = 'green'
-            buy_positions = Table("qty", "price", "gain", show_edge=False, padding=0, show_header=first)
+            buy_positions = Table("qty", "pricenok", "price", "gain", show_edge=False, padding=0, show_header=first)
             for b in e.from_positions:
                 gain = b.gain_ps * b.qty
-                buy_positions.add_row(f'{b.qty:.2f}', f'{b.purchase_price:.2f}', f'{gain.nok_value:.2f}  ${gain.value:.2f}')
+                buy_positions.add_row(f'{b.qty:.2f}', f'{b.purchase_price.nok_value:.2f}', f'{b.purchase_price:.2f}', f'{gain.nok_value:.2f}  ${gain.value:.2f}')
             buy_positions.add_row("")
             table.add_row(k, f'{e.qty:.2f}', str(e.date), f'{sale_price_nok:.2f} ${sale_price:.2f}',
                           f'{e.amount.nok_value:.2f}  ${e.amount.value:.2f}',

@@ -1,9 +1,14 @@
-from pydantic import BaseModel, ValidationError, validator, Field, Extra, root_validator, condecimal
+'''Data models for espp2'''
+# pylint: disable=too-few-public-methods, missing-class-docstring, no-name-in-module
+# pylint: disable=no-self-argument
+
 from datetime import date
 from typing import List, Literal, Annotated, Union, Optional, Any, Dict
 from enum import Enum
 from decimal import Decimal
+from pydantic import BaseModel, validator, Field, Extra, root_validator, condecimal
 from espp2.fmv import FMV
+
 
 #
 # Transactions data model
@@ -12,7 +17,6 @@ from espp2.fmv import FMV
 
 # Singleton caching stock and currency data
 fmv = FMV()
-
 
 class EntryTypeEnum(str, Enum):
     '''Entry type'''
@@ -113,7 +117,7 @@ class TransactionEntry(BaseModel):
     def validate_id(cls, v, values):
         '''Validate id'''
         return get_id(values)
-    
+
 class Buy(TransactionEntry):
     '''Buy transaction'''
     type: Literal[EntryTypeEnum.BUY]
@@ -254,8 +258,10 @@ class Cashadjust(TransactionEntry):
     amount: Amount
     description: str
 
+
 Entry = Annotated[Union[Buy, Deposit, Tax, Taxsub, Dividend,
-                        Dividend_Reinv, Wire, Sell, Transfer, Fee, Cashadjust], Field(discriminator="type")]
+                        Dividend_Reinv, Wire, Sell, Transfer, Fee, Cashadjust],
+                        Field(discriminator="type")]
 
 class Transactions(BaseModel):
     '''Transactions'''
@@ -289,6 +295,7 @@ class Stock(BaseModel):
     # @validator('purchase_price', pre=True, always=True)
     @validator('purchase_price', pre=True, always=True)
     def set_purchase_price(cls, value, values):
+        '''Set purchase price and calculate nok value if needed'''
         if isinstance(value, Amount):
             return value
         if 'nok_exchange_rate' not in value:
