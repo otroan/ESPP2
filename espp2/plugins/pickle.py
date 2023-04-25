@@ -174,6 +174,7 @@ methods = {
     'DIVIDEND': do_dividend,
     'TAX': do_tax,
     'RSU': do_rsu,
+    'RSUREC': do_rsu,
     'PURCHASE': do_rsu,
     'WIRE': do_wire,
     'FEE': do_fee,
