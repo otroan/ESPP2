@@ -156,7 +156,7 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
         dividend = e.dividend
         gain = e.taxable_gain
         if summary.year == 2022:
-            table.add_row(e.symbol, e.isin, e.country, e.account, f'{e.shares:.2f}', f'{e.wealth}',
+            table.add_row(e.symbol, e.isin, e.country, e.account, f'{e.shares:.2f}', f'{e.wealth:.0f}',
                         f'{dividend}', f'{e.post_tax_inc_dividend}', f'{gain}', f'{e.taxable_post_tax_inc_gain}',
                         f'{e.tax_deduction_used}')
         else:
