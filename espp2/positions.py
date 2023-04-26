@@ -32,12 +32,10 @@ from itertools import groupby
 from copy import deepcopy
 from datetime import datetime, date, timedelta
 from math import isclose
-from decimal import Decimal, getcontext
+from decimal import Decimal
 from espp2.fmv import FMV
 from espp2.datamodels import *
 from espp2.console import console
-
-getcontext().prec = 6
 
 logger = logging.getLogger(__name__)
 
