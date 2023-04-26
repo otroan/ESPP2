@@ -628,7 +628,7 @@ def parse_withdrawal_sales(state, sales):
             assert(w.symbol != 'Cash')   # No Cash-fund for sale withdrawals
             state.wire_transfer(w.entry_date, w.net_amount, w.fees_amount)
         else:
-            raise ValueError(f'Sales withdrawal w/o wire-transfer: {w.wda}')
+            raise ValueError(f'Sales withdrawal w/o wire-transfer: wd={wd.data} sb={sb.data} np={np.data}')
 
 def parse_withdrawal_proceeds(state, proceeds):
     '''Withdrawal of accumulated Cash (it seems)'''
@@ -638,7 +638,7 @@ def parse_withdrawal_proceeds(state, proceeds):
             assert(w.symbol == 'Cash')   # Proceeds withdrawal is for cash
             state.wire_transfer(w.entry_date, w.net_amount, w.fees_amount)
         else:
-            raise ValueError(f'Proceeds withdrawal w/o wire-transfer: {w.wda}')
+            raise ValueError(f'Proceeds withdrawal w/o wire-transfer: wd={wd.data} pb={pb.data} np={np.data}')
 
 def decode_headers(mi):
     '''Force a MultiIndex or Index object into a plain array-of-arrays'''
