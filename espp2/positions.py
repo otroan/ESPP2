@@ -478,6 +478,9 @@ class Positions():
                 tax_deduction_used = gain
                 tax_deduction -= gain
                 gain = 0
+        # Update the tax deduction table in case we accidentially use it again.
+        self.tax_deduction[buy_entry.idx] = tax_deduction
+
         if tax_deduction > 0:
             logger.info("Unused tax deduction: %s %d", buy_entry, gain)
 
