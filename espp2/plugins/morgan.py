@@ -616,7 +616,8 @@ class Withdrawal:
         assert(self.wd.data[5][0] == 'Delivery Method:')
         if 'Transfer funds via wire' in self.wd.data[5][1]:
             self.is_wire = True
-
+        if 'Electronic Funds Transfer' in self.wd.data[5][1]:
+            self.is_wire = True
         if 'Historical sale of shares' in self.wd.data[5][1] and has_wire_fee:
             self.is_wire = True
 
