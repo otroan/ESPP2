@@ -181,6 +181,20 @@ class ParseState:
 
         self.transactions.append(parse_obj_as(Entry, r))
 
+    def taxreversal(self, amount):
+        # This is a hack - Tax reversal seems not tied to a particular share
+        symbol = 'CSCO' if self.symbol is None else self.symbol
+
+        r = { 'type': EntryTypeEnum.TAXSUB,
+              'date': self.entry_date,
+              'amount': amount,
+              'symbol': symbol,
+              'description': self.activity,
+              'source': self.source }
+
+        self.transactions.append(parse_obj_as(Entry, r))
+        return True
+
     def parse_rsu_release(self, row):
         '''Handle what appears to be RSUs added to account'''
         m = re.match(r'''^Release\s+\(([A-Z0-9]+)\)''', self.activity)
@@ -305,6 +319,20 @@ class ParseState:
             #self.deposit(qty, purchase_price, 'RS', self.entry_date)
             return True
         raise ValueError(f'Unexpected opening balance: {row}')
+
+    def parse_cash_adjustments(self, row):
+        '''Parse misc cash-balance adjustment records'''
+        if self.activity == 'Nonresident Alien Withholding Transfer':
+            # Assume this is getting tax back? Looks like it...
+            cash, ok = getitems(row, 'Cash')
+            if not ok:
+                raise ValueError(f'Expected Cash for Tax reversal')
+            value, currency = morgan_price(cash)
+            amount = fixup_price2(self.entry_date, currency, value)
+            self.taxreversal(amount)
+            return True
+
+        return False
 
 def find_all_tables(document):
     nodes = document.findall('.//{http://www.w3.org/1999/xhtml}table', None)
@@ -491,6 +519,7 @@ def parse_rsu_activity_table(state, recs):
         'Cash Transfer Out': True,
         'Transfer out': True,
         'Historical Transaction': True, # TODO: This should update cash-balance
+        'Adhoc Adjustment': True, # Same TODO as over
     }
 
     # Record QTY deltas for RSUs so the RSU holdings table is only used for
@@ -521,6 +550,9 @@ def parse_rsu_activity_table(state, recs):
             continue
 
         if state.parse_opening_balance(row):
+            continue
+
+        if state.parse_cash_adjustments(row):
             continue
 
         if state.activity in ignore:
