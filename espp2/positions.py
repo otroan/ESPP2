@@ -657,8 +657,8 @@ class Positions():
     def process(self):
         '''Process all transactions'''
         self.buys()
-        self.sales()
         self.dividends()
+        self.sales()
         self.fees()
 
         # Process wires
