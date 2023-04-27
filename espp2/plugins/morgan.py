@@ -210,7 +210,6 @@ class ParseState:
         purchase_price = fixup_price2(self.entry_date, currency, book_value / qty)
 
         self.deposit(qty, purchase_price, 'RS', self.entry_date)
-        self.qty_delta = qty
         return True
 
     def parse_dividend_reinvest(self, row):
@@ -531,10 +530,6 @@ def parse_rsu_activity_table(state, recs):
         'Historical Transaction': True, # TODO: This should update cash-balance
     }
 
-    # Record QTY deltas for RSUs so the RSU holdings table is only used for
-    # what is not recorded as proper transactions
-    transaction_qtys = []
-
     for row in recs:
         if state.parse_fund_symbol(row, 'Entry Date'):
             continue
@@ -542,14 +537,12 @@ def parse_rsu_activity_table(state, recs):
         state.parse_activity(row)
 
         if state.parse_rsu_release(row):
-            transaction_qtys.append(state.qty_delta)
             continue
 
         if state.parse_dividend_reinvest(row):
             continue
 
         if state.parse_sale(row):
-            transaction_qtys.append(state.qty_delta)
             continue
 
         if state.parse_dividend_cash(row):
@@ -568,8 +561,6 @@ def parse_rsu_activity_table(state, recs):
             continue
 
         raise ValueError(f'Unknown RSU activity: "{state.activity}"')
-
-    return transaction_qtys
 
 def parse_espp_activity_table(state, recs):
     ignore = {
