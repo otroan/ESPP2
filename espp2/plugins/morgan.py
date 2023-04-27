@@ -332,6 +332,16 @@ class ParseState:
             self.taxreversal(amount)
             return True
 
+        if self.activity == 'Adhoc Adjustment':
+            # We have no idea what this is, but it affects chash holdings...
+            cash, ok = getitems(row, 'Cash')
+            if not ok:
+                raise ValueError(f'Expected Cash for Adhoc Adjustment')
+            value, currency = morgan_price(cash)
+            amount = fixup_price2(self.entry_date, currency, value)
+            self.cashadjust(self.entry_date, amount, 'Adhoc Adjustment')
+            return True
+
         return False
 
 def find_all_tables(document):
@@ -519,7 +529,6 @@ def parse_rsu_activity_table(state, recs):
         'Cash Transfer Out': True,
         'Transfer out': True,
         'Historical Transaction': True, # TODO: This should update cash-balance
-        'Adhoc Adjustment': True, # Same TODO as over
     }
 
     # Record QTY deltas for RSUs so the RSU holdings table is only used for
