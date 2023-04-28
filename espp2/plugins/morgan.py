@@ -322,8 +322,10 @@ class ParseState:
 
     def parse_cash_adjustments(self, row):
         '''Parse misc cash-balance adjustment records'''
-        if self.activity == 'Nonresident Alien Withholding Transfer':
+        if self.activity == 'Nonresident Alien Withholding Transfer' or \
+           self.activity == 'Backup Withholding Refund Transfer':
             # Assume this is getting tax back? Looks like it...
+            # Or it should mean the withheld amount wasn't used for tax
             cash, ok = getitems(row, 'Cash')
             if not ok:
                 raise ValueError(f'Expected Cash for Tax reversal')
