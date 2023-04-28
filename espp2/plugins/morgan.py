@@ -284,7 +284,7 @@ class ParseState:
 
     def parse_tax_withholding(self, row):
         '''Record taxes withheld'''
-        if self.activity != 'Withholding' and self.activity != 'IRS Nonresident Alien Withholding':
+        if self.activity != 'Withholding' and self.activity != 'IRS Nonresident Alien Withholding' and self.activity != 'IRS Backup Withholding':
             return False
         taxed, ok = getitems(row, 'Cash')
         if not ok:
@@ -609,6 +609,8 @@ class Withdrawal:
         self.sb = sb
         self.np = np
 
+        self.description = 'Withdrawal'
+        self.is_transfer = False
         self.is_wire = False
         self.has_wire_fee = False
 
@@ -652,6 +654,11 @@ class Withdrawal:
             self.is_wire = True
         if 'Historical sale of shares' in self.wd.data[5][1] and has_wire_fee:
             self.is_wire = True
+        if 'Deposit funds into my Morgan Stanley' in self.wd.data[5][1]:
+            self.description = 'Transfer to Morgan Stanley account'
+            self.is_transfer = True
+        if self.is_wire:
+            self.description = 'Wire-transfer'
 
 def parse_withdrawal_sales(state, sales):
     '''Withdrawals from sale of shares'''
@@ -670,6 +677,8 @@ def parse_withdrawal_proceeds(state, proceeds):
         if w.is_wire:
             assert(w.symbol == 'Cash')   # Proceeds withdrawal is for cash
             state.wire_transfer(w.entry_date, w.net_amount, w.fees_amount)
+        elif w.is_transfer:
+            state.cashadjust(w.entry_date, w.net_amount, w.description)
         else:
             raise ValueError(f'Proceeds withdrawal w/o wire-transfer: wd={wd.data} pb={pb.data} np={np.data}')
 
