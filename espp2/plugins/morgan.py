@@ -292,11 +292,12 @@ class ParseState:
 
         # print(f'parse_tax_withholding: date={self.entry_date} activity={self.activity} taxed={taxed}')
         amount = fixup_price(self.entry_date, 'USD', taxed)
+        symbol = 'CSCO' if self.symbol is None else self.symbol
 
         r = { 'type': EntryTypeEnum.TAX,
               'date': self.entry_date,
               'amount': amount,
-              'symbol': self.symbol,
+              'symbol': symbol,
               'description': self.activity,
               'source': self.source }
 
