@@ -5,17 +5,18 @@ ESPPv2 main entry point
 # pylint: disable=invalid-name
 import logging
 from decimal import Decimal
+from typing import Tuple, NamedTuple
+import datetime
+from math import isclose
 import simplejson as json
 from espp2.console import console
-from espp2.positions import Positions, Cash, InvalidPositionException, Ledger, get_tax_deduction_rate
+from espp2.positions import Positions, InvalidPositionException, Ledger, get_tax_deduction_rate
 from espp2.transactions import normalize
-from espp2.datamodels import TaxReport, Transactions, Wires, Holdings, ForeignShares, TaxSummary, CreditDeduction, Sell, EntryTypeEnum, Amount, Buy
+from espp2.datamodels import (TaxReport, Transactions, Wires, Holdings, ForeignShares,
+                              TaxSummary, CreditDeduction, Sell, EntryTypeEnum, Amount, Buy)
 from espp2.report import print_ledger, print_cash_ledger, print_report_holdings
 from espp2.fmv import FMV, FMVTypeEnum
-from typing import Tuple
-import datetime
-from typing import NamedTuple
-from math import isclose
+
 logger = logging.getLogger(__name__)
 
 class ESPPErrorException(Exception):
@@ -189,8 +190,8 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
         this_year = [t for t in transactions.transactions if t.date.year == y]
         logger.info('Calculating tax for previous year: %s', y)
 
-        p = Positions(y, holdings, this_year, received_wires=Wires(
-            __root__=[]), generate_holdings=True)
+        p = Positions(y, holdings, this_year,
+                      received_wires=Wires([]), generate_holdings=True)
 
         # Calculate taxes for the year
         p.process()
@@ -229,7 +230,7 @@ def do_taxes(broker, transaction_file, holdfile,
 
     if wirefile and not isinstance(wirefile, Wires):
         wires = json_load(wirefile)
-        wires = Wires(__root__=wires)
+        wires = Wires(wires)
         logger.info('Wires: read')
     elif wirefile:
         wires = wirefile

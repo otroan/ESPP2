@@ -6,7 +6,8 @@ from datetime import date
 from typing import List, Literal, Annotated, Union, Optional, Any, Dict
 from enum import Enum
 from decimal import Decimal
-from pydantic import BaseModel, validator, Field, Extra, root_validator, condecimal
+from pydantic import (field_validator, model_validator, ConfigDict,
+                      BaseModel, validator, Field, RootModel)
 from espp2.fmv import FMV
 
 
@@ -83,7 +84,8 @@ class Amount(BaseModel):
 
 class PositiveAmount(Amount):
     '''Positive amount'''
-    @validator('value', 'nok_value')
+    @field_validator('value', 'nok_value')
+    @classmethod
     def value_validator(cls, v):
         '''Validate value'''
         if v < 0:
@@ -91,7 +93,8 @@ class PositiveAmount(Amount):
         return v
 class NegativeAmount(Amount):
     '''Negative amount'''
-    @validator('value', 'nok_value')
+    @field_validator('value', 'nok_value')
+    @classmethod
     def value_validator(cls, v):
         '''Validate value'''
         if v > 0:
@@ -113,6 +116,8 @@ def get_id(values: Dict[str, Any]):
     return id + ':' + str(duplicates[d])
 
 class TransactionEntry(BaseModel):
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator('id', pre=True, always=True, check_fields=False)
     def validate_id(cls, v, values):
         '''Validate id'''
@@ -128,15 +133,15 @@ class Buy(TransactionEntry):
     source: str
     id: str = Optional[str]
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator('purchase_price')
     def purchase_price_validator(cls, v, values):
         '''Validate purchase price'''
         if v.nok_value < 0 or v.value < 0:
             raise ValueError('Negative values for purchase price', v, values)
         return v
-
-    class Config:
-        extra = Extra.allow
+    model_config = ConfigDict(extra="allow")
 
 class Deposit(TransactionEntry):
     '''Deposit transaction'''
@@ -146,18 +151,19 @@ class Deposit(TransactionEntry):
     symbol: str
     description: str
     purchase_price: Amount
-    purchase_date: Optional[date]
+    purchase_date: Optional[date] = None
     source: str
     id: str = Optional[str]
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator('purchase_price')
     def purchase_price_validator(cls, v, values):
         '''Validate purchase price'''
         if v.nok_value < 0 or v.value < 0:
             raise ValueError('Negative values for purchase price', values)
         return v
-    class Config:
-        extra = Extra.allow
+    model_config = ConfigDict(extra="allow")
 
 class Tax(TransactionEntry):
     '''Tax withheld transaction'''
@@ -184,20 +190,19 @@ class Dividend(TransactionEntry):
     type: Literal[EntryTypeEnum.DIVIDEND]
     date: date
     symbol: str
-    amount: Optional[PositiveAmount]
-    amount_ps: Optional[PositiveAmount]
+    amount: Optional[PositiveAmount] = None
+    amount_ps: Optional[PositiveAmount] = None
     source: str
     id: str = Optional[str]
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def check_dividend_data(cls, values):
         '''Lookup dividend data from the external API and put those records in the data model'''
         values['exdate'], values['declarationdate'], values['dividend_dps'] = fmv.get_dividend(
             values['symbol'], values['date'])
         return values
-
-    class Config:
-        extra = Extra.allow
+    model_config = ConfigDict(extra="allow")
 
 
 class Dividend_Reinv(TransactionEntry):
@@ -216,7 +221,7 @@ class Wire(TransactionEntry):
     date: date
     amount: Amount
     description: str
-    fee: Optional[NegativeAmount]
+    fee: Optional[NegativeAmount] = None
     source: str
     id: str = Optional[str]
 
@@ -225,8 +230,8 @@ class Sell(TransactionEntry):
     type: Literal[EntryTypeEnum.SELL]
     date: date
     symbol: str
-    qty: condecimal(lt=0)
-    fee: Optional[NegativeAmount]
+    qty: Annotated[Decimal, Field(lt=0)]
+    fee: Optional[NegativeAmount] = None
     amount: Amount
     description: str
     source: str
@@ -279,9 +284,14 @@ class WireAmount(BaseModel):
 # class Wire(BaseModel):
 #     date: date
 #     wire: WireAmount
-class Wires(BaseModel):
-    __root__: list[WireAmount]
+class Wires(RootModel):
+    root: list[WireAmount]
 
+    def __iter__(self):
+        return iter(self.root)
+
+    def __getitem__(self, item):
+        return self.root[item]
 
 # Holdings data model
 class Stock(BaseModel):
@@ -293,6 +303,8 @@ class Stock(BaseModel):
     purchase_price: Amount
 
     # @validator('purchase_price', pre=True, always=True)
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator('purchase_price', pre=True, always=True)
     def set_purchase_price(cls, value, values):
         '''Set purchase price and calculate nok value if needed'''
@@ -302,9 +314,7 @@ class Stock(BaseModel):
             return Amount(amountdate=values['date'], currency=value['currency'],
                           value=value['value'])
         return value
-
-    class Config:
-        extra = Extra.allow
+    model_config = ConfigDict(extra="allow")
 
 class CashEntry(BaseModel):
     '''Cash entry'''
@@ -326,15 +336,14 @@ class EOYBalanceItem(BaseModel):
     qty: Decimal
     amount: Amount
     fmv: Decimal
-    class Config:
-        extra = Extra.allow
+    model_config = ConfigDict(extra="allow")
 
 class EOYDividend(BaseModel):
     '''EOY dividend'''
     symbol: str
     amount: Amount
     gross_amount: Amount
-    post_tax_inc_amount: Optional[Amount]
+    post_tax_inc_amount: Optional[Amount] = None
     tax: Amount # Negative
     tax_deduction_used: Decimal # NOK
 
@@ -353,14 +362,14 @@ class EOYSales(BaseModel):
     date: date
     qty: Decimal
     amount: Amount
-    fee: Optional[Amount]
+    fee: Optional[Amount] = None
     from_positions: list[SalesPosition]
-    totals: Optional[dict]
+    totals: Optional[dict] = None
     # total_gain: Amount
 
 class TaxReport(BaseModel):
     '''Tax report'''
-    eoy_balance: Dict[str, list[EOYBalanceItem]]
+    eoy_balance: Dict[int, list[EOYBalanceItem]]
     ledger: dict
     dividends: list[EOYDividend]
     buys: list
@@ -368,7 +377,7 @@ class TaxReport(BaseModel):
     # cash: dict
     cash_ledger: list
     unmatched_wires: list[WireAmount]
-    prev_holdings: Optional[Holdings]
+    prev_holdings: Optional[Holdings] = None
 
 class CashModel(BaseModel):
     '''Cash model'''
@@ -381,29 +390,29 @@ class ForeignShares(BaseModel):
     country: str
     account: str
     shares: Decimal
-    wealth: condecimal(ge=0)
+    wealth: Annotated[Decimal, Field(ge=0)]
     # Share of taxable dividend after October 6.
-    post_tax_inc_dividend: Optional[condecimal(ge=0, decimal_places=0)]
+    post_tax_inc_dividend: Optional[Annotated[Decimal, Field(ge=0, decimal_places=0)]] = None
     # Taxable dividend
-    dividend: condecimal(ge=0, decimal_places=0)
-    taxable_gain: condecimal(decimal_places=0)
-    taxable_post_tax_inc_gain: Optional[condecimal(decimal_places=0)]
-    tax_deduction_used: condecimal(ge=0, decimal_places=0)
+    dividend: Annotated[Decimal, Field(ge=0, decimal_places=0)]
+    taxable_gain: Annotated[Decimal, Field(decimal_places=0)]
+    taxable_post_tax_inc_gain: Optional[Annotated[Decimal, Field(decimal_places=0)]] = None
+    tax_deduction_used: Annotated[Decimal, Field(ge=0, decimal_places=0)]
 
 class CreditDeduction(BaseModel):
     '''Credit deduction'''
     symbol: str
     country: str
-    income_tax: condecimal(ge=0, decimal_places=0)
-    gross_share_dividend: condecimal(ge=0, decimal_places=0)
-    tax_on_gross_share_dividend: condecimal(ge=0, decimal_places=0)
+    income_tax: Annotated[Decimal, Field(ge=0, decimal_places=0)]
+    gross_share_dividend: Annotated[Decimal, Field(ge=0, decimal_places=0)]
+    tax_on_gross_share_dividend: Annotated[Decimal, Field(ge=0, decimal_places=0)]
 
 class TransferRecord(BaseModel):
     '''Transfers'''
     date: date
-    amount_sent: condecimal(ge=0, decimal_places=0)
-    amount_received: condecimal(gt=0, decimal_places=0)
-    gain: condecimal(decimal_places=0)
+    amount_sent: Annotated[Decimal, Field(ge=0, decimal_places=0)]
+    amount_received: Annotated[Decimal, Field(gt=0, decimal_places=0)]
+    gain: Annotated[Decimal, Field(decimal_places=0)]
     description: str
 class CashSummary(BaseModel):
     '''Cash account'''

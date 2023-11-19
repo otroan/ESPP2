@@ -151,7 +151,7 @@ class FMV():
         r = http.request('GET', url)
         if r.status != 200:
             raise FMVException(
-                f'Fetching dividends data for {symbol} failed {r.status}')
+                f'Fetching fundamentals data for {symbol} failed {r.status}')
         raw = json.loads(r.data.decode('utf-8'))
         return raw
 
