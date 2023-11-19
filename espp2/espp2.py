@@ -5,17 +5,16 @@ ESPPv2 Wrapper
 # pylint: disable=invalid-name
 
 import logging
+import json
 from enum import Enum
 import typer
-from espp2.main import do_taxes, do_holdings_2, do_holdings_1, do_holdings_3, do_holdings_4, preheat_cache, console
-from espp2.datamodels import TaxReport, Holdings, Wires, ExpectedBalance
-from espp2.report import print_report
 from pydantic import parse_obj_as
-import json
 from numpy import nan
-from pydantic import BaseModel
-from decimal import Decimal
 from rich.logging import RichHandler
+from espp2.main import do_taxes, do_holdings_2, do_holdings_1, do_holdings_3, do_holdings_4, console
+from espp2.datamodels import Holdings, Wires, ExpectedBalance
+from espp2.report import print_report
+from espp2._version import __version__
 
 app = typer.Typer()
 
@@ -27,7 +26,6 @@ class BrokerEnum(str, Enum):
 
 logger = logging.getLogger(__name__)
 
-from espp2._version import __version__
 def version_callback(value: bool):
     if value:
         typer.echo(f"espp2 CLI Version: {__version__}")
@@ -107,8 +105,8 @@ def main(transaction_files: list[typer.FileBinaryRead],
         console.print('No new holdings file specified', style='bold red')
     if outwires and result and result.report and result.report.unmatched_wires:
         logger.info('Writing unmatched wires to %s', outwires.name)
-        outw = Wires(__root__=result.report.unmatched_wires)
-        for w in outw.__root__:
+        outw = Wires(result.report.unmatched_wires)
+        for w in outw:
             w.nok_value = nan
             w.value = abs(w.value)
         j = outw.json(indent=4)
