@@ -9,7 +9,7 @@ Morgan Stanley HTML table transaction history normalizer.
 import math
 from decimal import Decimal
 import html5lib
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
 import re
@@ -68,6 +68,7 @@ class ParseState:
         self.symbol = None
         self.entry_date = None
         self.date2dividend = dict()
+        self.adapter = TypeAdapter(Entry)
 
     def parse_activity(self, row):
         '''Parse the "Activity" column'''
@@ -105,7 +106,7 @@ class ParseState:
               'source': self.source,
               'broker': 'morgan' }
 
-        self.transactions.append(parse_obj_as(Entry, r))
+        self.transactions.append(self.adapter.validate_python(r))
 
     def sell(self, qty, price):
         assert self.symbol is not None
@@ -118,7 +119,7 @@ class ParseState:
               'description': self.activity,
               'source': self.source }
 
-        self.transactions.append(parse_obj_as(Entry, r))
+        self.transactions.append(self.adapter.validate_python(r))
 
     def dividend(self, amount):
         assert self.symbol is not None
@@ -141,7 +142,8 @@ class ParseState:
             return
 
         print(f"### DIV: {date} +{r['amount']['value']} (First)")
-        self.date2dividend[date] = parse_obj_as(Entry, r)
+        self.date2dividend[date] = self.adapter.validate_python(r)
+
 
     def flush_dividend(self):
         for date in self.date2dividend.keys():
@@ -157,7 +159,8 @@ class ParseState:
               'source': self.source,
               'description': 'Debit' }
 
-        self.transactions.append(parse_obj_as(Entry, r))
+        self.transactions.append(self.adapter.validate_python(r))
+
 
     def wire_transfer(self, date, amount, fee):
         assert self.symbol is not None
@@ -169,7 +172,8 @@ class ParseState:
               'fee': fee,
               'source': self.source }
 
-        self.transactions.append(parse_obj_as(Entry, r))
+        self.transactions.append(self.adapter.validate_python(r))
+
 
     def cashadjust(self, date, amount, description):
         '''Ad-hoc cash-adjustment (positive or negative)'''
@@ -179,7 +183,8 @@ class ParseState:
               'description': description,
               'source': self.source }
 
-        self.transactions.append(parse_obj_as(Entry, r))
+        self.transactions.append(self.adapter.validate_python(r))
+
 
     def taxreversal(self, amount):
         # This is a hack - Tax reversal seems not tied to a particular share
@@ -192,7 +197,7 @@ class ParseState:
               'description': self.activity,
               'source': self.source }
 
-        self.transactions.append(parse_obj_as(Entry, r))
+        self.transactions.append(self.adapter.validate_python(r))
         return True
 
     def parse_rsu_release(self, row):
@@ -301,7 +306,8 @@ class ParseState:
               'description': self.activity,
               'source': self.source }
 
-        self.transactions.append(parse_obj_as(Entry, r))
+        self.transactions.append(self.adapter.validate_python(r))
+
         return True
 
     def parse_opening_balance(self, row):

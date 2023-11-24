@@ -10,7 +10,7 @@ from typing import Optional
 from os.path import realpath
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 from espp2.main import do_taxes, do_holdings_1, do_holdings_2, do_holdings_3, do_holdings_4, preheat_cache
@@ -33,10 +33,6 @@ async def generate_holdings_1(
     '''Generate previous year holdings from a plethora of transaction files'''
     opening_balance = None
 
-    # if opening_balance:
-    #     opening_balance = json.loads(opening_balance)
-    #     opening_balance = parse_obj_as(Holdings, opening_balance)
-
     if holdfile and holdfile.filename == '':
         holdfile = None
     elif holdfile:
@@ -56,8 +52,8 @@ async def generate_holdings_2(
         expected_balance: str = Form(...)):
     '''Generate holdings from complete purchase history from stocks web site'''
     if expected_balance:
-        expected_balance = json.loads(expected_balance)
-        expected_balance = parse_obj_as(ExpectedBalance, expected_balance)
+        adapter = TypeAdapter(ExpectedBalance)
+        expected_balance = adapter.validate_json(expected_balance)
     try:
         return do_holdings_2(broker, transaction_files, year, expected_balance=expected_balance)
     except Exception as e:
@@ -75,8 +71,8 @@ async def generate_holdings_3(
     This will only work if any position prior to the beginngin of the transaction file has been
     sold before the tax year. This has only been tested with Schwab.
     '''
-    expected_balance = json.loads(expected_balance)
-    expected_balance = parse_obj_as(ExpectedBalance, expected_balance)
+    adapter = TypeAdapter(ExpectedBalance)
+    expected_balance = adapter.validate_json(expected_balance)
     try:
         return do_holdings_3(broker, transaction_file, year, expected_balance=expected_balance)
     except Exception as e:
@@ -112,8 +108,8 @@ async def taxreport(
         wires = Wires(__root__=wires_list)
 
     if opening_balance:
-        opening_balance = json.loads(opening_balance)
-        opening_balance = parse_obj_as(Holdings, opening_balance)
+        adapter = TypeAdapter(Holdings)
+        opening_balance= adapter.validate_json(opening_balance)
 
     if holdfile and holdfile.filename == '':
         holdfile = None

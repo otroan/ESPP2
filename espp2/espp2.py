@@ -8,7 +8,7 @@ import logging
 import json
 from enum import Enum
 import typer
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 from numpy import nan
 from rich.logging import RichHandler
 from espp2.main import do_taxes, do_holdings_2, do_holdings_1, do_holdings_3, do_holdings_4, console
@@ -16,7 +16,7 @@ from espp2.datamodels import Holdings, Wires, ExpectedBalance
 from espp2.report import print_report
 from espp2._version import __version__
 
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_enable=False)
 
 class BrokerEnum(str, Enum):
     '''BrokerEnum'''
@@ -53,8 +53,8 @@ def main(transaction_files: list[typer.FileBinaryRead],
     logging.basicConfig(level=lognames[loglevel], handlers=[RichHandler(rich_tracebacks=False)])
 
     if opening_balance:
-        opening_balance = json.loads(opening_balance)
-        opening_balance = parse_obj_as(Holdings, opening_balance)
+        adapter = TypeAdapter(Holdings)
+        opening_balance= adapter.validate_json(opening_balance)
     result = None
 
     if preheat_cache:
@@ -72,8 +72,8 @@ def main(transaction_files: list[typer.FileBinaryRead],
             holdings = do_holdings_4(broker, transaction_files[0], year, verbose=verbose)
 
         elif expected_balance:
-            expected_balance = json.loads(expected_balance)
-            expected_balance = parse_obj_as(ExpectedBalance, expected_balance)
+            adapter = TypeAdapter(ExpectedBalance)
+            expected_balance = adapter.validate_json(expected_balance)
             console.print('Generating holdings from expected balance', style='bold green')
             if len(transaction_files) > 1:
                 logger.warning("This does not work with reinvested dividends!")

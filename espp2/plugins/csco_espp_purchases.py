@@ -10,7 +10,6 @@ import math
 from decimal import Decimal
 import dateutil.parser as dt
 from pandas import read_excel
-from pydantic import parse_obj_as
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount, Deposit
 import simplejson as json

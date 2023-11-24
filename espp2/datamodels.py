@@ -10,7 +10,7 @@ from pydantic import (field_validator, model_validator, ConfigDict,
                       BaseModel, validator, Field, RootModel)
 from espp2.fmv import FMV
 
-
+from IPython import embed
 #
 # Transactions data model
 #
@@ -64,20 +64,20 @@ class Amount(BaseModel):
         return f'${self.value:{format_spec}}'
 
     def __mul__(self, qty: Decimal):
-        result = self.copy()
+        result = self.model_copy()
         result.value = result.value * qty
         result.nok_value = result.nok_value * qty
         return result
 
     def __add__(self, other):
-        result = self.copy()
+        result = self.model_copy()
         result.value = result.value + other.value
         result.nok_value = result.nok_value + other.nok_value
         return result
     def __radd__(self, other):
         if isinstance(other, int) and other == 0:
             return self
-        result = self.copy()
+        result = self.model_copy()
         result.value = result.value + other.value
         result.nok_value = result.nok_value + other.nok_value
         return result
@@ -104,6 +104,7 @@ class NegativeAmount(Amount):
 duplicates = {}
 def get_id(values: Dict[str, Any]):
     '''Get id'''
+    embed()
     d = values['source'] + str(values['date'])
     if d in duplicates:
         duplicates[d] += 1
@@ -116,12 +117,19 @@ def get_id(values: Dict[str, Any]):
     return id + ':' + str(duplicates[d])
 
 class TransactionEntry(BaseModel):
+    pass
     # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
     # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
-    @validator('id', pre=True, always=True, check_fields=False)
-    def validate_id(cls, v, values):
-        '''Validate id'''
-        return get_id(values)
+    # @validator('id', pre=True, always=True, check_fields=False)
+    # def validate_id(cls, v, values):
+    #     '''Validate id'''
+    #     return get_id(values)
+
+    # @field_validator('id', mode='after')
+    # @classmethod
+    # def validate_id(cls, v, values):
+    #     '''Validate id'''
+    #     return get_id(values)
 
 class Buy(TransactionEntry):
     '''Buy transaction'''
