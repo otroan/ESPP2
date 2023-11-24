@@ -7,16 +7,12 @@ Cisco Stocks page Excel transaction history normalizer.
 # pylint: disable=no-self-argument
 
 import math
-from decimal import Decimal
-import dateutil.parser as dt
+import logging
 from pandas import read_excel
-from pydantic import parse_obj_as
+import re
+from datetime import datetime
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount, Deposit, Sell
-import simplejson as json
-import re
-from datetime import datetime, date
-import logging
 
 logger = logging.getLogger(__name__)
 

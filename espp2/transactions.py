@@ -87,6 +87,8 @@ def guess_format(filename, data) -> str:
     # Assume CSV
     if filebytes[0:20] == b'"Transaction Details':
         return 'schwab'
+    if filebytes[0:5] == b'"Date':
+        return 'schwab2'
 
     if filebytes[0:16] == b'DATE,TRANSACTION':
         return 'td'

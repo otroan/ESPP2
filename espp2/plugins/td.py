@@ -11,7 +11,7 @@ import codecs
 from decimal import Decimal
 import logging
 import dateutil.parser as dt
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum
 
@@ -101,7 +101,7 @@ def action_to_type(value):
 
 def read(raw_data, filename=''):
     '''Main entry point of plugin. Return normalized Python data structure.'''
-
+    adapter = TypeAdapter(Entry)
     csv_data = td_csv_import(raw_data)
     trans = []
     for e in csv_data:
@@ -207,6 +207,6 @@ def read(raw_data, filename=''):
             raise ValueError(f'Unknown transaction entry: {e}')
 
         r['source'] = f'td:{filename}'
-        trans.append(parse_obj_as(Entry, r))
+        trans.append(adapter.validate_python(r))
 
     return Transactions(transactions=trans)

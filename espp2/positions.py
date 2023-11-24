@@ -22,7 +22,8 @@ tax_deduction_rates = {
     2019: [1.3, 1.7],
     2020: [0.6, 0.8],
     2021: [0.5, 0.6],
-    2022: [1.7, 2.1]
+    2022: [1.7, 2.1],
+    2023: [0.0, 0.0],
 }
 
 # pylint: disable=too-many-instance-attributes, line-too-long, invalid-name, logging-fstring-interpolation
@@ -198,7 +199,7 @@ class Positions():
         self.tax_deduction = []
         for i, p in enumerate(self.positions):
             p.idx = i
-            tax_deduction = p.dict().get('tax_deduction', 0)
+            tax_deduction = p.model_dump().get('tax_deduction', 0)
             self.tax_deduction.insert(i, tax_deduction)
             total_accumulated_tax_deduction += (tax_deduction * p.qty)
         logger.info('Total tax deduction accumulated from previous years %s', total_accumulated_tax_deduction)
@@ -506,13 +507,13 @@ class Positions():
 
         for s in sales:
             if s.fee and s.fee.value < 0:
-                self.cash.credit(s.date, s.fee.copy(), 'sale fee')
+                self.cash.credit(s.date, s.fee.model_copy(), 'sale fee')
             # Distinguish between real sale and a transfer
             is_sale = s.type == EntryTypeEnum.SELL
             if is_sale:
                 s_record = EOYSales(date=s.date, symbol=symbol, qty=s.qty,
                             fee=s.fee, amount=s.amount, from_positions=[])
-                self.cash.debit(s.date, s.amount.copy(), 'sale')
+                self.cash.debit(s.date, s.amount.model_copy(), 'sale')
 
             qty_to_sell = abs(s.qty)
             while qty_to_sell > 0:
@@ -653,7 +654,7 @@ class Positions():
                 # tax_deduction += (item.purchase_price.nok_value *
                 #                   tax_deduction_rate)/100
                 hitem = Stock(date=item.date, symbol=item.symbol, qty=item.qty,
-                              purchase_price=item.purchase_price.copy(), tax_deduction=self.tax_deduction[item.idx])
+                              purchase_price=item.purchase_price.model_copy(), tax_deduction=self.tax_deduction[item.idx])
                 stocks.append(hitem)
         return Holdings(year=year, broker=broker, stocks=stocks, cash=self.cash_summary.holdings)
 

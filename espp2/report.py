@@ -4,7 +4,6 @@ from decimal import Decimal
 from rich.console import Console
 from rich.table import Table
 from espp2.datamodels import TaxReport, TaxSummary, Holdings, EOYDividend
-from espp2.positions import Ledger
 from espp2.console import console
 
 def print_report_dividends(dividends: list[EOYDividend], console:Console):
@@ -179,7 +178,7 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
                       f'{e.gross_share_dividend}', f'{e.tax_on_gross_share_dividend}')
     console.print(table)
     console.print()
-    
+
     # Transfer gain/loss
     table = Table(title="Transfer gain/loss:", title_justify="left")
     table.add_column("Date", justify="center", style="cyan", no_wrap=True)
