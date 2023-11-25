@@ -141,9 +141,8 @@ class Buy(TransactionEntry):
     source: str
     id: str = Optional[str]
 
-    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
-    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
-    @validator('purchase_price')
+    @field_validator('purchase_price')
+    @classmethod
     def purchase_price_validator(cls, v, values):
         '''Validate purchase price'''
         if v.nok_value < 0 or v.value < 0:
@@ -163,9 +162,8 @@ class Deposit(TransactionEntry):
     source: str
     id: str = Optional[str]
 
-    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
-    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
-    @validator('purchase_price')
+    @field_validator('purchase_price')
+    @classmethod
     def purchase_price_validator(cls, v, values):
         '''Validate purchase price'''
         if v.nok_value < 0 or v.value < 0:
