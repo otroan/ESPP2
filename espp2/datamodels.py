@@ -104,32 +104,27 @@ class NegativeAmount(Amount):
 duplicates = {}
 def get_id(values: Dict[str, Any]):
     '''Get id'''
-    embed()
-    d = values['source'] + str(values['date'])
+    d = values.source + str(values.date)
     if d in duplicates:
         duplicates[d] += 1
     else:
         duplicates[d] = 1
 
-    id = f"{values['type']} {str(values['date'])}"
-    if 'qty' in values:
-        id += ' ' + str(values['qty'])
+    id = f"{values.type} {str(values.date)}"
+    try:
+        if values.qty:
+            id += ' ' + str(values.qty)
+    except AttributeError:
+        pass
     return id + ':' + str(duplicates[d])
 
 class TransactionEntry(BaseModel):
-    pass
-    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
-    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
-    # @validator('id', pre=True, always=True, check_fields=False)
-    # def validate_id(cls, v, values):
-    #     '''Validate id'''
-    #     return get_id(values)
-
-    # @field_validator('id', mode='after')
-    # @classmethod
-    # def validate_id(cls, v, values):
-    #     '''Validate id'''
-    #     return get_id(values)
+    @model_validator(mode="after")
+    @classmethod
+    def validate_id(cls, v, info):
+        '''Validate id'''
+        v.id = get_id(v)
+        return v
 
 class Buy(TransactionEntry):
     '''Buy transaction'''
