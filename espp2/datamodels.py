@@ -223,7 +223,7 @@ class Dividend_Reinv(TransactionEntry):
 
 class Wire(TransactionEntry):
     '''Wire transaction'''
-    type: Literal[EntryTypeEnum.WIRE]
+    type: Literal[EntryTypeEnum.WIRE] = Field(const=True)
     date: date
     amount: Amount
     description: str
