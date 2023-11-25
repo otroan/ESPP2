@@ -101,12 +101,15 @@ def get_purchaseprice(csv_item):
 
 def deposit(csv_item, source):
     '''Process deposit'''
-    d = fixup_date(csv_item['DATE'])
+    purchase_date = None
+    if csv_item['DESCRIPTION'] == 'ESPP':
+        purchase_date = fixup_date(csv_item['subdata'][0]['PURCHASEDATE'])
+        d = purchase_date
+    else:
+        d = fixup_date(csv_item['DATE'])
     qty = fixup_number(csv_item['QUANTITY'])
     purchase_price = fixup_price(d, 'USD', get_purchaseprice(csv_item))
-    purchase_date = fixup_date(csv_item['PURCHASEDATE'])
-    return Deposit(type=EntryTypeEnum.DEPOSIT,
-                   date=d,
+    return Deposit(date=d,
                    symbol=csv_item['SYMBOL'],
                    description=csv_item['DESCRIPTION'],
                    qty=qty,
@@ -123,8 +126,7 @@ def wire(csv_item, source):
         fee = fixup_price(d, 'USD', "$0.0")
 
     amount = fixup_price(d, 'USD', csv_item['AMOUNT'])
-    return Wire(type=EntryTypeEnum.WIRE,
-                date=d,
+    return Wire(date=d,
                 description=csv_item['DESCRIPTION'],
                 amount=Amount(**amount),
                 fee=NegativeAmount(**fee),
@@ -143,8 +145,7 @@ def sale(csv_item, source):
     grossproceeds = fixup_price(d, 'USD', csv_item['AMOUNT'])
     qty = fixup_number(csv_item['QUANTITY'])
 
-    return Sell(type=EntryTypeEnum.SELL,
-                date=d,
+    return Sell(date=d,
                 symbol=csv_item['SYMBOL'],
                 description=csv_item['DESCRIPTION'],
                 qty=qty*-1,
@@ -159,8 +160,7 @@ def tax_withholding(csv_item, source):
     d = fixup_date(csv_item['DATE'])
     amount = fixup_price(d, 'USD', csv_item['AMOUNT'])
 
-    return Tax(type=EntryTypeEnum.TAX,
-               date=d,
+    return Tax(date=d,
                symbol=csv_item['SYMBOL'],
                description=csv_item['DESCRIPTION'],
                amount=amount,
@@ -171,8 +171,7 @@ def dividend(csv_item, source):
     d = fixup_date(csv_item['DATE'])
     amount = fixup_price(d, 'USD', csv_item['AMOUNT'])
 
-    return Dividend(type=EntryTypeEnum.DIVIDEND,
-                    date=fixup_date(csv_item['DATE']),
+    return Dividend(date=fixup_date(csv_item['DATE']),
                     symbol=csv_item['SYMBOL'],
                     description=csv_item['DESCRIPTION'],
                     amount=PositiveAmount(**amount),
@@ -183,19 +182,17 @@ def dividend_reinvested(csv_item, source):
     d = fixup_date(csv_item['DATE'])
     amount = fixup_price(d, 'USD', csv_item['AMOUNT'])
 
-    return Dividend_Reinv(type=EntryTypeEnum.DIVIDEND_REINV,
-                            date=d,
-                            symbol=csv_item['SYMBOL'],
-                            description=csv_item['DESCRIPTION'],
-                            amount= Amount(**amount),
-                            source=source)
+    return Dividend_Reinv(date=d,
+                          symbol=csv_item['SYMBOL'],
+                          description=csv_item['DESCRIPTION'],
+                          amount= Amount(**amount),
+                          source=source)
 
 def tax_reversal(csv_item, source):
     '''Process tax reversal'''
     d = fixup_date(csv_item['DATE'])
     amount = fixup_price(d, 'USD', csv_item['AMOUNT'])
-    return Taxsub(type=EntryTypeEnum.TAXSUB,
-                  date=d,
+    return Taxsub(date=d,
                   symbol=csv_item['SYMBOL'],
                   description=csv_item['DESCRIPTION'],
                   amount=Amount(**amount),

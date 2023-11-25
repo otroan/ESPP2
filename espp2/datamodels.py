@@ -133,7 +133,7 @@ class TransactionEntry(BaseModel):
 
 class Buy(TransactionEntry):
     '''Buy transaction'''
-    type: Literal[EntryTypeEnum.BUY]
+    type: Literal[EntryTypeEnum.BUY] = Field(default=EntryTypeEnum.BUY)
     date: date
     symbol: str
     qty: Decimal
@@ -152,7 +152,7 @@ class Buy(TransactionEntry):
 
 class Deposit(TransactionEntry):
     '''Deposit transaction'''
-    type: Literal[EntryTypeEnum.DEPOSIT]
+    type: Literal[EntryTypeEnum.DEPOSIT] = Field(default=EntryTypeEnum.DEPOSIT)
     date: date
     qty: Decimal
     symbol: str
@@ -173,7 +173,7 @@ class Deposit(TransactionEntry):
 
 class Tax(TransactionEntry):
     '''Tax withheld transaction'''
-    type: Literal[EntryTypeEnum.TAX]
+    type: Literal[EntryTypeEnum.TAX] = Field(default=EntryTypeEnum.TAX)
     date: date
     symbol: str
     description: str
@@ -183,7 +183,7 @@ class Tax(TransactionEntry):
 
 class Taxsub(TransactionEntry):
     '''Tax returned transaction'''
-    type: Literal[EntryTypeEnum.TAXSUB]
+    type: Literal[EntryTypeEnum.TAXSUB] = Field(default=EntryTypeEnum.TAXSUB)
     date: date
     symbol: str
     description: str
@@ -193,7 +193,7 @@ class Taxsub(TransactionEntry):
 
 class Dividend(TransactionEntry):
     '''Dividend transaction'''
-    type: Literal[EntryTypeEnum.DIVIDEND]
+    type: Literal[EntryTypeEnum.DIVIDEND] = Field(default=EntryTypeEnum.DIVIDEND)
     date: date
     symbol: str
     amount: Optional[PositiveAmount] = None
@@ -213,7 +213,7 @@ class Dividend(TransactionEntry):
 
 class Dividend_Reinv(TransactionEntry):
     '''Dividend reinvestment transaction'''
-    type: Literal[EntryTypeEnum.DIVIDEND_REINV]
+    type: Literal[EntryTypeEnum.DIVIDEND_REINV] = Field(default=EntryTypeEnum.DIVIDEND_REINV)
     date: date
     symbol: str
     amount: Amount
@@ -223,7 +223,7 @@ class Dividend_Reinv(TransactionEntry):
 
 class Wire(TransactionEntry):
     '''Wire transaction'''
-    type: Literal[EntryTypeEnum.WIRE] = Field(const=True)
+    type: Literal[EntryTypeEnum.WIRE] = Field(default=EntryTypeEnum.WIRE)
     date: date
     amount: Amount
     description: str
@@ -233,7 +233,7 @@ class Wire(TransactionEntry):
 
 class Sell(TransactionEntry):
     '''Sell transaction'''
-    type: Literal[EntryTypeEnum.SELL]
+    type: Literal[EntryTypeEnum.SELL] = Field(default=EntryTypeEnum.SELL)
     date: date
     symbol: str
     qty: Annotated[Decimal, Field(lt=0)]
@@ -245,7 +245,7 @@ class Sell(TransactionEntry):
 
 class Fee(TransactionEntry):
     '''Independent Fee'''
-    type: Literal[EntryTypeEnum.FEE]
+    type: Literal[EntryTypeEnum.FEE] = Field(default=EntryTypeEnum.FEE)
     date: date
     amount: NegativeAmount
     source: str
@@ -253,7 +253,7 @@ class Fee(TransactionEntry):
 
 class Transfer(TransactionEntry):
     '''Transfer transaction'''
-    type: Literal[EntryTypeEnum.TRANSFER]
+    type: Literal[EntryTypeEnum.TRANSFER] = Field(default=EntryTypeEnum.TRANSFER)
     date: date
     symbol: str
     qty: Decimal
@@ -264,7 +264,7 @@ class Transfer(TransactionEntry):
 
 class Cashadjust(TransactionEntry):
     '''Adjust the cash-balance with a positive or negative adjustment'''
-    type: Literal[EntryTypeEnum.CASHADJUST]
+    type: Literal[EntryTypeEnum.CASHADJUST] = Field(default=EntryTypeEnum.CASHADJUST)
     date: date
     amount: Amount
     description: str
