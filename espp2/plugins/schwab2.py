@@ -1,5 +1,5 @@
 '''
-Schwab CSV normalizer.
+Schwab2 CSV normalizer.
 '''
 
 # pylint: disable=invalid-name, too-many-locals, too-many-branches
@@ -9,7 +9,6 @@ from decimal import Decimal
 import codecs
 import io
 import logging
-from IPython import embed
 import dateutil.parser as dt
 from espp2.fmv import FMV
 from espp2.datamodels import (Transactions, Wire, EntryTypeEnum,
@@ -18,9 +17,8 @@ from espp2.datamodels import (Transactions, Wire, EntryTypeEnum,
 
 logger = logging.getLogger(__name__)
 
-#"Date","Action","Symbol","Description","Quantity","FeesAndCommissions","DisbursementElection","Amount","Type","Shares","SalePrice","SubscriptionDate","SubscriptionFairMarketValue","PurchaseDate","PurchasePrice","PurchaseFairMarketValue","DispositionType","GrantId","VestDate","VestFairMarketValue","GrossProceeds","AwardDate","AwardId"
 def schwab_csv_import(fd):
-    '''Parse Schwab CSV file.'''
+    '''Parse Schwab2 CSV file.'''
 
     data = []
 
@@ -28,14 +26,20 @@ def schwab_csv_import(fd):
     if isinstance(fd, io.TextIOWrapper):
         reader = csv.reader(fd)
     else:
-        reader = csv.reader(codecs.iterdecode(fd,'utf-8'), dialect='excel')
+        reader = csv.reader(codecs.iterdecode(fd,'utf-8'))
 
     try:
         # next(reader)
         header = next(reader)
-        assert header == (['Date', 'Action', 'Symbol', 'Description', 'Quantity', 'FeesAndCommissions', 'DisbursementElection', 'Amount', 'Type', 'Shares',
-'SalePrice', 'SubscriptionDate', 'SubscriptionFairMarketValue', 'PurchaseDate', 'PurchasePrice', 'PurchaseFairMarketValue', 'DispositionType', 'GrantId',
-'VestDate', 'VestFairMarketValue', 'GrossProceeds', 'AwardDate', 'AwardId'])
+        assert header == (['Date', 'Action', 'Symbol', 'Description',
+                           'Quantity', 'FeesAndCommissions',
+                           'DisbursementElection', 'Amount', 'Type',
+                           'Shares', 'SalePrice',
+                           'SubscriptionDate', 'SubscriptionFairMarketValue',
+                           'PurchaseDate', 'PurchasePrice',
+                           'PurchaseFairMarketValue', 'DispositionType',
+                           'GrantId', 'VestDate', 'VestFairMarketValue',
+                           'GrossProceeds', 'AwardDate', 'AwardId'])
 
         def field(x):
             return header.index(x)
@@ -82,28 +86,31 @@ def fixup_number(numberstr):
 def get_purchaseprice(csv_item):
     # RS
     subdata = csv_item['subdata'][0]
-    if subdata['VESTFAIRMARKETVALUE'] != '':
+    description = csv_item['DESCRIPTION']
+    if description == 'RS' and subdata['VESTFAIRMARKETVALUE'] != '':
         return subdata['VESTFAIRMARKETVALUE']
     # ESPP
-    if subdata['PURCHASEFAIRMARKETVALUE'] != '':
+    if description == 'ESPP' and subdata['PURCHASEFAIRMARKETVALUE'] != '':
         return subdata['PURCHASEFAIRMARKETVALUE']
 
     # Div Reinv
-    if subdata['PURCHASEPRICE'] != '':
+    if description == 'Div Reinv' and subdata['PURCHASEPRICE'] != '':
         return subdata['PURCHASEPRICE']
+
+    raise ValueError(f'Unknown purchase price for {csv_item}')
 
 def deposit(csv_item, source):
     '''Process deposit'''
     d = fixup_date(csv_item['DATE'])
     qty = fixup_number(csv_item['QUANTITY'])
     purchase_price = fixup_price(d, 'USD', get_purchaseprice(csv_item))
-
+    purchase_date = fixup_date(csv_item['PURCHASEDATE'])
     return Deposit(type=EntryTypeEnum.DEPOSIT,
                    date=d,
                    symbol=csv_item['SYMBOL'],
                    description=csv_item['DESCRIPTION'],
                    qty=qty,
-                #    purchase_date=fixup_date(csv_item['PURCHASEDATE']), ### TODO Needed for ESPP?
+                   purchase_date=purchase_date,
                    purchase_price=Amount(**purchase_price),
                    source=source)
 
@@ -140,7 +147,7 @@ def sale(csv_item, source):
                 date=d,
                 symbol=csv_item['SYMBOL'],
                 description=csv_item['DESCRIPTION'],
-                qty=-qty,
+                qty=qty*-1,
                 sale_price=Amount(**saleprice),
                 amount=Amount(**grossproceeds),
                 fee=NegativeAmount(**fee),

@@ -5,7 +5,6 @@ ESPPv2 Wrapper
 # pylint: disable=invalid-name
 
 import logging
-import json
 from enum import Enum
 import typer
 from pydantic import TypeAdapter
@@ -98,7 +97,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
     if outholdings:
         holdings = result.holdings if result else holdings
         logger.info('Writing new holdings to %s', outholdings.name)
-        j = holdings.json(indent=4)
+        j = holdings.model_dump_json(indent=4)
         with outholdings as f:
             f.write(j)
     else:
@@ -109,7 +108,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
         for w in outw:
             w.nok_value = nan
             w.value = abs(w.value)
-        j = outw.json(indent=4)
+        j = outw.model_dump_json(indent=4)
         with outwires as f:
             f.write(j)
 
