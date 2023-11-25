@@ -11,8 +11,8 @@ import io
 import logging
 import dateutil.parser as dt
 from espp2.fmv import FMV
-from espp2.datamodels import (Transactions, Wire, EntryTypeEnum,
-                              Amount, Taxsub, PositiveAmount, NegativeAmount, Sell, Deposit,
+from espp2.datamodels import (Transactions, Wire,  Amount, Taxsub,
+                              PositiveAmount, NegativeAmount, Sell, Deposit,
                               Dividend, Dividend_Reinv, Tax)
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,6 @@ def schwab_csv_import(fd):
         reader = csv.reader(codecs.iterdecode(fd,'utf-8'))
 
     try:
-        # next(reader)
         header = next(reader)
         assert header == (['Date', 'Action', 'Symbol', 'Description',
                            'Quantity', 'FeesAndCommissions',
@@ -219,4 +218,7 @@ def read(csv_file, filename='') -> Transactions:
         records.append(r)
 
     # sorted_transactions = sorted(newlist, key=lambda d: d['date'])
+    t = Transactions(transactions=records)
+    from rich import print
+    print(t)
     return Transactions(transactions=records)

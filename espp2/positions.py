@@ -117,6 +117,50 @@ def get_tax_deduction_rate(year):
         raise Exception(f'No tax deduction rate for year {year}')
 
     return tax_deduction_rates[year]
+
+from rich import print
+class PostionsTakeTwo():
+    def buy(self, transaction):
+        self.positions.append(transaction)
+
+    def deposit(self, transaction):
+        self.positions.append(transaction)
+
+    def dividend(self, transaction):
+        # embed()
+        pass
+    def tax(self, transaction):
+        pass
+    def dividend_reinv(self, transaction):
+        pass
+    def sell(self, transaction):
+        pass
+    def wire(self, transaction):
+        pass
+    def taxsub(self, transaction):
+        pass
+    dispatch = {
+        'BUY': buy,
+        'DEPOSIT': deposit,
+        'SELL': sell,
+        # 'TRANSFER': 'transfer',
+        'DIVIDEND': dividend,
+        'DIVIDEND_REINV': dividend_reinv,
+        'TAX': tax,
+        'TAXSUB': taxsub,
+        'WIRE': wire,
+        # 'FEE': 'fee',
+        # 'CASHADJUST': 'cashadjust',
+    }
+    def __init__(self, positions, transactions):
+        self.positions = positions
+        # print('POSITIONS:', positions)
+        # print('TRANSACTIONS:', transactions)
+
+        for t in transactions:
+            # Use dispatch to call a function per t.type
+            self.__class__.dispatch[t.type](self, t)
+
 class Positions():
     '''
     Keep track of stock positions. Expect transactions for this year and holdings from previous year.
@@ -186,6 +230,7 @@ class Positions():
                 logger.warning(
                     "No previous holdings or stocks in holding file. Requires the complete transaction history.")
             self.positions = self.new_holdings
+        x = PostionsTakeTwo(self.positions, transactions)
 
         if not generate_holdings:
             # Validate that all positions for the tax year has a valid purchase price.
