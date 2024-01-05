@@ -71,10 +71,13 @@ def guess_format(filename, data) -> str:
     filebytes = data.read(32)
     data.seek(0)
 
+    if extension == '.json':
+        return 'schwab-json'
+
     if extension == '.pickle':
         return 'pickle'
 
-    if extension == '.html' or extension == '.htm':
+    if extension in ('.html', '.htm'):
         if filebytes[0:1] == b'<':
             return 'morgan'
 

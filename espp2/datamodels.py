@@ -74,6 +74,13 @@ class Amount(BaseModel):
         result.value = result.value + other.value
         result.nok_value = result.nok_value + other.nok_value
         return result
+
+    def __sub__(self, other):
+        result = self.model_copy()
+        result.value = result.value - other.value
+        result.nok_value = result.nok_value - other.nok_value
+        return result
+
     def __radd__(self, other):
         if isinstance(other, int) and other == 0:
             return self

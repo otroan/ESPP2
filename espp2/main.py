@@ -10,12 +10,14 @@ import datetime
 from math import isclose
 import simplejson as json
 from espp2.console import console
-from espp2.positions import Positions, InvalidPositionException, Ledger, get_tax_deduction_rate
+from espp2.positions import Positions, InvalidPositionException, Ledger
 from espp2.transactions import normalize
 from espp2.datamodels import (TaxReport, Transactions, Wires, Holdings, ForeignShares,
                               TaxSummary, CreditDeduction, Sell, EntryTypeEnum, Amount, Buy)
 from espp2.report import print_ledger, print_cash_ledger, print_report_holdings
-from espp2.fmv import FMV, FMVTypeEnum
+from espp2.fmv import FMV, FMVTypeEnum, get_tax_deduction_rate
+from espp2.portfolio import Portfolio
+from IPython import embed
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +40,16 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     '''Generate tax report'''
 
     this_year = [t for t in transactions.transactions if t.date.year == year]
+
+    # New portfolio method
+    x = Portfolio(year, broker, this_year, wires, prev_holdings, verbose)
+
     p = Positions(year, prev_holdings, this_year, wires)
     p.process()
+
     holdings = p.holdings(year, broker)
     report = {}
+
     fundamentals = p.fundamentals()
     if prev_holdings:
         report['prev_holdings'] = prev_holdings
