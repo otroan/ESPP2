@@ -14,7 +14,7 @@ from espp2.main import do_taxes, do_holdings_2, do_holdings_1, do_holdings_3, do
 from espp2.datamodels import Holdings, Wires, ExpectedBalance
 from espp2.report import print_report
 from espp2._version import __version__
-
+from IPython import embed
 app = typer.Typer(pretty_exceptions_enable=False)
 
 class BrokerEnum(str, Enum):
@@ -114,7 +114,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
 
     # Tax report (in JSON)
     if output:
-        j = result.report.json(indent=4)
+        j = result.report.model_dump_json(indent=4)
         logger.info('Writing tax report to: %s', output.name)
         with output as f:
             f.write(j)

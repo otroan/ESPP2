@@ -44,8 +44,46 @@ def get_espp_exchange_rate(ratedate):
             '2021-06-30':	8.470699849,
             '2021-12-31':	8.698223823,
             '2022-06-30':	9.068896406,
-            '2022-12-30':	10.06694519, }
+            '2022-12-30':	10.06694519,
+            # '2023-06-30':	11.06499397, # Need number from Cisco
+            # '2023-12-29':	12.06304276,
+            }
     return Decimal(espp[ratedate])
+
+def get_tax_deduction_rate(year):
+    '''Return tax deduction rate for year'''
+    #
+    # Remember to add the new tax-free deduction rates for a new year
+    #
+    tax_deduction_rates = {
+        2006: [2.1, 3.0],
+        2007: [3.3, 4.6],
+        2008: [3.8, 5.2],
+        2009: [1.3, 1.8],
+        2010: [1.6, 2.2],
+        2011: [1.5, 2.1],
+        2012: [1.1, 1.6],
+        2013: [1.1, 1.5],
+        2014: [0.9, 1.2],
+        2015: [0.6, 0.8],
+        2016: [0.4, 0.5],
+        2017: [0.7, 0.9],
+        2018: [0.8, 1.1],
+        2019: [1.3, 1.7],
+        2020: [0.6, 0.8],
+        2021: [0.5, 0.6],
+        2022: [1.7, 2.1],
+        2023: [3.2, 4.2],
+    }
+
+    if year < 2006:
+        logger.error('The tax deduction rate was introduced in 2006, no support for years prior to that. %s', year)
+        return 0
+
+    if year not in tax_deduction_rates:
+        raise Exception(f'No tax deduction rate for year {year}')
+
+    return Decimal(str(tax_deduction_rates[year][0]))
 
 class FMVTypeEnum(Enum):
     '''Enum for FMV types'''
@@ -61,7 +99,6 @@ class FMVTypeEnum(Enum):
 CACHE_DIR = 'cache'
 
 EODHDKEY='6409ce1fb285f1.01896144'
-
 
 class FMVException(Exception):
     '''Exception class for FMV module'''
@@ -81,7 +118,7 @@ class FMV():
             if not os.path.exists(CACHE_DIR):
                 os.makedirs(CACHE_DIR)
 
-            cls.fetchers = {FMVTypeEnum.STOCK: cls.fetch_stock,
+            cls.fetchers = {FMVTypeEnum.STOCK: cls.fetch_stock2,
                             FMVTypeEnum.CURRENCY: cls.fetch_currency,
                             FMVTypeEnum.DIVIDENDS: cls.fetch_dividends,
                             FMVTypeEnum.FUNDAMENTALS: cls.fetch_fundamentals,
@@ -94,7 +131,7 @@ class FMV():
         return cls._instance
 
     def fetch_stock(self, symbol):
-        '''Returns a dictionary of date and closing value'''
+        '''Returns a dictionary of date and closing value from AlphaVantage'''
         # apikey = 'LN6PYRQ0I5LKDY51'
         http = urllib3.PoolManager()
         # The REST api is described here: https://www.alphavantage.co/documentation/
@@ -107,6 +144,21 @@ class FMV():
         raw = json.loads(r.data.decode('utf-8'))
         return {k: float(v['4. close'])
                 for k, v in raw['Time Series (Daily)'].items()}
+
+    def fetch_stock2(self, symbol):
+        '''Returns a dictionary of date and closing value from EOD Historical Data'''
+        apikey = '6409ce1fb285f1.01896144'
+        url = f'https://eodhd.com/api/eod/AAPL.US?api_token=6409ce1fb285f1.01896144&fmt=json'
+        http = urllib3.PoolManager()
+        r = http.request('GET', url)
+        if r.status != 200:
+            raise FMVException(
+                f'Fetching stock data for {symbol} failed {r.status}')
+        raw = json.loads(r.data.decode('utf-8'))
+        print('RAW', raw)
+        return {k: float(v['4. close'])
+                for k, v in raw['Time Series (Daily)'].items()}
+
 
     def fetch_currency(self, currency):
         '''Returns a dictionary of date and closing value'''

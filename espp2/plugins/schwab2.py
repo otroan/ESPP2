@@ -218,7 +218,4 @@ def read(csv_file, filename='') -> Transactions:
         records.append(r)
 
     # sorted_transactions = sorted(newlist, key=lambda d: d['date'])
-    t = Transactions(transactions=records)
-    from rich import print
-    print(t)
     return Transactions(transactions=records)
