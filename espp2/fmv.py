@@ -17,7 +17,6 @@ import logging
 from decimal import Decimal
 import numpy as np
 import urllib3
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +44,8 @@ def get_espp_exchange_rate(ratedate):
             '2021-12-31':	8.698223823,
             '2022-06-30':	9.068896406,
             '2022-12-30':	10.06694519,
-            # '2023-06-30':	11.06499397, # Need number from Cisco
-            # '2023-12-29':	12.06304276,
+            '2023-06-30':	10.28872,
+            '2023-12-29':	10.709775,
             }
     return Decimal(espp[ratedate])
 
