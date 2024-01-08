@@ -20,69 +20,29 @@ import urllib3
 
 logger = logging.getLogger(__name__)
 
-#### ESPP Rate MANUALLY MAINTAINED ####
+# Read manually entered data
+with open('data.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+
 def get_espp_exchange_rate(ratedate):
     '''Return the 6 month P&L average. Manually maintained for now.'''
-    espp = {
-            '2013-06-28':	5.686826466,
-            '2013-12-31':	5.92490772,
-            '2014-06-30':	6.038793208,
-            '2014-12-31':	6.355057037,
-            '2015-06-30':	7.701490238,
-            '2015-12-31':	8.194034743,
-            '2016-06-30':	8.543211564,
-            '2016-12-30':	8.358548287,
-            '2017-06-30':	8.464247021,
-            '2017-12-29':	8.06913636,
-            '2018-06-29':	7.960515841,
-            '2018-12-31':	8.268904784,
-            '2019-06-28':	8.62864884,
-            '2019-12-31':	8.921163677,
-            '2020-06-30':	9.719589833,
-            '2020-12-31':	9.119760697,
-            '2021-06-30':	8.470699849,
-            '2021-12-31':	8.698223823,
-            '2022-06-30':	9.068896406,
-            '2022-12-30':	10.06694519,
-            '2023-06-30':	10.28872,
-            '2023-12-29':	10.709775,
-            }
-    return Decimal(espp[ratedate])
+    return Decimal(data["espp"][ratedate])
 
 def get_tax_deduction_rate(year):
     '''Return tax deduction rate for year'''
     #
     # Remember to add the new tax-free deduction rates for a new year
     #
-    tax_deduction_rates = {
-        2006: [2.1, 3.0],
-        2007: [3.3, 4.6],
-        2008: [3.8, 5.2],
-        2009: [1.3, 1.8],
-        2010: [1.6, 2.2],
-        2011: [1.5, 2.1],
-        2012: [1.1, 1.6],
-        2013: [1.1, 1.5],
-        2014: [0.9, 1.2],
-        2015: [0.6, 0.8],
-        2016: [0.4, 0.5],
-        2017: [0.7, 0.9],
-        2018: [0.8, 1.1],
-        2019: [1.3, 1.7],
-        2020: [0.6, 0.8],
-        2021: [0.5, 0.6],
-        2022: [1.7, 2.1],
-        2023: [3.2, 4.2],
-    }
 
     if year < 2006:
         logger.error('The tax deduction rate was introduced in 2006, no support for years prior to that. %s', year)
         return 0
 
-    if year not in tax_deduction_rates:
+    yearstr = str(year)
+    if yearstr not in data["tax_deduction_rates"]:
         raise Exception(f'No tax deduction rate for year {year}')
 
-    return Decimal(str(tax_deduction_rates[year][0]))
+    return Decimal(str(data["tax_deduction_rates"][yearstr][0]))
 
 class FMVTypeEnum(Enum):
     '''Enum for FMV types'''
