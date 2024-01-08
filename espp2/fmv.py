@@ -18,15 +18,22 @@ from decimal import Decimal
 import numpy as np
 import urllib3
 
+class FMVException(Exception):
+    '''Exception class for FMV module'''
+
 logger = logging.getLogger(__name__)
 
 # Read manually entered data
-with open('data.json', 'r', encoding='utf-8') as f:
-    data = json.load(f)
+with open('espp2/data.json', 'r', encoding='utf-8') as f:
+    MANUALRATES = json.load(f)
+
+with open('vault.json', 'r', encoding='utf-8') as vault_file:
+    vault = json.load(vault_file)
+    EODHDKEY = vault['EODHDKEY']
 
 def get_espp_exchange_rate(ratedate):
     '''Return the 6 month P&L average. Manually maintained for now.'''
-    return Decimal(data["espp"][ratedate])
+    return Decimal(MANUALRATES["espp"][ratedate])
 
 def get_tax_deduction_rate(year):
     '''Return tax deduction rate for year'''
@@ -39,10 +46,10 @@ def get_tax_deduction_rate(year):
         return 0
 
     yearstr = str(year)
-    if yearstr not in data["tax_deduction_rates"]:
-        raise Exception(f'No tax deduction rate for year {year}')
+    if yearstr not in MANUALRATES["tax_deduction_rates"]:
+        raise FMVException(f'No tax deduction rate for year {year}')
 
-    return Decimal(str(data["tax_deduction_rates"][yearstr][0]))
+    return Decimal(str(MANUALRATES["tax_deduction_rates"][yearstr][0]))
 
 class FMVTypeEnum(Enum):
     '''Enum for FMV types'''
@@ -56,11 +63,6 @@ class FMVTypeEnum(Enum):
 
 # Store downloaded files in cache directory under current directory
 CACHE_DIR = 'cache'
-
-EODHDKEY='6409ce1fb285f1.01896144'
-
-class FMVException(Exception):
-    '''Exception class for FMV module'''
 
 def todate(datestr: str) -> date:
     '''Convert string to datetime'''
@@ -91,7 +93,6 @@ class FMV():
 
     def fetch_stock(self, symbol):
         '''Returns a dictionary of date and closing value from AlphaVantage'''
-        # apikey = 'LN6PYRQ0I5LKDY51'
         http = urllib3.PoolManager()
         # The REST api is described here: https://www.alphavantage.co/documentation/
         url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&outputsize=full&' \
@@ -106,8 +107,7 @@ class FMV():
 
     def fetch_stock2(self, symbol):
         '''Returns a dictionary of date and closing value from EOD Historical Data'''
-        apikey = '6409ce1fb285f1.01896144'
-        url = f'https://eodhd.com/api/eod/AAPL.US?api_token=6409ce1fb285f1.01896144&fmt=json'
+        url = f'https://eodhd.com/api/eod/AAPL.US?api_token={EODHDKEY}&fmt=json'
         http = urllib3.PoolManager()
         r = http.request('GET', url)
         if r.status != 200:
