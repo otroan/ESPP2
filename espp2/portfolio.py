@@ -92,6 +92,16 @@ class PortfolioSale(BaseModel):
         )
         return l
 
+def adjust_width(ws):
+    def as_text(value):
+        if value is None:
+            return ""
+        return str(value)
+
+    # Adjust column width to fit the longest value in each column
+    for column_cells in ws.columns:
+        length = max(len(as_text(cell.value)) for cell in column_cells)
+        ws.column_dimensions[column_cells[0].column_letter].width = length + 1
 
 class PortfolioPosition(BaseModel):
     """Stock positions"""
@@ -189,6 +199,8 @@ class Portfolio:
         for p in self.positions:
             sold = 0
             if p.symbol == transaction.symbol:
+                if p.current_qty == 0:
+                    continue
                 if p.current_qty >= shares_to_sell:
                     p.current_qty -= shares_to_sell
                     sold = shares_to_sell
@@ -302,11 +314,16 @@ class Portfolio:
                 )
             )
 
+        # Process transactions.
+        # There's a problem here. I need to add tax deduction before processing. But I can't do that because I don't know if I have a sale.
+        # So I need to process sales first.
         for t in transactions:
             # Use dispatch to call a function per t.type
             self.__class__.dispatch[t.type](self, t)
 
         # Add tax deduction to the positions held by the end of the year
+        total_tax_deduction = 0
+
         for p in self.positions:
             if p.current_qty > 0:
                 tax_deduction_rate = get_tax_deduction_rate(self.year)
@@ -314,10 +331,14 @@ class Portfolio:
                     (p.purchase_price.nok_value + p.tax_deduction) * tax_deduction_rate
                 ) / 100
                 p.tax_deduction_new = tax_deduction
+                print('POSITION THAT GETS TAX DEDUCTION FOR THIS YEAR', p.date, p.current_qty, p.symbol, p.tax_deduction_new)
             p.tax_deduction = p.tax_deduction_acc + p.tax_deduction_new
+            total_tax_deduction += (p.tax_deduction * p.qty)
+
+        print('Total tax deduction', total_tax_deduction)
 
         # Walk through and use the available tax deduction
-        # Use tax deduction for dividend if we can. Then for sales. Then keep for next year.
+        # Use tax deduction for dividend if we can. Then for sales. Then keep leftovers for next year.
         for p in self.positions:
             if p.tax_deduction > 0:
                 # Walk through records looking for dividends
@@ -334,13 +355,14 @@ class Portfolio:
                             r.tax_deduction_used_total = p.tax_deduction * r.qty
                             p.tax_deduction = 0
                     if isinstance(r, PortfolioSale) and r.gain_ps.nok_value > 0:
+                        qty = abs(r.qty)
                         if p.tax_deduction >= r.gain_ps.nok_value:
                             p.tax_deduction -= r.gain_ps.nok_value
                             r.tax_deduction_used = r.gain_ps.nok_value
-                            r.tax_deduction_used_total = r.gain_ps.nok_value * r.qty
+                            r.tax_deduction_used_total = r.gain_ps.nok_value * qty
                         else:
                             r.tax_deduction_used = p.tax_deduction
-                            r.tax_deduction_used_total = p.tax_deduction * r.qty
+                            r.tax_deduction_used_total = p.tax_deduction * qty
                             p.tax_deduction = 0
 
         # Process wires
@@ -351,6 +373,16 @@ class Portfolio:
         print('CASH REPORT', cash_report)
         self.ledger = self.cash.ledger()
         print_cash_ledger(self.ledger, console)
+
+        # Generate holdings for next year.
+        holdings = []
+        for p in self.positions:
+            if p.current_qty == 0:
+                continue
+            hitem = Stock(date=p.date, symbol=p.symbol, qty=p.current_qty,
+                          purchase_price=p.purchase_price, tax_deduction=p.tax_deduction)
+            holdings.append(hitem)
+        self.eoy_holdings = Holdings(year=year, broker=broker, stocks=holdings, cash=[])
 
         self.excel_report()
 
@@ -417,16 +449,8 @@ class Portfolio:
         # Specify the Excel file path
         excel_file_path = "stock_data.xlsx"
 
-        def as_text(value):
-            if value is None:
-                return ""
-            return str(value)
 
-        # Adjust column width to fit the longest value in each column
-        for column_cells in ws.columns:
-            length = max(len(as_text(cell.value)) for cell in column_cells)
-            ws.column_dimensions[column_cells[0].column_letter].width = length + 1
-
+        adjust_width(ws)
         # Freeze the first row
         c = ws['A2']
         ws.freeze_panes = c
@@ -437,6 +461,16 @@ class Portfolio:
         for c in self.ledger:
             ws.append([c[0].date, c[0].description, round(c[0].amount.nok_value, 2),
                        round(c[0].amount.value, 2), round(c[1], 2)])
+
+        adjust_width(ws)
+
+
+        # Separate sheet for EOY holdings
+        ws = workbook.create_sheet("EOY Holdings")
+        ws.append(["Symbol", "Date", "Qty", "Price", "Tax Deduction"])
+        for h in self.eoy_holdings.stocks:
+            ws.append([h.symbol, h.date, round(h.qty, 4), round(h.purchase_price.nok_value, 2), round(h.tax_deduction, 2)])
+        adjust_width(ws)
 
         # Save the Excel workbook to a file
         workbook.save(excel_file_path)

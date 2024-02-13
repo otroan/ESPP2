@@ -7,7 +7,6 @@ ESPPv2 Wrapper
 import logging
 from enum import Enum
 import typer
-from pydantic import TypeAdapter
 from numpy import nan
 from rich.logging import RichHandler
 from espp2.main import do_taxes, do_holdings_2, do_holdings_1, do_holdings_3, do_holdings_4, console
