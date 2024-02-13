@@ -27,9 +27,9 @@ logger = logging.getLogger(__name__)
 with open('espp2/data.json', 'r', encoding='utf-8') as f:
     MANUALRATES = json.load(f)
 
-with open('vault.json', 'r', encoding='utf-8') as vault_file:
+with open('espp2/vault.json', 'r', encoding='utf-8') as vault_file:
     vault = json.load(vault_file)
-    EODHDKEY = vault['EODHDKEY']
+    EODHDKEY = vault['EODHD']
 
 def get_espp_exchange_rate(ratedate):
     '''Return the 6 month P&L average. Manually maintained for now.'''
@@ -107,17 +107,14 @@ class FMV():
 
     def fetch_stock2(self, symbol):
         '''Returns a dictionary of date and closing value from EOD Historical Data'''
-        url = f'https://eodhd.com/api/eod/AAPL.US?api_token={EODHDKEY}&fmt=json'
+        url = f'https://eodhd.com/api/eod/{symbol}.US?api_token={EODHDKEY}&fmt=json'
         http = urllib3.PoolManager()
         r = http.request('GET', url)
         if r.status != 200:
             raise FMVException(
                 f'Fetching stock data for {symbol} failed {r.status}')
         raw = json.loads(r.data.decode('utf-8'))
-        print('RAW', raw)
-        return {k: float(v['4. close'])
-                for k, v in raw['Time Series (Daily)'].items()}
-
+        return {r['date']: r['adjusted_close'] for r in raw}
 
     def fetch_currency(self, currency):
         '''Returns a dictionary of date and closing value'''

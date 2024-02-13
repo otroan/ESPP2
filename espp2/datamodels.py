@@ -399,7 +399,7 @@ class ForeignShares(BaseModel):
     account: str
     shares: Decimal
     wealth: Annotated[Decimal, Field(ge=0)]
-    # Share of taxable dividend after October 6.
+    # Share of taxable dividend after October 6 2022.
     post_tax_inc_dividend: Optional[Annotated[Decimal, Field(ge=0, decimal_places=0)]] = None
     # Taxable dividend
     dividend: Annotated[Decimal, Field(ge=0, decimal_places=0)]
