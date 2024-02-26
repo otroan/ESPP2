@@ -17,6 +17,14 @@ import logging
 from decimal import Decimal
 import numpy as np
 import urllib3
+from pydantic import BaseModel
+
+class Fundamentals(BaseModel):
+    '''Fundamentals'''
+    name: str
+    isin: str
+    country: str
+    symbol: str
 
 class FMVException(Exception):
     '''Exception class for FMV module'''
@@ -286,6 +294,15 @@ class FMV():
             return self.table[FMVTypeEnum.FUNDAMENTALS][symbol]
         except KeyError as e:
             raise FMVException(f'No fundamentals data for {symbol}') from e
+
+    def get_fundamentals2(self, symbol: str) -> dict:
+        f = self.get_fundamentals(symbol)
+        isin = f.get('General', {}).get('ISIN', None)
+        if not isin:
+            isin = f.get('ETF_Data', {}).get('ISIN', '')
+
+        return Fundamentals(name=f['General']['Name'], isin=isin,
+                            country=f['General']['CountryName'], symbol=f['General']['Code'])
 
 if __name__ == '__main__':
 

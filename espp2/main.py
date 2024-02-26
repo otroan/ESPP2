@@ -21,6 +21,11 @@ from IPython import embed
 
 logger = logging.getLogger(__name__)
 
+class TaxReportReturn(NamedTuple):  # inherit from typing.NamedTuple
+    report: TaxReport
+    holdings: Holdings
+    summary: TaxSummary
+
 class ESPPErrorException(Exception):
     '''ESPP Error Exception'''
 
@@ -29,23 +34,18 @@ def json_load(fp):
     data = json.load(fp, parse_float=Decimal, encoding='utf-8')
     return data
 
-class TaxReportReturn(NamedTuple):  # inherit from typing.NamedTuple
-    report: TaxReport
-    holdings: Holdings
-    summary: TaxSummary
-
-
 def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
                prev_holdings: Holdings, verbose : bool = False) -> Tuple[TaxReport, Holdings, TaxSummary]:
     '''Generate tax report'''
 
     this_year = [t for t in transactions.transactions if t.date.year == year]
 
-    # New portfolio method
-    x = Portfolio(year, broker, this_year, wires, prev_holdings, verbose)
-
+    # Run the chosen tax calculation engine
     p = Positions(year, prev_holdings, this_year, wires)
     p.process()
+
+    # Parallel implementation generating Excel output
+    _portfolio = Portfolio(year, broker, this_year, wires, prev_holdings, verbose)
 
     holdings = p.holdings(year, broker)
     report = {}
@@ -53,6 +53,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     fundamentals = p.fundamentals()
     if prev_holdings:
         report['prev_holdings'] = prev_holdings
+
     report['ledger'] = p.ledger.entries
 
     # End of Year Balance (formueskatt)

@@ -3,7 +3,7 @@
 # pylint: disable=no-self-argument
 
 from datetime import date
-from typing import List, Literal, Annotated, Union, Optional, Any, Dict
+from typing import List, Literal, Annotated, Union, Optional, Any, Dict, NamedTuple
 from enum import Enum
 from decimal import Decimal
 from pydantic import (field_validator, model_validator, ConfigDict,
@@ -442,13 +442,6 @@ class ESPPResponse(BaseModel):
     holdings: Holdings
     tax_report: TaxReport
     summary: TaxSummary
-
-class Fundamentals(BaseModel):
-    '''Fundamentals'''
-    name: str
-    isin: str
-    country: str
-    symbol: str
 
 class ExpectedBalance(BaseModel):
     '''Expected balance. Note only supports a single symbol'''

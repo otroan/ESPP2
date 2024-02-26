@@ -9,11 +9,11 @@ from enum import Enum
 import typer
 from numpy import nan
 from rich.logging import RichHandler
+from pydantic import TypeAdapter
 from espp2.main import do_taxes, do_holdings_2, do_holdings_1, do_holdings_3, do_holdings_4, console
 from espp2.datamodels import Holdings, Wires, ExpectedBalance
 from espp2.report import print_report
 from espp2._version import __version__
-from IPython import embed
 app = typer.Typer(pretty_exceptions_enable=False)
 
 class BrokerEnum(str, Enum):
@@ -31,7 +31,7 @@ def version_callback(value: bool):
 @app.command()
 def main(transaction_files: list[typer.FileBinaryRead],
          output: typer.FileTextWrite = None,
-         year: int = 2022,
+         year: int = 2023,
          broker: BrokerEnum = BrokerEnum.schwab,
          wires: typer.FileText = None,
          inholdings: typer.FileText = None,
@@ -42,7 +42,8 @@ def main(transaction_files: list[typer.FileBinaryRead],
          loglevel: str = typer.Option("WARNING", help='Logging level'),
          version: bool = typer.Option(None, "--version", callback=version_callback, is_eager=True),
          preheat_cache: bool = False,
-         expected_balance: str = None):
+         expected_balance: str = None,
+         ):
 
     '''ESPPv2 tax reporting tool'''
     lognames = logging.getLevelNamesMapping()
