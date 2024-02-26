@@ -1,9 +1,10 @@
 from copy import deepcopy
 from openpyxl import Workbook
 from openpyxl.formatting import Rule
+from openpyxl.comments import Comment
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles.differential import DifferentialStyle
-from openpyxl.styles import Font
+from openpyxl.styles import Font, NamedStyle
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import date
 from decimal import Decimal
@@ -17,91 +18,26 @@ from espp2.datamodels import (
     Wires,
     Transactions,
     Dividend_Reinv,
+    EOYBalanceItem,
+    EOYDividend,
+    TaxSummary,
+    TaxReport,
+    ForeignShares,
+    CashSummary
 )
-from espp2.fmv import get_tax_deduction_rate
+from espp2.fmv import FMV, get_tax_deduction_rate
+
 from espp2.cash import Cash
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Dict
 from espp2.report import print_cash_ledger
 from espp2.console import console
 
+fmv = FMV()
 
 def format_cells(ws, column, number_format):
     for cell in ws[column]:
         cell.number_format = number_format
 
-
-def insert_in_list(columns, l, col, value):
-    i = columns.index(col)
-    l[i] = value
-
-
-# from rich import print
-class PortfolioDividend(BaseModel):
-    """Stock dividends"""
-
-    divdate: date
-    qty: Decimal = Field(decimal_places=4)
-    dividend_dps: Amount
-    dividend: Amount
-    tax_deduction_used: Decimal = 0
-    tax_deduction_used_total: Decimal = 0
-
-    def format(self, columns):
-        l = [""] * len(columns)
-        insert_in_list(columns, l, "Date", self.divdate)
-        insert_in_list(columns, l, "Type", "Dividend")
-        insert_in_list(columns, l, "iQty", self.qty)
-        insert_in_list(columns, l, "Exchange Rate", self.dividend_dps.nok_exchange_rate)
-        insert_in_list(columns, l, "Div PS USD", round(self.dividend_dps.value, 2))
-        insert_in_list(columns, l, "Div", round(self.dividend.nok_value, 2))
-        insert_in_list(columns, l, "Div USD", round(self.dividend.value, 2))
-        insert_in_list(columns, l, "Tax Ded Used", round(self.tax_deduction_used, 2))
-        insert_in_list(
-            columns, l, "Tax Ded Total", round(self.tax_deduction_used_total, 2)
-        )
-        return l
-
-
-class PortfolioSale(BaseModel):
-    saledate: date
-    qty: Decimal
-    sell_price: Amount
-    gain_ps: Amount
-    gain: Amount
-    total: Amount
-    tax_deduction_used: Decimal = 0
-    tax_deduction_used_total: Decimal = 0
-
-    def format(self, columns):
-        l = [""] * len(columns)
-        insert_in_list(columns, l, "Date", self.saledate)
-        insert_in_list(columns, l, "Type", "Sale")
-        insert_in_list(columns, l, "Qty", self.qty)
-        insert_in_list(columns, l, "Price", round(self.sell_price.nok_value, 2))
-        insert_in_list(columns, l, "Price USD", round(self.sell_price.value, 2))
-        insert_in_list(columns, l, "Exchange Rate", self.sell_price.nok_exchange_rate)
-        insert_in_list(columns, l, "Gain PS", round(self.gain_ps.nok_value, 2))
-        insert_in_list(columns, l, "Gain PS USD", round(self.gain_ps.value, 2))
-        insert_in_list(columns, l, "Gain", round(self.gain.nok_value, 2))
-        insert_in_list(columns, l, "Gain USD", round(self.gain.value, 2))
-        insert_in_list(columns, l, "Amount", round(self.total.nok_value, 2))
-        insert_in_list(columns, l, "Amount USD", round(self.total.value, 2))
-        insert_in_list(columns, l, "Tax Ded Used", round(self.tax_deduction_used, 2))
-        insert_in_list(
-            columns, l, "Tax Ded Total", round(self.tax_deduction_used_total, 2)
-        )
-        return l
-
-def adjust_width(ws):
-    def as_text(value):
-        if value is None:
-            return ""
-        return str(value)
-
-    # Adjust column width to fit the longest value in each column
-    for column_cells in ws.columns:
-        length = max(len(as_text(cell.value)) for cell in column_cells)
-        ws.column_dimensions[column_cells[0].column_letter].width = length + 1
 
 class PortfolioPosition(BaseModel):
     """Stock positions"""
@@ -115,6 +51,110 @@ class PortfolioPosition(BaseModel):
     purchase_price: Amount
     current_qty: Decimal = 0
     records: list[Any] = []
+    coord: Dict[str, str] = {}
+
+    def get_coord(self, key):
+        return self.coord[key]
+    def format(self, row, columns):
+        '''Return a list of cells for a row'''
+        l = [(row, columns.index("Symbol"), self.symbol)]
+        l.append((row, columns.index("Date"), self.date))
+        l.append((row, columns.index("Qty"), self.qty))
+        l.append((row, columns.index("Price"),
+                  f'={index_to_cell(row, columns.index("Price USD"))}*{index_to_cell(row, columns.index("Exchange Rate"))}'))
+        self.coord['Price']= index_to_cell(row, columns.index("Price"))
+        self.coord['Price USD']= index_to_cell(row, columns.index("Price USD"))
+        l.append((row, columns.index("Price USD"), round(self.purchase_price.value, 2)))
+        l.append((row, columns.index("Exchange Rate"), self.purchase_price.nok_exchange_rate))
+        l.append((row, columns.index("Tax Ded Acc"), round(self.tax_deduction_acc, 2)))
+        l.append((row, columns.index("Tax Ded Add"), round(self.tax_deduction_new, 2)))
+        return l
+
+class PortfolioDividend(BaseModel):
+    """Stock dividends"""
+
+    divdate: date
+    qty: Decimal = Field(decimal_places=4)
+    dividend_dps: Amount
+    dividend: Amount
+    tax_deduction_used: Decimal = 0
+    tax_deduction_used_total: Decimal = 0
+    parent: PortfolioPosition = None
+
+    def format(self, row, columns):
+        '''Return a list of cells for a row'''
+        l = [(row, columns.index("Date"), self.divdate)]
+        l.append((row, columns.index("Type"), "Dividend"))
+        l.append((row, columns.index("iQty"), self.qty))
+        l.append((row, columns.index("Exchange Rate"), self.dividend_dps.nok_exchange_rate))
+        l.append((row, columns.index("Div PS"),
+                  f'={index_to_cell(row, columns.index("Div PS USD"))}*{index_to_cell(row, columns.index("Exchange Rate"))}'))
+        l.append((row, columns.index("Div PS USD"), round(self.dividend_dps.value, 2)))
+        l.append((row, columns.index("Total Dividend"),
+                  f'={index_to_cell(row, columns.index("Div PS"))}*{index_to_cell(row, columns.index("iQty"))}'))
+
+        l.append((row, columns.index("Total Dividend USD"),
+                  f'={index_to_cell(row, columns.index("Div PS USD"))}*{index_to_cell(row, columns.index("iQty"))}'))
+        l.append((row, columns.index("Tax Ded Used"), round(self.tax_deduction_used, 2)))
+        l.append((row, columns.index("Tax Ded Total"), round(self.tax_deduction_used_total, 2)))
+        return l
+
+class PortfolioSale(BaseModel):
+    saledate: date
+    qty: Decimal
+    sell_price: Amount
+    gain_ps: Amount
+    gain: Amount
+    total: Amount
+    tax_deduction_used: Decimal = 0
+    tax_deduction_used_total: Decimal = 0
+    parent: PortfolioPosition = None
+
+    def format(self, row, columns):
+        l = [(row, columns.index("Date"), self.saledate)]
+        l.append((row, columns.index("Type"), "Sale"))
+        l.append((row, columns.index("Qty"), self.qty))
+        l.append((row, columns.index("Price"),
+                  f'={index_to_cell(row, columns.index("Price USD"))}*{index_to_cell(row, columns.index("Exchange Rate"))}'))
+        l.append((row, columns.index("Price USD"), round(self.sell_price.value, 2)))
+        l.append((row, columns.index("Exchange Rate"), self.sell_price.nok_exchange_rate))
+        l.append((row, columns.index("Gain PS"),
+                  f'={index_to_cell(row, columns.index("Price"))}-{self.parent.get_coord('Price')}'))
+
+        l.append((row, columns.index("Gain PS USD"),
+                    f'={index_to_cell(row, columns.index("Price USD"))}-{self.parent.get_coord("Price USD")}'))
+
+        l.append((row, columns.index("Gain"),
+                  f'={index_to_cell(row, columns.index("Gain PS"))}*ABS({index_to_cell(row, columns.index("Qty"))})'))
+        l.append((row, columns.index("Gain USD"),
+                  f'={index_to_cell(row, columns.index("Gain PS USD"))}*ABS({index_to_cell(row, columns.index("Qty"))})'))
+        l.append((row, columns.index("Amount"),
+                  f'=ABS({index_to_cell(row, columns.index("Price"))}*{index_to_cell(row, columns.index("Qty"))})'))
+        l.append((row, columns.index("Amount USD"),
+                  f'=ABS({index_to_cell(row, columns.index("Price USD"))}*{index_to_cell(row, columns.index("Qty"))})'))
+        l.append((row, columns.index("Tax Ded Used"), round(self.tax_deduction_used, 2)))
+        l.append((row, columns.index("Tax Ded Total"), round(self.tax_deduction_used_total, 2)))
+        return l
+
+def adjust_width(ws):
+    def as_text(value):
+        if value is None:
+            return ""
+        return str(value)
+
+    # Adjust column width to fit the longest value in each column
+    for column_cells in ws.columns:
+        length = max(len(as_text(cell.value)) for cell in column_cells)
+        ws.column_dimensions[column_cells[0].column_letter].width = length + 1
+
+from openpyxl.utils import get_column_letter
+
+def index_to_cell(row, column):
+    """
+    Convert a row and column index to an Excel cell reference.
+    """
+    column_letter = get_column_letter(column+1)
+    return f"{column_letter}{row}"
 
 
 class Portfolio:
@@ -131,6 +171,7 @@ class Portfolio:
         )
 
     def dividend(self, transaction):
+        '''Dividend'''
         shares_left = transaction.amount.value / transaction.dividend_dps
         total = transaction.amount.value
         for p in self.positions:
@@ -161,6 +202,7 @@ class Portfolio:
                         value=used,
                         currency=transaction.amount.currency,
                     ),
+                    parent=p
                 )
                 p.records.append(d)
                 if shares_left == 0:
@@ -224,6 +266,7 @@ class Portfolio:
                     #                 value=gain.value,
                     #                 currency=transaction.amount.currency),
                     total=sell_price * sold,
+                    parent=p
                 )
                 p.records.append(s)
                 if shares_to_sell == 0:
@@ -260,6 +303,73 @@ class Portfolio:
     }
     # x = Portfolio(year, broker, transactions, wires, prev_holdings, verbose)
 
+    def generate_tax_summary(self):
+        # Generate foreign shares for tax report
+        foreignshares = []
+        credit_deduction = []
+        # cashsummary = CashSummary()
+        end_of_year = f'{self.year}-12-31'
+        eoy_exchange_rate = fmv.get_currency('USD', end_of_year)
+
+        for s in self.symbols:
+            f = fmv.get_fundamentals2(s)
+            total_qty = 0
+            dividend_nok = 0
+            taxable_gain = 0
+            tax_deduction_used = 0
+            for p in self.positions:
+                if p.symbol != s or p.current_qty == 0:
+                    continue
+                total_qty += p.current_qty
+
+            eoyfmv = fmv[s, end_of_year]
+            wealth_nok = total_qty * eoyfmv * eoy_exchange_rate
+            foreignshares.append(ForeignShares(symbol=p.symbol, isin=f.isin,
+                                            country=f.country, account=self.broker,
+                                            shares=total_qty, wealth=wealth_nok,
+                                            dividend=dividend_nok,
+                                            taxable_gain=taxable_gain,
+                                            tax_deduction_used=tax_deduction_used))
+
+        return TaxSummary(year=self.year, foreignshares=foreignshares,
+                          credit_deduction=credit_deduction, cashsummary=self.cash_report)
+
+    def eoy_balance_report(self, year):
+        '''End of year summary of holdings'''
+        assert year == self.year or year == self.year-1, f'Year {year} does not match portfolio year {self.year}'
+        end_of_year = f'{year}-12-31'
+
+        eoy_exchange_rate = fmv.get_currency('USD', end_of_year)
+        r = []
+        positions = self.positions if year == self.year else self.prev_holdings.stocks
+        for symbol in self.symbols:
+            total_shares = 0
+            for p in positions:
+                if p.symbol == symbol:
+                    try:
+                        total_shares += p.current_qty
+                    except AttributeError:
+                        total_shares += p.qty
+
+            eoyfmv = fmv[symbol, end_of_year]
+            r.append(EOYBalanceItem(symbol=symbol, qty=total_shares, amount=Amount(
+                value=total_shares * eoyfmv, currency='USD',
+                nok_exchange_rate=eoy_exchange_rate,
+                nok_value=total_shares * eoyfmv * eoy_exchange_rate),
+                fmv=eoyfmv))
+        return r
+
+    def generate_holdings(self):
+        # Generate holdings for next year.
+        holdings = []
+        for p in self.positions:
+            if p.current_qty == 0:
+                continue
+            hitem = Stock(date=p.date, symbol=p.symbol, qty=p.current_qty,
+                          purchase_price=p.purchase_price, tax_deduction=p.tax_deduction)
+            holdings.append(hitem)
+        return Holdings(year=self.year, broker=self.broker, stocks=holdings, cash=[])
+
     def __init__(
         self,
         year: int,
@@ -273,12 +383,14 @@ class Portfolio:
         self.taxes = []
         self.positions = []
         self.cash = Cash(year=year)
+        self.broker = broker
 
         self.column_headers = [
             "Symbol",
             "Date",
             "Type",
             "Qty",
+            "iQty",
             "Price",
             "Price USD",
             "Exchange Rate",
@@ -290,14 +402,15 @@ class Portfolio:
             "Gain USD",
             "Amount",
             "Amount USD",
+            "Div PS",
             "Div PS USD",
-            "Div",
-            "Div USD",
-            "iQty",
+            "Total Dividend",
+            "Total Dividend USD",
             "Tax Ded Used",
             "Tax Ded Total",
         ]
 
+        self.prev_holdings = holdings
         for p in holdings.stocks:
             try:
                 tax_deduction = p.tax_deduction
@@ -323,6 +436,8 @@ class Portfolio:
 
         # Add tax deduction to the positions held by the end of the year
         total_tax_deduction = 0
+
+        self.symbols = [p.symbol for p in self.positions]
 
         for p in self.positions:
             if p.current_qty > 0:
@@ -368,21 +483,17 @@ class Portfolio:
         # Process wires
         db_wires = [t for t in transactions if t.type == 'WIRE']
         unmatched = self.cash.wire(db_wires, wires)
+        self.unmatched_wires = unmatched
         print("Unmatched wires", unmatched)
         cash_report = self.cash.process()
+        self.cash_report = cash_report
         print('CASH REPORT', cash_report)
         self.ledger = self.cash.ledger()
         print_cash_ledger(self.ledger, console)
 
         # Generate holdings for next year.
-        holdings = []
-        for p in self.positions:
-            if p.current_qty == 0:
-                continue
-            hitem = Stock(date=p.date, symbol=p.symbol, qty=p.current_qty,
-                          purchase_price=p.purchase_price, tax_deduction=p.tax_deduction)
-            holdings.append(hitem)
-        self.eoy_holdings = Holdings(year=year, broker=broker, stocks=holdings, cash=[])
+        self.eoy_holdings = self.generate_holdings()
+        self.summary = self.generate_tax_summary()
 
         self.excel_report()
 
@@ -410,22 +521,16 @@ class Portfolio:
         )
 
         # Write data from Stock instances to the Excel sheet
+        row = 2
+        decimal_style = NamedStyle(name="decimal", number_format="0.00")
         for stock in portfolio:
-            ws.append(
-                [
-                    stock.symbol,
-                    stock.date,
-                    "",
-                    round(stock.qty, 4),
-                    round(stock.purchase_price.nok_value, 2),
-                    round(stock.purchase_price.value, 2),
-                    round(stock.purchase_price.nok_exchange_rate, 6),
-                    round(stock.tax_deduction_acc, 2),
-                    round(stock.tax_deduction_new, 2),
-                ]
-            )
+            for row, col, value in stock.format(row, self.column_headers):
+                ws.cell(row=row, column=col+1, value=value)
+            row += 1
             for record in stock.records:
-                ws.append(record.format(self.column_headers))
+                for row, col, value in record.format(row, self.column_headers):
+                    ws.cell(row=row, column=col+1, value=value)
+                row += 1
 
         # Set number format for the entire column
         sum_cols = ["D", "L", "M", "N", "O", "Q", "R", "U"]
@@ -439,8 +544,9 @@ class Portfolio:
         for t in self.taxes:
             ws.append(
                 [
-                    t["date"],
                     t["symbol"],
+                    t["date"],
+                    "Tax",
                     round(t["amount"].nok_value, 2),
                     round(t["amount"].value, 2),
                 ]
@@ -448,7 +554,6 @@ class Portfolio:
 
         # Specify the Excel file path
         excel_file_path = "stock_data.xlsx"
-
 
         adjust_width(ws)
         # Freeze the first row
@@ -463,7 +568,6 @@ class Portfolio:
                        round(c[0].amount.value, 2), round(c[1], 2)])
 
         adjust_width(ws)
-
 
         # Separate sheet for EOY holdings
         ws = workbook.create_sheet("EOY Holdings")

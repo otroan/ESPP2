@@ -17,7 +17,7 @@ graph LR;
     ExpectedBalance2["ExpectedBalance"]-.->schwab-importer
     schwab-importer-->Holdings-2021
     schwab-importer-->ESPP2{{ESPP2}}
-    
+
     My_ESPP_Purchases.xlsx-->stocks-importer{{stocks-importer}}
     My_Stock_Transactions.xlsx-->stocks-importer
     ExpectedBalance-->stocks-importer
@@ -81,7 +81,7 @@ The tool runs in multiple phases to collect all the required data. The various u
 
 The transaction history for Schwab can be downloaded from https://eac.schwab.com:  Go to _History_, choose _Equity Award Center_ from the blue drop down box, date range _All_, click _Search_. Then there is the export link in the upper right corner of the page.
 
-This transaction history only covers transactions from the last 4 years. The further process depends on if this file covers all your transactions or if you have a pickle file from running the legacy espp tool last year. 
+This transaction history only covers transactions from the last 4 years. The further process depends on if this file covers all your transactions or if you have a pickle file from running the legacy espp tool last year.
 
 ### Option 1: Schwab - Transaction history is complete
 
@@ -175,3 +175,10 @@ Will show the available options. The --verbose option will show the tax calculat
 - The tax-free deduction was introduced in 2006. If you hold shares purchased prior to 2006, you will need to manually enter the purchase price for those shares.
 - ESPP shares purchases on the last day of the year receives the tax free deduction and counts against wealth tax. Even though they are not in the broker account yet.
 - For exchange rate gains/losses within the same year as the stock sale, those can be added to the stock gains/losses.
+
+
+
+# TODO
+
+- [ ] Total tax deduction from last year. Total received for the year. And total brought to next year.
+- [ ] Multiple symbols for excel generation
