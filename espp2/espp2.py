@@ -10,7 +10,7 @@ import typer
 from numpy import nan
 from rich.logging import RichHandler
 from pydantic import TypeAdapter
-from espp2.main import do_taxes, do_holdings_2, do_holdings_1, do_holdings_3, do_holdings_4, console
+from espp2.main import do_taxes, do_holdings_2, do_holdings_1, do_holdings_3, do_holdings_4, console, get_zipdata
 from espp2.datamodels import Holdings, Wires, ExpectedBalance
 from espp2.report import print_report
 from espp2._version import __version__
@@ -30,7 +30,7 @@ def version_callback(value: bool):
         raise typer.Exit()
 @app.command()
 def main(transaction_files: list[typer.FileBinaryRead],
-         output: typer.FileTextWrite = None,
+         output: typer.FileBinaryWrite = None,
          year: int = 2023,
          broker: BrokerEnum = BrokerEnum.schwab,
          wires: typer.FileText = None,
@@ -112,12 +112,15 @@ def main(transaction_files: list[typer.FileBinaryRead],
         with outwires as f:
             f.write(j)
 
-    # Tax report (in JSON)
+    # Tax report (in ZIP)
     if output:
         j = result.report.model_dump_json(indent=4)
         logger.info('Writing tax report to: %s', output.name)
+        zipdata = get_zipdata([(f'espp-holdings-{year}.json', holdings.model_dump_json(indent=4)),
+                           (f'espp-portfolio-{year}.xlsx', result.excel)])
+
         with output as f:
-            f.write(j)
+            f.write(zipdata)
 
 if __name__ == '__main__':
     app()
