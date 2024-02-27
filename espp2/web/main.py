@@ -6,6 +6,7 @@ ESPP2 web server
 # pylint: disable=invalid-name
 
 import logging
+import json
 from typing import Optional
 from os.path import realpath
 import uvicorn
@@ -13,10 +14,9 @@ from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from pydantic import TypeAdapter
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
-from espp2.main import do_taxes, do_holdings_1, do_holdings_2, do_holdings_3, do_holdings_4, preheat_cache
+from espp2.main import (do_taxes, do_holdings_1, do_holdings_2,
+                        do_holdings_3, do_holdings_4, preheat_cache, get_zipdata)
 from espp2.datamodels import ESPPResponse, Wires, Holdings, ExpectedBalance
-from espp2.positions import Positions
-import json
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -116,12 +116,15 @@ async def taxreport(
     elif holdfile:
         holdfile = holdfile.file
     try:
-        report, holdings, summary = do_taxes(
+        report, holdings, exceldata, summary = do_taxes(
             broker, transaction_file, holdfile, wires, year)
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
-    return ESPPResponse(tax_report=report, holdings=holdings, summary=summary)
+
+    zipdata = get_zipdata([(f'espp-holdings-{year}.json', holdings),
+                           (f'espp-portfolio-{year}.xlsx', exceldata)])
+    return ESPPResponse(tax_report=report, zip=zipdata, summary=summary)
 
 
 # This seems to keep us from caching the files too agressively.

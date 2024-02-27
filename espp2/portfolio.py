@@ -1,4 +1,9 @@
+'''
+ESPP portfolio class
+'''
+
 from copy import deepcopy
+from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.formatting import Rule
 from openpyxl.comments import Comment
@@ -495,7 +500,7 @@ class Portfolio:
         self.eoy_holdings = self.generate_holdings()
         self.summary = self.generate_tax_summary()
 
-        self.excel_report()
+        self.excel_data = self.excel_report()
 
     def excel_report(self):
         # Create an Excel workbook and get the active sheet
@@ -552,9 +557,6 @@ class Portfolio:
                 ]
             )
 
-        # Specify the Excel file path
-        excel_file_path = "stock_data.xlsx"
-
         adjust_width(ws)
         # Freeze the first row
         c = ws['A2']
@@ -576,7 +578,8 @@ class Portfolio:
             ws.append([h.symbol, h.date, round(h.qty, 4), round(h.purchase_price.nok_value, 2), round(h.tax_deduction, 2)])
         adjust_width(ws)
 
-        # Save the Excel workbook to a file
-        workbook.save(excel_file_path)
-
-        print(f"Data written to {excel_file_path}")
+        # Save the Excel workbook to a binary blob
+        excel_data = BytesIO()
+        workbook.save(excel_data)
+        excel_data.seek(0)
+        return excel_data.getvalue()

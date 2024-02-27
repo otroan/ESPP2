@@ -4,6 +4,8 @@ ESPPv2 main entry point
 
 # pylint: disable=invalid-name
 import logging
+import zipfile
+from io import BytesIO
 from decimal import Decimal
 from typing import Tuple, NamedTuple
 import datetime
@@ -17,13 +19,13 @@ from espp2.datamodels import (TaxReport, Transactions, Wires, Holdings, ForeignS
 from espp2.report import print_ledger, print_cash_ledger, print_report_holdings
 from espp2.fmv import FMV, FMVTypeEnum, get_tax_deduction_rate
 from espp2.portfolio import Portfolio
-from IPython import embed
 
 logger = logging.getLogger(__name__)
 
 class TaxReportReturn(NamedTuple):  # inherit from typing.NamedTuple
     report: TaxReport
     holdings: Holdings
+    excel: bytes
     summary: TaxSummary
 
 class ESPPErrorException(Exception):
@@ -45,7 +47,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
     p.process()
 
     # Parallel implementation generating Excel output
-    _portfolio = Portfolio(year, broker, this_year, wires, prev_holdings, verbose)
+    portfolio = Portfolio(year, broker, this_year, wires, prev_holdings, verbose)
 
     holdings = p.holdings(year, broker)
     report = {}
@@ -150,7 +152,7 @@ def tax_report(year: int, broker: str, transactions: Transactions, wires: Wires,
 
     summary = TaxSummary(year=year, foreignshares=foreignshares, credit_deduction=credit_deductions,
                          cashsummary=cashsummary)
-    return TaxReportReturn(TaxReport(**report), holdings, summary)
+    return TaxReportReturn(TaxReport(**report), holdings, portfolio.excel_data, summary)
 
 # Merge transaction files
 # - "Concatenate" transaction on year bounaries
@@ -218,6 +220,16 @@ def generate_previous_year_holdings(broker, years, year, prev_holdings, transact
 
     return holdings
 
+def get_zipdata(files) -> bytes:
+    '''Get zip data'''
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
+        for name, data in files:
+            print('Adding files to zip', name)
+
+            zip_file.writestr(name, data)
+    zip_buffer.seek(0)
+    return zip_buffer.getvalue()
 
 def do_taxes(broker, transaction_file, holdfile,
              wirefile, year, verbose=False, opening_balance=None) -> Tuple[TaxReport, Holdings, TaxSummary]:
