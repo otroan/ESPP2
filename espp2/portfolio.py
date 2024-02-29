@@ -124,7 +124,7 @@ class PortfolioSale(BaseModel):
         l.append((row, columns.index("Price USD"), round(self.sell_price.value, 2)))
         l.append((row, columns.index("Exchange Rate"), self.sell_price.nok_exchange_rate))
         l.append((row, columns.index("Gain PS"),
-                  f'={index_to_cell(row, columns.index("Price"))}-{self.parent.get_coord('Price')}'))
+                  f'={index_to_cell(row, columns.index("Price"))}-{self.parent.get_coord("Price")}'))
 
         l.append((row, columns.index("Gain PS USD"),
                     f'={index_to_cell(row, columns.index("Price USD"))}-{self.parent.get_coord("Price USD")}'))
