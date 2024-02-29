@@ -19,6 +19,8 @@ import numpy as np
 import urllib3
 from pydantic import BaseModel
 
+from .vault import Vault
+
 class Fundamentals(BaseModel):
     '''Fundamentals'''
     name: str
@@ -35,9 +37,7 @@ logger = logging.getLogger(__name__)
 with open('espp2/data.json', 'r', encoding='utf-8') as f:
     MANUALRATES = json.load(f)
 
-with open('espp2/vault.json', 'r', encoding='utf-8') as vault_file:
-    vault = json.load(vault_file)
-    EODHDKEY = vault['EODHD']
+vault = Vault('espp2/vault.json')
 
 def get_espp_exchange_rate(ratedate):
     '''Return the 6 month P&L average. Manually maintained for now.'''
@@ -115,6 +115,7 @@ class FMV():
 
     def fetch_stock2(self, symbol):
         '''Returns a dictionary of date and closing value from EOD Historical Data'''
+        EODHDKEY = vault['EODHD']
         url = f'https://eodhd.com/api/eod/{symbol}.US?api_token={EODHDKEY}&fmt=json'
         http = urllib3.PoolManager()
         r = http.request('GET', url)
@@ -149,6 +150,7 @@ class FMV():
         '''Returns a dividends object keyed on payment date'''
         http = urllib3.PoolManager()
         # url = f'https://eodhistoricaldata.com/api/div/{symbol}.US?fmt=json&from=2000-01-01&api_token={EODHDKEY}'
+        EODHDKEY = vault['EODHD']
         url = f'https://eodhistoricaldata.com/api/div/{symbol}.US?fmt=json&api_token={EODHDKEY}'
         r = http.request('GET', url)
         if r.status != 200:
@@ -163,6 +165,7 @@ class FMV():
     def fetch_fundamentals(self, symbol):
         '''Returns a fundamentals object for symbol'''
         http = urllib3.PoolManager()
+        EODHDKEY = vault['EODHD']
         url = f'https://eodhistoricaldata.com/api/fundamentals/{symbol}.US?api_token={EODHDKEY}'
         r = http.request('GET', url)
         if r.status != 200:
