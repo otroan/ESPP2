@@ -1026,7 +1026,7 @@ def morgan_html_import(html_fd, filename):
 
     start_period, end_period = parse_account_summary_html(all_tables)
 
-    if end_period == '2021-12-31':
+    if end_period == '2022-12-31':
         # Parse the holdings tables to produce deposits to establish the
         # holdings at the end of 2021.
         print('Parse RSU holdings ...')
@@ -1036,7 +1036,7 @@ def morgan_html_import(html_fd, filename):
         print('Parse Cash holdings ...')
         parse_cash_holdings_html(all_tables, state)
 
-    elif start_period == '2022-01-01' and end_period == '2022-12-31':
+    elif start_period == '2023-01-01' and end_period == '2023-12-31':
         print('Parse RSU activity ...')
         parse_rsu_activity_html(all_tables, state)
         print('Parse ESPP activity ...')
