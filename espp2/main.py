@@ -225,8 +225,6 @@ def get_zipdata(files) -> bytes:
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED, False) as zip_file:
         for name, data in files:
-            print('Adding files to zip', name)
-
             zip_file.writestr(name, data)
     zip_buffer.seek(0)
     return zip_buffer.getvalue()

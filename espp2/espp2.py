@@ -116,7 +116,7 @@ def main(transaction_files: list[typer.FileBinaryRead],
     if output:
         j = result.report.model_dump_json(indent=4)
         logger.info('Writing tax report to: %s', output.name)
-        zipdata = get_zipdata([(f'espp-holdings-{year}.json', holdings.model_dump_json(indent=4)),
+        zipdata = get_zipdata([(f'espp-holdings-{year}.json', result.holdings.model_dump_json(indent=4)),
                            (f'espp-portfolio-{year}.xlsx', result.excel)])
 
         with output as f:
