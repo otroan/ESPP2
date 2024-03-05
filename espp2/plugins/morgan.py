@@ -11,7 +11,7 @@ from decimal import Decimal
 import html5lib
 from pydantic import TypeAdapter
 from espp2.fmv import FMV
-from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount
+from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount, NegativeAmount
 import re
 import logging
 from pandas import MultiIndex, Index
@@ -138,10 +138,10 @@ class ParseState:
             assert(r['amount']['nok_exchange_rate'] == rr.amount.nok_exchange_rate)
             rr.amount.value += r['amount']['value']
             rr.amount.nok_value += r['amount']['nok_value']
-            print(f"### DIV: {date} +{r['amount']['value']} (Again)")
+            # print(f"### DIV: {date} +{r['amount']['value']} (Again)")
             return
 
-        print(f"### DIV: {date} +{r['amount']['value']} (First)")
+        # print(f"### DIV: {date} +{r['amount']['value']} (First)")
         self.date2dividend[date] = self.adapter.validate_python(r)
 
 
@@ -342,13 +342,26 @@ class ParseState:
 
         if self.activity == 'Adhoc Adjustment':
             # We have no idea what this is, but it affects chash holdings...
+            # But we've also seen it affect number of shares, probably as
+            # a fix for a missing or incorrect RSU/ESPP transaction...
+            rc = False
             cash, ok = getitems(row, 'Cash')
-            if not ok:
-                raise ValueError(f'Expected Cash for Adhoc Adjustment')
-            value, currency = morgan_price(cash)
-            amount = fixup_price2(self.entry_date, currency, value)
-            self.cashadjust(self.entry_date, amount, 'Adhoc Adjustment')
-            return True
+            if ok:
+                value, currency = morgan_price(cash)
+                amount = fixup_price2(self.entry_date, currency, value)
+                self.cashadjust(self.entry_date, amount, 'Adhoc Adjustment')
+                rc = True
+            qty, value, ok = getitems(row, 'Number of Shares', 'Book Value')
+            if ok:
+                qty = Decimal(qty)
+                book_value, currency = morgan_price(value)
+                purchase_price = fixup_price2(self.entry_date, currency, book_value / qty)
+                self.deposit(qty, purchase_price, 'RS', self.entry_date)
+                rc = True
+
+            if not rc:
+                raise Exception('Adhoc adjustment not as expected')
+            return rc
 
         return False
 
@@ -358,6 +371,47 @@ def find_all_tables(document):
     for e, n in zip(nodes, range(0, 10000)):
         rc.append(Table(e, n))
     return rc
+
+def create_signed_amount(currency, value, nok_exchange_rate, nok_value,
+                         negative_ok=True, positive_ok=True, negate=False):
+
+    assert positive_ok or negative_ok
+
+    if negate:
+        value *= -1
+        nok_value *= -1
+
+    if value > 0 and positive_ok:
+        return Amount(currency=currency, value=value,
+                      nok_exchange_rate=nok_exchange_rate,
+                      nok_value=nok_value)
+
+    if value < 0 and negative_ok:
+        return NegativeAmount(currency=currency, value=value,
+                              nok_exchange_rate=nok_exchange_rate,
+                              nok_value=nok_value)
+
+    if positive_ok:
+        if value < 0:
+            raise Exception(f'Expected positive number, got {value}')
+        return Amount(currency=currency, value=value,
+                      nok_exchange_rate=nok_exchange_rate,
+                      nok_value=nok_value)
+
+    if negative_ok:
+        if value > 0:
+            raise Exception(f'Expected negative number, got {value}')
+        return NegativeAmount(currency=currency, value=value,
+                              nok_exchange_rate=nok_exchange_rate,
+                              nok_value=nok_value)
+
+    raise Exception('Unexpected, should never get here')
+
+def verify_sign(value, positive_ok, negative_ok):
+    if value < 0 and not negative_ok:
+        raise Exception('Value {value} must be positive')
+    if value > 0 and not positive_ok:
+        raise Exception('Value {value} must be negative')
 
 def morgan_price(price_str):
     '''Parse price string.'''
@@ -383,35 +437,40 @@ def fixup_price(datestr, currency, pricestr, change_sign=False):
 def fixup_price2(date, currency, value):
     '''Fixup price.'''
     exchange_rate = currency_converter.get_currency(currency, date)
-    return Amount(currency=currency, value=value,
-                   nok_exchange_rate=exchange_rate,
-                   nok_value=value * exchange_rate)
+    return create_signed_amount(currency=currency, value=value,
+                                nok_exchange_rate=exchange_rate,
+                                nok_value=value * exchange_rate)
 
 def create_amount(date, price):
     value, currency = morgan_price(price)
     return fixup_price2(date, currency, value)
 
-def sum_amounts(amounts, negative=False):
+def sum_amounts(amounts, positive_ok=True, negative_ok=True, negate=False):
     if len(amounts) == 0:
         return None
 
-    sign = -1 if negative else 1
-
-    total = sign * amounts[0].value
-    nok_total = sign * amounts[0].nok_value
+    total = amounts[0].value
+    nok_total = amounts[0].nok_value
     currency = amounts[0].currency
+
+    verify_sign(total, positive_ok, negative_ok)
+    verify_sign(nok_total, positive_ok, negative_ok)
 
     for a in amounts[1:]:
         if a.currency != currency:
             raise ValueError(f'Summing {currency} with {a.currency}')
-        total += sign * a.value
-        nok_total += sign * a.nok_value
+        verify_sign(a.value, positive_ok, negative_ok)
+        verify_sign(a.nok_value, positive_ok, negative_ok)
+
+        total += a.value
+        nok_total += a.nok_value
 
     avg_nok_exchange_rate = nok_total / total
 
-    return Amount(currency=currency, value=total,
-                  nok_exchange_rate=avg_nok_exchange_rate,
-                  nok_value=nok_total)
+    return create_signed_amount(currency=currency, value=total,
+                                nok_exchange_rate=avg_nok_exchange_rate,
+                                nok_value=nok_total,
+                                negate=negate)
 
 def fixup_date(morgandate):
     '''Do this explicitly here to learn about changes in the export format'''
@@ -653,8 +712,8 @@ class Withdrawal:
         assert(len(net) == 1)
 
         self.gross_amount = sum_amounts(gross)
-        self.fees_amount = sum_amounts(fees)
-        self.net_amount = sum_amounts(net, negative=True)
+        self.fees_amount = sum_amounts(fees, positive_ok=False)
+        self.net_amount = sum_amounts(net, negative_ok=False, negate=True)
 
         assert(self.wd.data[5][0] == 'Delivery Method:')
         if 'Transfer funds via wire' in self.wd.data[5][1]:
