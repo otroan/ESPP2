@@ -237,10 +237,12 @@ class Portfolio:
 
     def sell(self, transaction):
         shares_to_sell = abs(transaction.qty)
+        actual = transaction.amount.value
+        if transaction.fee is not None:
+            actual -= abs(transaction.fee.value)
         sell_price = Amount(
             amountdate=transaction.date,
-            value=(transaction.amount.value - abs(transaction.fee.value))
-            / abs(transaction.qty),
+            value=(actual / shares_to_sell),
             currency=transaction.amount.currency,
         )
         for p in self.positions:
@@ -277,7 +279,8 @@ class Portfolio:
                 if shares_to_sell == 0:
                     break
         self.cash.debit(transaction.date, transaction.amount.model_copy(), 'sale')
-        self.cash.credit(transaction.date, transaction.fee.model_copy(), 'sale fee')
+        if transaction.fee is not None:
+            self.cash.credit(transaction.date, transaction.fee.model_copy(), 'sale fee')
 
     def wire(self, transaction):
         # wire type=<EntryTypeEnum.WIRE: 'WIRE'>
