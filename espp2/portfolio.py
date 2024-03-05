@@ -416,21 +416,22 @@ class Portfolio:
         ]
 
         self.prev_holdings = holdings
-        for p in holdings.stocks:
-            try:
-                tax_deduction = p.tax_deduction
-            except AttributeError:
-                tax_deduction = 0
-            self.positions.append(
-                PortfolioPosition(
-                    qty=p.qty,
-                    purchase_price=p.purchase_price,
-                    date=p.date,
-                    symbol=p.symbol,
-                    tax_deduction_acc=tax_deduction,
-                    current_qty=p.qty,
+        if holdings:
+            for p in holdings.stocks:
+                try:
+                    tax_deduction = p.tax_deduction
+                except AttributeError:
+                    tax_deduction = 0
+                self.positions.append(
+                    PortfolioPosition(
+                        qty=p.qty,
+                        purchase_price=p.purchase_price,
+                        date=p.date,
+                        symbol=p.symbol,
+                        tax_deduction_acc=tax_deduction,
+                        current_qty=p.qty,
+                    )
                 )
-            )
 
         # Process transactions.
         # There's a problem here. I need to add tax deduction before processing. But I can't do that because I don't know if I have a sale.
