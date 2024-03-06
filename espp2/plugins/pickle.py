@@ -9,7 +9,8 @@ import logging
 import datetime
 import codecs
 from pprint import pformat    # Pretty-print objects for debugging
-from espp2.datamodels import Transactions, Amount, Deposit, EntryTypeEnum, Sell, Tax, Dividend_Reinv
+from espp2.datamodels import (Transactions, Amount, PositiveAmount, NegativeAmount,
+                              Deposit, EntryTypeEnum, Sell, Tax, Dividend_Reinv)
 from espp2.datamodels import Dividend, Taxsub, Wire, Fee, Transfer
 
 logger = logging.getLogger(__name__)
@@ -84,7 +85,7 @@ def do_trans(record, source):
         logger.warning("Zero quantity for sale, ignoring it: %s", record)
         return None
     if 'fee' in record:
-        fee = Amount(amountdate=record['date'], currency='USD', value=-record['fee'])
+        fee = NegativeAmount(amountdate=record['date'], currency='USD', value=-record['fee'])
     else:
         fee = None
     return Sell(type=EntryTypeEnum.SELL,
@@ -105,7 +106,7 @@ def do_transfer(record, source):
                     symbol='CSCO',
                     description='',
                     qty=-record['n'],
-                    fee=Amount(amountdate=record['date'], currency='USD', value=-record['fee']),
+                    fee=NegativeAmount(amountdate=record['date'], currency='USD', value=-record['fee']),
                     source=source)
 
 dividends = {}
@@ -115,7 +116,7 @@ def do_dividend(record, source):
                     date=record['payDate'],
                     symbol='CSCO',
                     description='',
-                    amount_ps=Amount(amountdate=record['payDate'], currency='USD',
+                    amount_ps=PositiveAmount(amountdate=record['payDate'], currency='USD',
                                      value=record['amount']),
                     source=source)
     k = (d.date, d.symbol, d.amount_ps.value)
@@ -134,7 +135,7 @@ def do_tax(record, source):
                 date=record['date'],
                 symbol='CSCO',
                 description='',
-                amount=Amount(amountdate=record['date'], currency='USD',
+                amount=NegativeAmount(amountdate=record['date'], currency='USD',
                                 value=-amount),
                 source=source)
 
@@ -157,7 +158,7 @@ def do_wire(record, source):
     return Wire(type=EntryTypeEnum.WIRE,
                 date=record['date'],
                 description='RSU',
-                fee=Amount(amountdate=record['date'], currency='USD', value=-record['fee']),
+                fee=NegativeAmount(amountdate=record['date'], currency='USD', value=-record['fee']),
                 amount=Amount(amountdate=record['date'], currency='USD', value=-record['sent']),
                 source=source)
 
