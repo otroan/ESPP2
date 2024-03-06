@@ -13,7 +13,7 @@ from decimal import Decimal
 from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals
 from espp2.datamodels import *
 from espp2.console import console
-from espp2.portfolio import Portfolio
+# from espp2.portfolio import Portfolio
 from espp2.cash import Cash
 
 logger = logging.getLogger(__name__)
