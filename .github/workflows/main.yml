@@ -2,9 +2,6 @@ name: ESPP2 pytest
 
 on: [push]
 
-env:
-  ESPP2_VAULT_PATH: "vault.json"
-
 jobs:
   build:
 
@@ -37,3 +34,6 @@ jobs:
         run: |
           pip install -e .
           pytest
+        env:
+          ESPP2_VAULT_PATH: "vault.json"
+
