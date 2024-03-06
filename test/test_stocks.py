@@ -1,5 +1,3 @@
-
-
 import espp2.plugins.csco_espp_purchases as csco_espp_purchases
 import espp2.plugins.csco_stock_transactions as csco_stock_transactions
 from espp2.datamodels import Transactions
@@ -9,9 +7,10 @@ from rich.console import Console
 from espp2.espp2 import app
 from typer.testing import CliRunner
 
+
 def test_cisco_import():
     trans = []
-    with open('test/My_ESPP_Purchases.xlsx', 'rb') as f:
+    with open("test/My_ESPP_Purchases.xlsx", "rb") as f:
         t = csco_espp_purchases.read(f)
     assert isinstance(t, Transactions)
     trans += t.transactions
@@ -20,7 +19,7 @@ def test_cisco_import():
     # assert isinstance(t, Transactions)
     # trans += t.transactions
 
-    with open('test/My_Stock_Transactions.xlsx', 'rb') as f:
+    with open("test/My_Stock_Transactions.xlsx", "rb") as f:
         t = csco_stock_transactions.read(f)
     assert isinstance(t, Transactions)
     trans += t.transactions
@@ -33,20 +32,32 @@ def test_cisco_import():
 
 
 runner = CliRunner()
+
+
 def test_full_run(tmp_path):
-    outholdings_2021 = tmp_path / 'outholdings-2021.json'
-    outholdings_2022 = tmp_path / 'outholdings-2022.json'
+    outholdings_2021 = tmp_path / "outholdings-2021.json"
+    outholdings_2022 = tmp_path / "outholdings-2022.json"
 
     result = runner.invoke(
-        app, ['test/schwab.csv', 'test/espp.pickle', '--outholdings', outholdings_2021])
+        app, ["test/schwab.csv", "test/espp.pickle", "--outholdings", outholdings_2021]
+    )
     assert result.exit_code == 0
 
     result = runner.invoke(
-        app, ['test/schwab.csv', '--inholdings', outholdings_2021, '--outholdings', outholdings_2022])
+        app,
+        [
+            "test/schwab.csv",
+            "--inholdings",
+            outholdings_2021,
+            "--outholdings",
+            outholdings_2022,
+        ],
+    )
     assert result.exit_code == 0
+
 
 def test_opening_balance():
-    opening_balance = '''
+    opening_balance = """
 {
     "stocks": [
         {
@@ -64,8 +75,9 @@ def test_opening_balance():
     "year": 2019,
     "broker": "schwab"
 }
-'''
+"""
 
     result = runner.invoke(
-        app, ['test/schwab.csv', '--verbose', '--opening-balance', opening_balance])
+        app, ["test/schwab.csv", "--verbose", "--opening-balance", opening_balance]
+    )
     assert result.exit_code == 0
