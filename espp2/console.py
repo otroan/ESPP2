@@ -1,3 +1,5 @@
-'''Console for rich library'''
+"""Console for rich library"""
+
 from rich.console import Console
+
 console = Console()
