@@ -31,7 +31,6 @@ from espp2.datamodels import (
     CashSummary
 )
 from espp2.fmv import FMV, get_tax_deduction_rate
-
 from espp2.cash import Cash
 from typing import Any, ClassVar, Dict
 from espp2.report import print_cash_ledger
@@ -60,6 +59,15 @@ class PortfolioPosition(BaseModel):
 
     def get_coord(self, key):
         return self.coord[key]
+
+    def qty_at_date(self, exdate):
+        '''Return qty at date'''
+        qty = self.qty
+        for r in self.records:
+            if isinstance(r, PortfolioSale) and r.saledate <= exdate:
+                qty -= r.qty
+        return qty
+
     def format(self, row, columns):
         '''Return a list of cells for a row'''
         l = [(row, columns.index("Symbol"), self.symbol)]
@@ -179,24 +187,27 @@ class Portfolio:
         '''Dividend'''
         shares_left = transaction.amount.value / transaction.dividend_dps
         total = transaction.amount.value
+        # Walk through positions available at exdate.
         for p in self.positions:
             if p.symbol == transaction.symbol:
-                if p.current_qty == 0:
+                # Get qty up until exdate
+                qty = p.qty_at_date(transaction.exdate)
+                if qty == 0:
                     continue
                 assert (
                     p.date <= transaction.exdate
                 ), f"Exdate {transaction.exdate} before purchase date {p.date}"
-                if p.current_qty >= shares_left:
+                if qty >= shares_left:
                     shares_left = 0
                 else:
-                    shares_left -= p.current_qty
+                    shares_left -= qty
 
-                used = transaction.dividend_dps * p.current_qty
+                used = transaction.dividend_dps * qty
                 # used_nok = used * transaction.amount.nok_exchange_rate
                 total -= used
                 d = PortfolioDividend(
                     divdate=transaction.date,
-                    qty=p.current_qty,
+                    qty=qty,
                     dividend_dps=Amount(
                         amountdate=transaction.date,
                         value=transaction.dividend_dps,
@@ -542,8 +553,9 @@ class Portfolio:
                 row += 1
 
         # Set number format for the entire column
-        sum_cols = ["D", "L", "M", "N", "O", "Q", "R", "U"]
+        sum_cols = ["D", "M", "N", "O", "P", "S", "T", "U"]
         l = len(ws[sum_cols[0]])
+        ws[f"A{l+1}"] = "Total"
         for col in sum_cols:
             ws[f"{col}{l+1}"] = f"=SUM({col}2:{col}{l})"
             # format_cells(ws, col, number_format)
