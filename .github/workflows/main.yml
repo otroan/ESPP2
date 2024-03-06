@@ -2,6 +2,9 @@ name: ESPP2 pytest
 
 on: [push]
 
+env:
+  ESPP2_VAULT_PATH: "vault.json"
+
 jobs:
   build:
 
@@ -27,6 +30,9 @@ jobs:
       #    flake8 espp2 --count --select=E9,F63,F7,F82 --show-source --statistics
       #    # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
       #    flake8 espp2 --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Create vault.json
+        run: |
+          echo '{"EODHD": "${{ secrets.EODHD }}"}' > vault.json
       - name: Test with pytest
         run: |
           pip install -e .
