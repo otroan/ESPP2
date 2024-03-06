@@ -18,6 +18,7 @@ from espp2.main import (
     do_holdings_4,
     console,
     get_zipdata,
+    preheat_cache
 )
 from espp2.datamodels import Holdings, Wires, ExpectedBalance
 from espp2.report import print_report
@@ -59,7 +60,7 @@ def main(  # noqa: C901
     version: bool = typer.Option(
         None, "--version", callback=version_callback, is_eager=True
     ),
-    preheat_cache: bool = False,
+    preheat: bool = False,
     expected_balance: str = None,
 ):
     """ESPPv2 tax reporting tool"""
@@ -70,13 +71,14 @@ def main(  # noqa: C901
         level=lognames[loglevel], handlers=[RichHandler(rich_tracebacks=False)]
     )
 
+    if preheat:
+        preheat_cache()
+        return
+
     if opening_balance:
         adapter = TypeAdapter(Holdings)
         opening_balance = adapter.validate_json(opening_balance)
     result = None
-
-    if preheat_cache:
-        preheat_cache()
 
     if inholdings:
         # Check inholdings are valid for previous tax year

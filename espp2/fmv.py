@@ -37,10 +37,9 @@ class FMVException(Exception):
 
 logger = logging.getLogger(__name__)
 
+# Load manually maintained exchange rates / tax deduction rates
 with files().joinpath('data.json').open('r', encoding='utf-8') as f:
     MANUALRATES = json.load(f)
-
-vault = Vault("espp2/vault.json")
 
 
 def get_espp_exchange_rate(ratedate):
@@ -131,6 +130,7 @@ class FMV:
 
     def fetch_stock2(self, symbol):
         """Returns a dictionary of date and closing value from EOD Historical Data"""
+        vault = Vault()
         EODHDKEY = vault["EODHD"]
         url = f"https://eodhd.com/api/eod/{symbol}.US?api_token={EODHDKEY}&fmt=json"
         http = urllib3.PoolManager()
@@ -167,6 +167,7 @@ class FMV:
         """Returns a dividends object keyed on payment date"""
         http = urllib3.PoolManager()
         # url = f'https://eodhistoricaldata.com/api/div/{symbol}.US?fmt=json&from=2000-01-01&api_token={EODHDKEY}'
+        vault = Vault()
         EODHDKEY = vault["EODHD"]
         url = f"https://eodhistoricaldata.com/api/div/{symbol}.US?fmt=json&api_token={EODHDKEY}"
         r = http.request("GET", url)
@@ -183,6 +184,7 @@ class FMV:
     def fetch_fundamentals(self, symbol):
         """Returns a fundamentals object for symbol"""
         http = urllib3.PoolManager()
+        vault = Vault()
         EODHDKEY = vault["EODHD"]
         url = f"https://eodhistoricaldata.com/api/fundamentals/{symbol}.US?api_token={EODHDKEY}"
         r = http.request("GET", url)
