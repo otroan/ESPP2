@@ -9,6 +9,7 @@ caches them in a set of JSON files.
 
 import os
 import json
+from importlib.resources import files
 from enum import Enum
 from datetime import date, datetime, timedelta
 from typing import Union, Tuple
@@ -36,8 +37,7 @@ class FMVException(Exception):
 
 logger = logging.getLogger(__name__)
 
-# Read manually entered data
-with open("espp2/data.json", "r", encoding="utf-8") as f:
+with files().joinpath('data.json').open('r', encoding='utf-8') as f:
     MANUALRATES = json.load(f)
 
 vault = Vault("espp2/vault.json")
