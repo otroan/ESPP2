@@ -10,7 +10,7 @@ from pandas import read_excel
 from espp2.fmv import FMV
 from espp2.datamodels import Transactions, EntryTypeEnum, Amount, Deposit
 import logging
-import datetime
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 

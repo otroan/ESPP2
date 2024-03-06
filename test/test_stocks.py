@@ -53,6 +53,7 @@ def test_full_run(tmp_path):
             outholdings_2022,
         ],
     )
+    print('RESULT', result)
     assert result.exit_code == 0
 
 

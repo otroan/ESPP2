@@ -62,10 +62,10 @@ class PortfolioPosition(BaseModel):
 
     def format(self, row, columns):
         """Return a list of cells for a row"""
-        columns = [(row, columns.index("Symbol"), self.symbol)]
-        columns.append((row, columns.index("Date"), self.date))
-        columns.append((row, columns.index("Qty"), self.qty))
-        columns.append(
+        col = [(row, columns.index("Symbol"), self.symbol)]
+        col.append((row, columns.index("Date"), self.date))
+        col.append((row, columns.index("Qty"), self.qty))
+        col.append(
             (
                 row,
                 columns.index("Price"),
@@ -74,13 +74,13 @@ class PortfolioPosition(BaseModel):
         )
         self.coord["Price"] = index_to_cell(row, columns.index("Price"))
         self.coord["Price USD"] = index_to_cell(row, columns.index("Price USD"))
-        columns.append((row, columns.index("Price USD"), round(self.purchase_price.value, 2)))
-        columns.append(
+        col.append((row, columns.index("Price USD"), round(self.purchase_price.value, 2)))
+        col.append(
             (row, columns.index("Exchange Rate"), self.purchase_price.nok_exchange_rate)
         )
-        columns.append((row, columns.index("Tax Ded Acc"), round(self.tax_deduction_acc, 2)))
-        columns.append((row, columns.index("Tax Ded Add"), round(self.tax_deduction_new, 2)))
-        return columns
+        col.append((row, columns.index("Tax Ded Acc"), round(self.tax_deduction_acc, 2)))
+        col.append((row, columns.index("Tax Ded Add"), round(self.tax_deduction_new, 2)))
+        return col
 
 
 class PortfolioDividend(BaseModel):
@@ -96,21 +96,21 @@ class PortfolioDividend(BaseModel):
 
     def format(self, row, columns):
         """Return a list of cells for a row"""
-        columns = [(row, columns.index("Date"), self.divdate)]
-        columns.append((row, columns.index("Type"), "Dividend"))
-        columns.append((row, columns.index("iQty"), self.qty))
-        columns.append(
+        col = [(row, columns.index("Date"), self.divdate)]
+        col.append((row, columns.index("Type"), "Dividend"))
+        col.append((row, columns.index("iQty"), self.qty))
+        col.append(
             (row, columns.index("Exchange Rate"), self.dividend_dps.nok_exchange_rate)
         )
-        columns.append(
+        col.append(
             (
                 row,
                 columns.index("Div PS"),
                 f'={index_to_cell(row, columns.index("Div PS USD"))}*{index_to_cell(row, columns.index("Exchange Rate"))}',
             )
         )
-        columns.append((row, columns.index("Div PS USD"), round(self.dividend_dps.value, 2)))
-        columns.append(
+        col.append((row, columns.index("Div PS USD"), round(self.dividend_dps.value, 2)))
+        col.append(
             (
                 row,
                 columns.index("Total Dividend"),
@@ -118,24 +118,24 @@ class PortfolioDividend(BaseModel):
             )
         )
 
-        columns.append(
+        col.append(
             (
                 row,
                 columns.index("Total Dividend USD"),
                 f'={index_to_cell(row, columns.index("Div PS USD"))}*{index_to_cell(row, columns.index("iQty"))}',
             )
         )
-        columns.append(
+        col.append(
             (row, columns.index("Tax Ded Used"), round(self.tax_deduction_used, 2))
         )
-        columns.append(
+        col.append(
             (
                 row,
                 columns.index("Tax Ded Total"),
                 round(self.tax_deduction_used_total, 2),
             )
         )
-        return columns
+        return col
 
 
 class PortfolioSale(BaseModel):
@@ -150,21 +150,21 @@ class PortfolioSale(BaseModel):
     parent: PortfolioPosition = None
 
     def format(self, row, columns):
-        columns = [(row, columns.index("Date"), self.saledate)]
-        columns.append((row, columns.index("Type"), "Sale"))
-        columns.append((row, columns.index("Qty"), self.qty))
-        columns.append(
+        col = [(row, columns.index("Date"), self.saledate)]
+        col.append((row, columns.index("Type"), "Sale"))
+        col.append((row, columns.index("Qty"), self.qty))
+        col.append(
             (
                 row,
                 columns.index("Price"),
                 f'={index_to_cell(row, columns.index("Price USD"))}*{index_to_cell(row, columns.index("Exchange Rate"))}',
             )
         )
-        columns.append((row, columns.index("Price USD"), round(self.sell_price.value, 2)))
-        columns.append(
+        col.append((row, columns.index("Price USD"), round(self.sell_price.value, 2)))
+        col.append(
             (row, columns.index("Exchange Rate"), self.sell_price.nok_exchange_rate)
         )
-        columns.append(
+        col.append(
             (
                 row,
                 columns.index("Gain PS"),
@@ -172,7 +172,7 @@ class PortfolioSale(BaseModel):
             )
         )
 
-        columns.append(
+        col.append(
             (
                 row,
                 columns.index("Gain PS USD"),
@@ -180,45 +180,45 @@ class PortfolioSale(BaseModel):
             )
         )
 
-        columns.append(
+        col.append(
             (
                 row,
                 columns.index("Gain"),
                 f'={index_to_cell(row, columns.index("Gain PS"))}*ABS({index_to_cell(row, columns.index("Qty"))})',
             )
         )
-        columns.append(
+        col.append(
             (
                 row,
                 columns.index("Gain USD"),
                 f'={index_to_cell(row, columns.index("Gain PS USD"))}*ABS({index_to_cell(row, columns.index("Qty"))})',
             )
         )
-        columns.append(
+        col.append(
             (
                 row,
                 columns.index("Amount"),
                 f'=ABS({index_to_cell(row, columns.index("Price"))}*{index_to_cell(row, columns.index("Qty"))})',
             )
         )
-        columns.append(
+        col.append(
             (
                 row,
                 columns.index("Amount USD"),
                 f'=ABS({index_to_cell(row, columns.index("Price USD"))}*{index_to_cell(row, columns.index("Qty"))})',
             )
         )
-        columns.append(
+        col.append(
             (row, columns.index("Tax Ded Used"), round(self.tax_deduction_used, 2))
         )
-        columns.append(
+        col.append(
             (
                 row,
                 columns.index("Tax Ded Total"),
                 round(self.tax_deduction_used_total, 2),
             )
         )
-        return columns
+        return col
 
 
 def adjust_width(ws):

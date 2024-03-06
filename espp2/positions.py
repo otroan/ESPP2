@@ -255,8 +255,8 @@ class Positions:
             r[symbol] = Fundamentals(
                 name=fundamentals["General"]["Name"],
                 isin=isin,
-                country=f["General"]["CountryName"],
-                symbol=f["General"]["Code"],
+                country=fundamentals["General"]["CountryName"],
+                symbol=fundamentals["General"]["Code"],
             )
         return r
 
