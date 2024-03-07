@@ -38,7 +38,7 @@ class FMVException(Exception):
 logger = logging.getLogger(__name__)
 
 # Load manually maintained exchange rates / tax deduction rates
-with files().joinpath('data.json').open('r', encoding='utf-8') as f:
+with files('espp2').joinpath('data.json').open('r', encoding='utf-8') as f:
     MANUALRATES = json.load(f)
 
 
