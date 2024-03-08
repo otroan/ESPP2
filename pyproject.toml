@@ -22,9 +22,9 @@ requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
 dynamic = ["version"]
 dependencies = [
-    "simplejson", "numpy", "pydantic",
+    "simplejson", "pydantic",
     "urllib3", "python-dateutil", "uvicorn", "fastapi",
-    "python-multipart", "tabulate", "pandas", "pytest", "httpx",
+    "python-multipart", "tabulate", "pytest", "httpx",
     "rich", "typing", "html5lib", "typer", "openpyxl",
 ]
 authors = [

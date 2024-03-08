@@ -15,7 +15,7 @@ from datetime import date, datetime, timedelta
 from typing import Union, Tuple
 import logging
 from decimal import Decimal
-import numpy as np
+import math
 import urllib3
 from pydantic import BaseModel
 
@@ -274,7 +274,7 @@ class FMV:
                 # Might be a holiday, iterate backwards
                 itemdate -= timedelta(days=1)
                 date_str = str(itemdate)
-        return np.nan
+        return math.nan
 
     def get_currency(self, currency: str, date_union: Union[str, datetime]) -> float:
         """Get currency value. If not found, iterate backwards until found."""
