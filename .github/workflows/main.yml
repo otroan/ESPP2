@@ -35,6 +35,7 @@ jobs:
           ESPP2_VAULT_PATH: "vault.json"
         run: |
           echo ESPP2 Vault: $ESPP2_VAULT_PATH
+          echo "$(cat vault.json)"
           pip install -e .
           pytest
 
