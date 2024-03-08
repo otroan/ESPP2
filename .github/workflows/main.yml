@@ -31,9 +31,10 @@ jobs:
         run: |
           echo '{"EODHD": "${{ secrets.EODHD }}"}' > vault.json
       - name: Test with pytest
-        run: |
-          pip install -e .
-          pytest
         env:
           ESPP2_VAULT_PATH: "vault.json"
+        run: |
+          echo ESPP2 Vault: $ESPP2_VAULT_PATH
+          pip install -e .
+          pytest
 
