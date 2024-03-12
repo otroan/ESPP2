@@ -414,10 +414,9 @@ class Positions:
                     d.dividend_dps,
                 )
                 if not isclose(dps, d.dividend_dps, abs_tol=10**-2):
-                    logger.error(
-                        f("Dividend for {exdate}/{d.date} per share calculated does not match "
-                          "reported {dps} vs {d.dividend_dps} for {total_shares} shares. Dividend:"
-                          "{d.amount.value}. Dividend payment indicates you had: {d.amount.value / d.dividend_dps} shares.")
+                    logger.error((f"Dividend for {exdate}/{d.date} per share calculated does not match "
+                          f"reported {dps} vs {d.dividend_dps} for {total_shares} shares. Dividend:"
+                          f" {d.amount.value}. Dividend payment indicates you had: {d.amount.value/d.dividend_dps} shares.")
                     )
                 for entry in self[:exdate, symbol]:  # Creates a view
                     entry.dps = dps if "dps" not in entry else entry.dps + dps

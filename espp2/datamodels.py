@@ -318,6 +318,8 @@ class Cashadjust(TransactionEntry):
     date: date
     amount: Amount
     description: str
+    source: str
+    id: str = Optional[str]
 
 
 Entry = Annotated[
