@@ -21,6 +21,8 @@ from espp2.datamodels import (
     Dividend,
     Dividend_Reinv,
     Tax,
+    Transfer,
+    Cashadjust,
 )
 
 logger = logging.getLogger(__name__)
@@ -196,11 +198,42 @@ def deposit(csv_item, source):
 
 def not_implemented(csv_item, source):
     """Process not implemented"""
-    raise NotImplementedError(f"Action {csv_item['Action']} not implemented")
+    raise NotImplementedError(f"Action \"{csv_item['Action']}\" not implemented")
+
+def transfer(csv_item, source):
+    """Process transfer"""
+    d = fixup_date(csv_item["Date"])
+    if csv_item["FeesAndCommissions"]:
+        fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"])
+    else:
+        fee = fixup_price(d, "USD", "$0.0")
+    return Transfer(
+        date=d,
+        description=csv_item["Description"],
+        symbol=csv_item["Symbol"],
+        qty=-fixup_number(csv_item["Quantity"]),
+        fee=fee,
+        source=source,
+    )
+
+def adjustment(csv_item, source):
+    """Process adjustment"""
+    d = fixup_date(csv_item["Date"])
+    if csv_item["FeesAndCommissions"]:
+        fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"])
+    else:
+        fee = fixup_price(d, "USD", "$0.0")
+    return Cashadjust(
+        date=fixup_date(csv_item["Date"]),
+        description=csv_item["Description"],
+        amount=fixup_price(d, "USD", csv_item["Amount"]),
+        source=source,
+    )
 
 dispatch = {
     "Deposit": deposit,
     "Wire Transfer": wire,
+    "MWI": wire,
     "Sale": sale,
     "Quick Sale": sale,  # "Quick Sale" is a "Sale"
     "Tax Withholding": tax_withholding,
@@ -210,7 +243,8 @@ dispatch = {
     "Journal": wire,
     "Service Fee": not_implemented,
     "Deposit": deposit,
-    "Adjustment": not_implemented,
+    "Adjustment": adjustment,
+    "Transfer": transfer,
 }
 
 
