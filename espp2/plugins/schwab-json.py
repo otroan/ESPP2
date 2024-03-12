@@ -194,16 +194,23 @@ def deposit(csv_item, source):
         source=source,
     )
 
+def not_implemented(csv_item, source):
+    """Process not implemented"""
+    raise NotImplementedError(f"Action {csv_item['Action']} not implemented")
 
 dispatch = {
     "Deposit": deposit,
     "Wire Transfer": wire,
     "Sale": sale,
+    "Quick Sale": sale,  # "Quick Sale" is a "Sale"
     "Tax Withholding": tax_withholding,
     "Dividend": dividend,
     "Dividend Reinvested": dividend_reinvested,
     "Tax Reversal": tax_reversal,
     "Journal": wire,
+    "Service Fee": not_implemented,
+    "Deposit": deposit,
+    "Adjustment": not_implemented,
 }
 
 
