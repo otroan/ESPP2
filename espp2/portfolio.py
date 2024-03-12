@@ -56,8 +56,8 @@ class PortfolioPosition(BaseModel):
         """Return qty at date"""
         qty = self.qty
         for r in self.records:
-            if isinstance(r, PortfolioSale) and r.saledate <= exdate:
-                qty -= r.qty
+            if isinstance(r, PortfolioSale) and r.saledate < exdate:
+                qty -= abs(r.qty)
         return qty
 
     def format(self, row, columns):
@@ -294,7 +294,7 @@ class Portfolio:
                 p.records.append(d)
                 if shares_left == 0:
                     break
-        ## assert abs(total) < 1, f"Not all dividend used: {total}"
+        assert abs(total) < 1, f"Not all dividend used: {total}"
         ## TODO: Temporarily disabled. Need to handle leftover dividends.
         self.cash.debit(transaction.date, transaction.amount, "dividend")
 
