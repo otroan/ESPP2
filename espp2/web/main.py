@@ -144,7 +144,10 @@ async def taxreport(
 
     zipdata = get_zipdata(
         [
-            (f"espp-holdings-{year}.json", holdings),
+            (
+                f"espp-holdings-{year}.json",
+                holdings.model_dump_json(indent=4),
+            ),
             (f"espp-portfolio-{year}.xlsx", exceldata),
         ]
     )
