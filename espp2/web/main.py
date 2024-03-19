@@ -7,11 +7,13 @@ ESPP2 web server
 
 import logging
 import json
+import base64
 from os.path import realpath
 import uvicorn
 from fastapi import FastAPI, Form, UploadFile, HTTPException
 from pydantic import TypeAdapter
 from fastapi.staticfiles import StaticFiles
+from fastapi.encoders import jsonable_encoder
 from starlette.responses import FileResponse
 from espp2.main import (
     do_taxes,
@@ -151,7 +153,9 @@ async def taxreport(
             (f"espp-portfolio-{year}.xlsx", exceldata),
         ]
     )
-    return ESPPResponse(tax_report=report, zip=zipdata, summary=summary)
+    zipstr = jsonable_encoder(zipdata, custom_encoder={
+        bytes: lambda v: base64.b64encode(v).decode('utf-8')})
+    return ESPPResponse(tax_report=report, zip=zipstr, summary=summary)
 
 
 # This seems to keep us from caching the files too agressively.

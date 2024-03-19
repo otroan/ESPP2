@@ -546,7 +546,7 @@ class TaxSummary(BaseModel):
 class ESPPResponse(BaseModel):
     """ESPP response"""
 
-    zip: bytes
+    zip: str
     tax_report: TaxReport
     summary: TaxSummary
 
