@@ -89,7 +89,7 @@ class PortfolioDividend(BaseModel):
     """Stock dividends"""
 
     divdate: date
-    qty: Decimal = Field(decimal_places=4)
+    qty: Decimal
     dividend_dps: Amount
     dividend: Amount
     tax_deduction_used: Decimal = 0
