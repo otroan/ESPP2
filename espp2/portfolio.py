@@ -2,6 +2,7 @@
 ESPP portfolio class
 """
 
+import logging
 from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.formatting.rule import CellIsRule
@@ -28,6 +29,7 @@ from espp2.report import print_cash_ledger
 from espp2.console import console
 
 fmv = FMV()
+logger = logging.getLogger(__name__)
 
 
 def format_cells(ws, column, number_format):
@@ -565,17 +567,14 @@ class Portfolio:
                     (p.purchase_price.nok_value + p.tax_deduction) * tax_deduction_rate
                 ) / 100
                 p.tax_deduction_new = tax_deduction
-                print(
-                    "POSITION THAT GETS TAX DEDUCTION FOR THIS YEAR",
-                    p.date,
-                    p.current_qty,
-                    p.symbol,
-                    p.tax_deduction_new,
+                logger.debug(
+                    "Position that gets tax deduction for this year: "
+                    f"{p.symbol} {p.date} {p.current_qty} {p.tax_deduction_new}"
                 )
             p.tax_deduction = p.tax_deduction_acc + p.tax_deduction_new
             total_tax_deduction += p.tax_deduction * p.qty
 
-        print("Total tax deduction", total_tax_deduction)
+        logger.debug(f"Total tax deduction {total_tax_deduction}")
 
         # Walk through and use the available tax deduction
         # Use tax deduction for dividend if we can. Then for sales. Then keep leftovers for next year.
@@ -609,12 +608,12 @@ class Portfolio:
         db_wires = [t for t in transactions if t.type == "WIRE"]
         unmatched = self.cash.wire(db_wires, wires)
         self.unmatched_wires = unmatched
-        print("Unmatched wires", unmatched)
+        # print("Unmatched wires", unmatched)
         cash_report = self.cash.process()
         self.cash_report = cash_report
-        print("CASH REPORT", cash_report)
+        # print("CASH REPORT", cash_report)
         self.ledger = self.cash.ledger()
-        print_cash_ledger(self.ledger, console)
+        # print_cash_ledger(self.ledger, console)
 
         # Generate holdings for next year.
         self.eoy_holdings = self.generate_holdings()
