@@ -549,6 +549,7 @@ class ESPPResponse(BaseModel):
     zip: str
     tax_report: TaxReport
     summary: TaxSummary
+    holdings: Holdings
 
 
 class ExpectedBalance(BaseModel):
