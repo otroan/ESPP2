@@ -126,7 +126,7 @@ async def taxreport(
     opening_balance = None
     if wires:
         wires_list = json.loads(wires)
-        wires = Wires(__root__=wires_list)
+        wires = Wires(root=wires_list)
 
     if opening_balance:
         adapter = TypeAdapter(Holdings)
