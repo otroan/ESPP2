@@ -5,7 +5,7 @@ Schwab JSON normalizer.
 # pylint: disable=invalid-name, too-many-locals, too-many-branches
 
 import json
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import logging
 import dateutil.parser as dt
 from espp2.fmv import FMV
@@ -84,7 +84,10 @@ def fixup_number(numberstr):
 def sale(csv_item, source):
     """Process sale"""
     d = fixup_date(csv_item["Date"])
-    fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"], change_sign=True)
+    try:
+        fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"], change_sign=True)
+    except InvalidOperation:
+        fee = None
     saleprice = fixup_price(d, "USD", get_saleprice(csv_item))
     grossproceeds = fixup_price(d, "USD", csv_item["Amount"])
     qty = fixup_number(csv_item["Quantity"])
@@ -96,7 +99,7 @@ def sale(csv_item, source):
         qty=qty * -1,
         sale_price=Amount(**saleprice),
         amount=Amount(**grossproceeds),
-        fee=NegativeAmount(**fee),
+        fee=NegativeAmount(**fee) if fee else None,
         source=source,
     )
 
