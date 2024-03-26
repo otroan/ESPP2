@@ -1213,8 +1213,8 @@ def parse_cash_holdings_html(all_tables, state):
                 total += Decimal(value)
                 print(f"### Cash: {value}")
     print(f"### Cash holdings: {total}")
-    cash = fixup_price2("2021-12-31", "USD", total)
-    state.cashadjust("2021-12-31", cash, "Closing balance 2021")
+    cash = fixup_price2("2022-12-31", "USD", total)
+    state.cashadjust("2022-12-31", cash, "Closing balance 2022")
 
 
 def morgan_html_import(html_fd, filename):
