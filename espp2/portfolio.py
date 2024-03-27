@@ -4,12 +4,13 @@ ESPP portfolio class
 
 import logging
 from io import BytesIO
+from copy import deepcopy
 from openpyxl import Workbook
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from espp2.datamodels import (
     Stock,
@@ -21,9 +22,12 @@ from espp2.datamodels import (
     EOYBalanceItem,
     TaxSummary,
     ForeignShares,
+    EOYDividend,
+    EOYSales
 )
-from espp2.fmv import FMV, get_tax_deduction_rate
+from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals
 from espp2.cash import Cash
+from espp2.positions import Ledger
 from typing import Any, Dict
 from espp2.report import print_cash_ledger
 from espp2.console import console
@@ -50,12 +54,15 @@ class PortfolioPosition(BaseModel):
     current_qty: Decimal = 0
     records: list[Any] = []
     coord: Dict[str, str] = {}
+    split: bool = False
 
     def get_coord(self, key):
         return self.coord[key]
 
     def qty_at_date(self, exdate):
         """Return qty at date"""
+        if self.date > exdate:
+            return 0
         qty = self.qty
         for r in self.records:
             if isinstance(r, PortfolioSale) and r.saledate < exdate:
@@ -65,7 +72,8 @@ class PortfolioPosition(BaseModel):
     def format(self, row, columns):
         """Return a list of cells for a row"""
         col = [(row, columns.index("Symbol"), self.symbol)]
-        col.append((row, columns.index("Date"), self.date))
+        if not self.split:
+            col.append((row, columns.index("Date"), self.date))
         col.append((row, columns.index("Qty"), self.qty))
         col.append(
             (
@@ -141,6 +149,7 @@ class PortfolioDividend(BaseModel):
 
 
 class PortfolioSale(BaseModel):
+    # TODO: Fee
     saledate: date
     qty: Decimal
     sell_price: Amount
@@ -245,8 +254,7 @@ def index_to_cell(row, column):
 
 class Portfolio:
     def buy(self, p):
-        self.positions.append(
-            PortfolioPosition(
+        position = PortfolioPosition(
                 qty=p.qty,
                 purchase_price=p.purchase_price,
                 date=p.date,
@@ -254,7 +262,10 @@ class Portfolio:
                 tax_deduction_acc=0,
                 current_qty=p.qty,
             )
-        )
+        self.positions.append(position)
+
+        # Keep stock of new positions for reporting
+        self.new_positions.append(position)
 
     def dividend(self, transaction):
         """Dividend"""
@@ -269,7 +280,7 @@ class Portfolio:
                     continue
                 assert (
                     p.date <= transaction.exdate
-                ), f"Exdate {transaction.exdate} before purchase date {p.date}"
+                ), f"Exdate {transaction.exdate} before purchase date {p.date} shares left {shares_left}"
                 if qty >= shares_left:
                     shares_left = 0
                 else:
@@ -296,8 +307,8 @@ class Portfolio:
                 p.records.append(d)
                 if shares_left == 0:
                     break
-        assert abs(total) < 1, f"Not all dividend used: {total}"
-        ## TODO: Temporarily disabled. Need to handle leftover dividends.
+        if abs(total) > 1:
+            logger.error(f"Not all dividend used: {total}")
         self.cash.debit(transaction.date, transaction.amount, "dividend")
 
     def tax(self, transaction):
@@ -316,6 +327,15 @@ class Portfolio:
             }
         )
         self.cash.credit(transaction.date, transaction.amount, "tax")
+
+    def tax_for_symbol(self, symbol):
+        total_nok = 0
+        total_usd = 0
+        for t in self.taxes:
+            if t["symbol"] == symbol:
+                total_nok += t["amount"].nok_value
+                total_usd += t["amount"].value
+        return total_usd, total_nok
 
     def dividend_reinv(self, transaction: Dividend_Reinv):
         self.cash.credit(transaction.date, transaction.amount, "dividend reinvest")
@@ -367,6 +387,90 @@ class Portfolio:
         if transaction.fee is not None:
             self.cash.credit(transaction.date, transaction.fee.model_copy(), "sale fee")
 
+    def sell_split(self, transaction):
+        '''If a sale is split over multiple records, split the position'''
+        shares_to_sell = abs(transaction.qty)
+        poscopy = deepcopy(self.positions)
+        for i, p in enumerate(poscopy):
+            if p.symbol == transaction.symbol:
+                if p.current_qty == 0:
+                    continue
+                if p.current_qty == shares_to_sell:
+                    p.current_qty = 0
+                    shares_to_sell = 0
+                elif p.current_qty > shares_to_sell:
+                    # Split record
+                    splitpos = deepcopy(p)
+                    splitpos.current_qty = p.current_qty - shares_to_sell
+                    splitpos.qty = splitpos.current_qty
+                    splitpos.split = True
+                    p.current_qty -= shares_to_sell
+                    self.positions[i].qty = self.positions[i].current_qty = shares_to_sell
+                    self.positions.insert(i+1, splitpos)
+                    shares_to_sell = 0
+
+                else:
+                    shares_to_sell -= p.current_qty
+                    p.current_qty = 0
+                if shares_to_sell == 0:
+                    break
+
+    def buys(self):
+        """Return report of BUYS"""
+        r = []
+        for symbol in self.symbols:
+            bought = 0
+            price_sum = 0
+            price_sum_nok = 0
+            no_pos = 0
+            for item in self.new_positions:
+                if item.symbol != symbol:
+                    continue
+                bought += item.qty
+                price_sum += item.purchase_price.value
+                price_sum_nok += item.purchase_price.nok_value
+                no_pos += 1
+            avg_usd = price_sum / no_pos
+            avg_nok = price_sum_nok / no_pos
+            r.append(
+                {
+                    "symbol": symbol,
+                    "qty": bought,
+                    "avg_usd": avg_usd,
+                    "avg_nok": avg_nok,
+                }
+            )
+        return r
+
+
+    def sales(self):
+        sales_report = {}
+        for p in self.positions:
+            for r in p.records:
+                if isinstance(r, PortfolioSale):
+                    s_record = EOYSales(
+                    date=r.saledate,
+                    symbol=p.symbol,
+                    qty=r.qty,
+                    # fee=r.fee,
+                    amount=r.total,
+                    from_positions=[],
+                    )
+
+                    totals = {
+                    "gain": r.gain,
+                    "purchase_price": p.purchase_price,
+                    "tax_ded_used": r.tax_deduction_used * abs(r.qty),
+                    }
+                    s_record.totals = totals
+                    if p.symbol not in sales_report:
+                        sales_report[p.symbol] = []
+                    sales_report[p.symbol].append(s_record)
+        return sales_report
+    def fees(self):
+        return []
+
+
     def wire(self, transaction):
         # wire type=<EntryTypeEnum.WIRE: 'WIRE'>
         # date=datetime.date(2022, 5, 23)
@@ -380,6 +484,15 @@ class Portfolio:
 
     def taxsub(self, transaction):
         self.cash.debit(transaction.date, transaction.amount, "tax returned")
+
+        self.taxes.append(
+            {
+                "date": transaction.date,
+                "symbol": transaction.symbol,
+                "amount": transaction.amount,
+            }
+        )
+
 
     dispatch = {
         "BUY": buy,
@@ -438,7 +551,7 @@ class Portfolio:
             cashsummary=self.cash_report,
         )
 
-    def eoy_balance_report(self, year):
+    def eoy_balance(self, year):
         """End of year summary of holdings"""
         assert (
             year == self.year or year == self.year - 1
@@ -489,6 +602,69 @@ class Portfolio:
             holdings.append(hitem)
         return Holdings(year=self.year, broker=self.broker, stocks=holdings, cash=[])
 
+    def holdings(self, year, broker):
+        return self.eoy_holdings
+
+    def fundamentals(self) -> Dict[str, Fundamentals]:
+        """Return fundamentals for symbol at date"""
+        r = {}
+        for symbol in self.symbols:
+            fundamentals = fmv.get_fundamentals(symbol)
+            isin = fundamentals.get("General", {}).get("ISIN", None)
+            if not isin:
+                isin = fundamentals.get("ETF_Data", {}).get("ISIN", "")
+
+            r[symbol] = Fundamentals(
+                name=fundamentals["General"]["Name"],
+                isin=isin,
+                country=fundamentals["General"]["CountryName"],
+                symbol=fundamentals["General"]["Code"],
+            )
+        return r
+
+    def dividends(self):
+        result = []
+        for s in self.symbols:
+            # For loop for all self.positions where p.symbol == s
+            usd = 0
+            nok = 0
+            tax_ded_used = 0
+
+            tax_usd, tax_nok = self.tax_for_symbol(s)
+            for p in self.positions:
+                if p.symbol != s:
+                    continue
+                for r in p.records:
+                    if isinstance(r, PortfolioDividend):
+                        usd += r.dividend.value
+                        nok += r.dividend.nok_value
+                        tax_ded_used += r.tax_deduction_used_total
+
+
+            result.append(EOYDividend(
+                symbol=s,
+                amount=Amount(
+                    currency="USD",
+                    value=usd,
+                    nok_value=nok - tax_ded_used,
+                    nok_exchange_rate=0,
+                ),
+                gross_amount=Amount(
+                    currency="USD",
+                    value=usd,
+                    nok_value=nok,
+                    nok_exchange_rate=0,
+                ),
+                tax=Amount(
+                    currency="USD",
+                    value=tax_usd,
+                    nok_value=tax_nok,
+                    nok_exchange_rate=0,
+                ),
+                tax_deduction_used=tax_ded_used,
+            ))
+        return result
+
     def __init__(  # noqa: C901
         self,
         year: int,
@@ -501,6 +677,7 @@ class Portfolio:
         self.year = year
         self.taxes = []
         self.positions = []
+        self.new_positions = []
         self.cash = Cash(year=year)
         self.broker = broker
 
@@ -547,19 +724,27 @@ class Portfolio:
                     )
                 )
 
-        # Process transactions.
-        # There's a problem here. I need to add tax deduction before processing.
-        # But I can't do that because I don't know if I have a sale.
-        # So I need to process sales first.
+        #######################
+        # Pre-Process buy/sell transactions, split positions as required
+        for t in transactions:
+            if t.type in ["BUY", "DEPOSIT"]:
+                self.buy(t)
+        for t in transactions:
+            if t.type in ["SELL"]:
+                self.sell_split(t)
+        #######################
+
         for t in transactions:
             # Use dispatch to call a function per t.type
+            if t.type in ["BUY", "DEPOSIT"]:    # Already handled these
+                continue
             self.__class__.dispatch[t.type](self, t)
 
         # Add tax deduction to the positions held by the end of the year
         total_tax_deduction = 0
 
-        self.symbols = [p.symbol for p in self.positions]
-
+        # Find the set of different symbolds in self.positions
+        self.symbols = {p.symbol for p in self.positions}
         for p in self.positions:
             if p.current_qty > 0:
                 tax_deduction_rate = get_tax_deduction_rate(self.year)
@@ -582,6 +767,7 @@ class Portfolio:
             if p.tax_deduction > 0:
                 # Walk through records looking for dividends
                 for r in p.records:
+                    # The qty we get dividends for is different from the qty we get tax dividends for
                     if isinstance(r, PortfolioDividend):
                         if p.tax_deduction >= r.dividend_dps.nok_value:
                             p.tax_deduction -= r.dividend_dps.nok_value
@@ -608,12 +794,14 @@ class Portfolio:
         db_wires = [t for t in transactions if t.type == "WIRE"]
         unmatched = self.cash.wire(db_wires, wires)
         self.unmatched_wires = unmatched
-        # print("Unmatched wires", unmatched)
+        self.unmatched_wires_report = unmatched
         cash_report = self.cash.process()
         self.cash_report = cash_report
+        self.cash_summary = cash_report
         # print("CASH REPORT", cash_report)
-        self.ledger = self.cash.ledger()
+        self.cash_ledger = self.cash.ledger()
         # print_cash_ledger(self.ledger, console)
+        self.ledger = Ledger(holdings, transactions)
 
         # Generate holdings for next year.
         self.eoy_holdings = self.generate_holdings()
@@ -656,7 +844,7 @@ class Portfolio:
                 row += 1
 
         # Set number format for the entire column
-        sum_cols = ["D", "M", "N", "O", "P", "S", "T", "U"]
+        sum_cols = ["D", "M", "N", "O", "P", "S", "T", "V"]
         no_columns = len(ws[sum_cols[0]])
         ws[f"A{no_columns+1}"] = "Total"
         for col in sum_cols:
@@ -684,7 +872,7 @@ class Portfolio:
         # Separate sheet for cash
         ws = workbook.create_sheet("Cash")
         ws.append(["Date", "Description", "Amount", "Amount USD", "Total"])
-        for c in self.ledger:
+        for c in self.cash_ledger:
             ws.append(
                 [
                     c[0].date,

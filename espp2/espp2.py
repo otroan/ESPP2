@@ -67,6 +67,7 @@ def main(  # noqa: C901
     lognames = logging.getLevelNamesMapping()
     if loglevel not in lognames:
         raise typer.BadParameter(f"Invalid loglevel: {loglevel}")
+
     logging.basicConfig(
         level=lognames[loglevel], handlers=[RichHandler(rich_tracebacks=False)]
     )
@@ -187,7 +188,6 @@ def main(  # noqa: C901
 
         with output as f:
             f.write(zipdata)
-
 
 if __name__ == "__main__":
     app()

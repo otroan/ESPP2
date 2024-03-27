@@ -6,6 +6,7 @@ ESPP2 web server
 # pylint: disable=invalid-name
 
 import logging
+from io import StringIO
 import json
 import base64
 from os.path import realpath
@@ -26,11 +27,11 @@ from espp2.main import (
 )
 from espp2.datamodels import ESPPResponse, Wires, Holdings, ExpectedBalance
 
-logging.basicConfig(level=logging.WARNING)
+log_stream = StringIO()
+logging.basicConfig(level=logging.WARNING, stream=log_stream)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-
 
 @app.post("/holdings_1/", response_model=Holdings)
 async def generate_holdings_1(
