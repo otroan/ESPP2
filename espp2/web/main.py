@@ -156,7 +156,8 @@ async def taxreport(
     )
     zipstr = jsonable_encoder(zipdata, custom_encoder={
         bytes: lambda v: base64.b64encode(v).decode('utf-8')})
-    return ESPPResponse(tax_report=report, holdings=holdings, zip=zipstr, summary=summary)
+    return ESPPResponse(tax_report=report, holdings=holdings, zip=zipstr, summary=summary,
+                        log=log_stream.getvalue())
 
 
 # This seems to keep us from caching the files too agressively.
