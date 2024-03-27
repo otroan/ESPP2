@@ -64,11 +64,11 @@ def tax_report(  # noqa: C901
     this_year = [t for t in transactions.transactions if t.date.year == year]
 
     # Run the chosen tax calculation engine
-    p = Positions(year, prev_holdings, this_year, wires)
-    p.process()
+    # p = Positions(year, prev_holdings, this_year, wires)
+    # p.process()
 
     # Parallel implementation generating Excel output
-    portfolio = Portfolio(year, broker, this_year, wires, prev_holdings, verbose)
+    p = Portfolio(year, broker, this_year, wires, prev_holdings, verbose)
 
     holdings = p.holdings(year, broker)
     report = {}
@@ -128,9 +128,11 @@ def tax_report(  # noqa: C901
             sales = []
         total_gain_nok = 0
         total_gain_post_tax_inc_nok = 0
+
         for s in sales:
             total_gain_nok += s.totals["gain"].nok_value
-            total_gain_post_tax_inc_nok += s.totals["post_tax_inc_gain"].nok_value
+            if "post_tax_inc_gain" in s.totals:
+                total_gain_post_tax_inc_nok += s.totals["post_tax_inc_gain"].nok_value
             tax_deduction_used += s.totals["tax_ded_used"]
 
         if year == 2022:
@@ -201,6 +203,7 @@ def tax_report(  # noqa: C901
         credit_deduction=credit_deductions,
         cashsummary=cashsummary,
     )
+    portfolio = p
     return TaxReportReturn(TaxReport(**report), holdings, portfolio.excel_data, summary)
 
 
