@@ -57,6 +57,7 @@ def tax_report(  # noqa: C901
     transactions: Transactions,
     wires: Wires,
     prev_holdings: Holdings,
+    portfolio_engine: bool,
     verbose: bool = False,
 ) -> Tuple[TaxReport, Holdings, TaxSummary]:
     """Generate tax report"""
@@ -64,11 +65,12 @@ def tax_report(  # noqa: C901
     this_year = [t for t in transactions.transactions if t.date.year == year]
 
     # Run the chosen tax calculation engine
-    # p = Positions(year, prev_holdings, this_year, wires)
-    # p.process()
-
-    # Parallel implementation generating Excel output
-    p = Portfolio(year, broker, this_year, wires, prev_holdings, verbose)
+    portfolio = Portfolio(year, broker, this_year, wires, prev_holdings, verbose)
+    if portfolio_engine is False:
+        p = Positions(year, prev_holdings, this_year, wires)
+        p.process()
+    else:
+        p = portfolio
 
     holdings = p.holdings(year, broker)
     report = {}
@@ -203,7 +205,6 @@ def tax_report(  # noqa: C901
         credit_deduction=credit_deductions,
         cashsummary=cashsummary,
     )
-    portfolio = p
     return TaxReportReturn(TaxReport(**report), holdings, portfolio.excel_data, summary)
 
 
@@ -292,6 +293,7 @@ def do_taxes(
     holdfile,
     wirefile,
     year,
+    portfolio_engine,
     verbose=False,
     opening_balance=None,
 ) -> Tuple[TaxReport, Holdings, TaxSummary]:
@@ -330,7 +332,7 @@ def do_taxes(
     if prev_holdings and prev_holdings.year != year - 1:
         raise ESPPErrorException("Holdings file for previous year not found")
 
-    return tax_report(year, broker, transactions, wires, prev_holdings, verbose=verbose)
+    return tax_report(year, broker, transactions, wires, prev_holdings, portfolio_engine, verbose=verbose)
 
 
 def do_holdings_1(

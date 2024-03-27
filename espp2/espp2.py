@@ -56,6 +56,7 @@ def main(  # noqa: C901
     outwires: typer.FileTextWrite = None,
     verbose: bool = False,
     opening_balance: str = None,
+    portfolio_engine: bool = False,
     loglevel: str = typer.Option("WARNING", help="Logging level"),
     version: bool = typer.Option(
         None, "--version", callback=version_callback, is_eager=True
@@ -93,6 +94,7 @@ def main(  # noqa: C901
             inholdings,
             wires,
             year,
+            portfolio_engine=portfolio_engine,
             verbose=verbose,
             opening_balance=opening_balance,
         )
