@@ -139,7 +139,7 @@ async def taxreport(
         holdfile = holdfile.file
     try:
         report, holdings, exceldata, summary = do_taxes(
-            broker, transaction_file, holdfile, wires, year
+            broker, transaction_file, holdfile, wires, year, portfolio_engine=True
         )
     except Exception as e:
         logger.exception(e)
