@@ -430,16 +430,17 @@ class Portfolio:
                 price_sum += item.purchase_price.value
                 price_sum_nok += item.purchase_price.nok_value
                 no_pos += 1
-            avg_usd = price_sum / no_pos
-            avg_nok = price_sum_nok / no_pos
-            r.append(
-                {
-                    "symbol": symbol,
-                    "qty": bought,
-                    "avg_usd": avg_usd,
-                    "avg_nok": avg_nok,
-                }
-            )
+            if no_pos > 0:
+                avg_usd = price_sum / no_pos
+                avg_nok = price_sum_nok / no_pos
+                r.append(
+                    {
+                        "symbol": symbol,
+                        "qty": bought,
+                        "avg_usd": avg_usd,
+                        "avg_nok": avg_nok,
+                    }
+                )
         return r
 
 
