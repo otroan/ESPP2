@@ -136,7 +136,7 @@ def tax_report(  # noqa: C901
             if "post_tax_inc_gain" in s.totals:
                 total_gain_post_tax_inc_nok += s.totals["post_tax_inc_gain"].nok_value
             tax_deduction_used += s.totals["tax_ded_used"]
-
+            total_gain_nok -= s.totals["tax_ded_used"]
         if year == 2022:
             dividend_post_tax_inc_nok_value = 0
             if dividend:

@@ -510,6 +510,7 @@ class Portfolio:
     }
     # x = Portfolio(year, broker, transactions, wires, prev_holdings, verbose)
 
+    '''
     def generate_tax_summary(self):
         # Generate foreign shares for tax report
         foreignshares = []
@@ -533,7 +534,7 @@ class Portfolio:
             wealth_nok = total_qty * eoyfmv * eoy_exchange_rate
             foreignshares.append(
                 ForeignShares(
-                    symbol=p.symbol,
+                    symbol=s,
                     isin=f.isin,
                     country=f.country,
                     account=self.broker,
@@ -544,13 +545,13 @@ class Portfolio:
                     tax_deduction_used=tax_deduction_used,
                 )
             )
-
         return TaxSummary(
             year=self.year,
             foreignshares=foreignshares,
             credit_deduction=credit_deduction,
             cashsummary=self.cash_report,
         )
+        '''
 
     def eoy_balance(self, year):
         """End of year summary of holdings"""
@@ -587,9 +588,10 @@ class Portfolio:
             )
         return r
 
-    def generate_holdings(self):
-        # Generate holdings for next year.
+    def generate_holdings(self, year, broker):
+        # Generate holdings for EOY.
         holdings = []
+        assert year == self.year, f"Year {year} does not match portfolio year {self.year}"
         for p in self.positions:
             if p.current_qty == 0:
                 continue
@@ -601,10 +603,13 @@ class Portfolio:
                 tax_deduction=p.tax_deduction,
             )
             holdings.append(hitem)
+        #
+        # TODO: FIX CASH
+        #
         return Holdings(year=self.year, broker=self.broker, stocks=holdings, cash=[])
 
     def holdings(self, year, broker):
-        return self.eoy_holdings
+        return self.generate_holdings(year, broker)
 
     def fundamentals(self) -> Dict[str, Fundamentals]:
         """Return fundamentals for symbol at date"""
@@ -679,7 +684,7 @@ class Portfolio:
         self.taxes = []
         self.positions = []
         self.new_positions = []
-        self.cash = Cash(year=year)
+        self.cash = Cash(year=year, opening_balance=holdings.cash)
         self.broker = broker
 
         self.column_headers = [
@@ -805,8 +810,8 @@ class Portfolio:
         self.ledger = Ledger(holdings, transactions)
 
         # Generate holdings for next year.
-        self.eoy_holdings = self.generate_holdings()
-        self.summary = self.generate_tax_summary()
+        self.eoy_holdings = self.generate_holdings(year, broker)
+        # self.summary = self.generate_tax_summary()
 
         self.excel_data = self.excel_report()
 
