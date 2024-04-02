@@ -475,7 +475,6 @@ def do_holdings_3(
 def do_holdings_4(broker, transaction_file, year, verbose=False) -> Holdings:
     """Generate holdings file for Morgan"""
 
-    assert year == 2022
     assert broker == "morgan"
 
     prev_holdings = []
