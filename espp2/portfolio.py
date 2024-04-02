@@ -591,7 +591,7 @@ class Portfolio:
             )
         return r
 
-    def generate_holdings(self, year, broker):
+    def generate_holdings(self, year, broker) -> Holdings:
         # Generate holdings for EOY.
         holdings = []
         assert year == self.year, f"Year {year} does not match portfolio year {self.year}"
@@ -606,10 +606,9 @@ class Portfolio:
                 tax_deduction=p.tax_deduction,
             )
             holdings.append(hitem)
-        #
-        # TODO: FIX CASH
-        #
-        return Holdings(year=self.year, broker=self.broker, stocks=holdings, cash=[])
+
+        cash = self.cash_summary.holdings
+        return Holdings(year=self.year, broker=self.broker, stocks=holdings, cash=cash)
 
     def holdings(self, year, broker):
         return self.generate_holdings(year, broker)
