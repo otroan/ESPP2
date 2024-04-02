@@ -511,50 +511,6 @@ class Portfolio:
         # 'FEE': 'fee',
         # 'CASHADJUST': 'cashadjust',
     }
-    # x = Portfolio(year, broker, transactions, wires, prev_holdings, verbose)
-
-    '''
-    def generate_tax_summary(self):
-        # Generate foreign shares for tax report
-        foreignshares = []
-        credit_deduction = []
-        # cashsummary = CashSummary()
-        end_of_year = f"{self.year}-12-31"
-        eoy_exchange_rate = fmv.get_currency("USD", end_of_year)
-
-        for s in self.symbols:
-            f = fmv.get_fundamentals2(s)
-            total_qty = 0
-            dividend_nok = 0
-            taxable_gain = 0
-            tax_deduction_used = 0
-            for p in self.positions:
-                if p.symbol != s or p.current_qty == 0:
-                    continue
-                total_qty += p.current_qty
-
-            eoyfmv = fmv[s, end_of_year]
-            wealth_nok = total_qty * eoyfmv * eoy_exchange_rate
-            foreignshares.append(
-                ForeignShares(
-                    symbol=s,
-                    isin=f.isin,
-                    country=f.country,
-                    account=self.broker,
-                    shares=total_qty,
-                    wealth=wealth_nok,
-                    dividend=dividend_nok,
-                    taxable_gain=taxable_gain,
-                    tax_deduction_used=tax_deduction_used,
-                )
-            )
-        return TaxSummary(
-            year=self.year,
-            foreignshares=foreignshares,
-            credit_deduction=credit_deduction,
-            cashsummary=self.cash_report,
-        )
-        '''
 
     def eoy_balance(self, year):
         """End of year summary of holdings"""
@@ -608,7 +564,7 @@ class Portfolio:
             holdings.append(hitem)
 
         cash = self.cash_summary.holdings
-        return Holdings(year=self.year, broker=self.broker, stocks=holdings, cash=cash)
+        return Holdings(year=self.year, broker=broker, stocks=holdings, cash=cash)
 
     def holdings(self, year, broker):
         return self.generate_holdings(year, broker)
@@ -788,6 +744,7 @@ class Portfolio:
                             r.tax_deduction_used = p.tax_deduction
                             r.tax_deduction_used_total = p.tax_deduction * r.qty
                             p.tax_deduction = 0
+                for r in p.records:
                     if isinstance(r, PortfolioSale) and r.gain_ps.nok_value > 0:
                         qty = abs(r.qty)
                         if p.tax_deduction >= r.gain_ps.nok_value:
