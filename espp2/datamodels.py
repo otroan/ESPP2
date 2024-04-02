@@ -282,7 +282,7 @@ class Sell(TransactionEntry):
     symbol: str
     qty: Annotated[Decimal, Field(lt=0)]
     fee: Optional[NegativeAmount] = None
-    amount: Amount
+    amount: Amount # Net amount after fees
     description: str
     source: str
     id: str = Optional[str]
