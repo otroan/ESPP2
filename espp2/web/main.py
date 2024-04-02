@@ -27,11 +27,24 @@ from espp2.main import (
 )
 from espp2.datamodels import ESPPResponse, Wires, Holdings, ExpectedBalance
 
-log_stream = StringIO()
-logging.basicConfig(level=logging.WARNING, stream=log_stream)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+def capture_logs_start() -> logging.StreamHandler:
+  log_stream = StringIO()
+  log_handler = logging.StreamHandler(log_stream)
+  formatter = logging.Formatter("%(levelname)s: %(message)s")
+  log_handler.setFormatter(formatter)
+  logger.addHandler(log_handler)
+  return log_handler
+
+def capture_logs_stop(log_handler) -> str:
+  logger.removeHandler(log_handler)
+  log_handler.flush()
+  log_handler.stream.flush()
+  return log_handler.stream.getvalue()
 
 @app.post("/holdings_1/", response_model=Holdings)
 async def generate_holdings_1(
@@ -123,6 +136,7 @@ async def taxreport(
     #        opening_balance: str = Form(...),
     year: int = Form(...),
 ):
+    log_handler = capture_logs_start()
     """File upload endpoint"""
     opening_balance = None
     if wires:
@@ -156,8 +170,9 @@ async def taxreport(
     )
     zipstr = jsonable_encoder(zipdata, custom_encoder={
         bytes: lambda v: base64.b64encode(v).decode('utf-8')})
+    logstr = capture_logs_stop(log_handler)
     return ESPPResponse(tax_report=report, holdings=holdings, zip=zipstr, summary=summary,
-                        log=log_stream.getvalue())
+                        log=logstr)
 
 
 # This seems to keep us from caching the files too agressively.
