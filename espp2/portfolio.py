@@ -390,33 +390,33 @@ class Portfolio:
         # if transaction.fee is not None:
         #     self.cash.credit(transaction.date, transaction.fee.model_copy(), "sale fee")
 
-    def sell_split(self, transaction):
+    def sell_split(self, transaction, poscopy):
         '''If a sale is split over multiple records, split the position'''
         shares_to_sell = abs(transaction.qty)
-        poscopy = deepcopy(self.positions)
         for i, p in enumerate(poscopy):
-            if p.symbol == transaction.symbol:
-                if p.current_qty == 0:
-                    continue
-                if p.current_qty == shares_to_sell:
-                    p.current_qty = 0
-                    shares_to_sell = 0
-                elif p.current_qty > shares_to_sell:
-                    # Split record
-                    splitpos = deepcopy(p)
-                    splitpos.current_qty = p.current_qty - shares_to_sell
-                    splitpos.qty = splitpos.current_qty
-                    splitpos.split = True
-                    p.current_qty -= shares_to_sell
-                    self.positions[i].qty = self.positions[i].current_qty = shares_to_sell
-                    self.positions.insert(i+1, splitpos)
-                    shares_to_sell = 0
+            if p.symbol != transaction.symbol or p.current_qty == 0:
+                continue
+            if p.current_qty == shares_to_sell:
+                p.current_qty = 0
+                shares_to_sell = 0
+            elif p.current_qty > shares_to_sell:
+                # Split record
+                splitpos = deepcopy(p)
+                splitpos.current_qty = p.current_qty - shares_to_sell
+                splitpos.qty = splitpos.current_qty
+                splitpos.split = True
+                p.current_qty -= shares_to_sell
+                self.positions[i].qty = self.positions[i].current_qty = shares_to_sell
+                self.positions.insert(i+1, splitpos)
+                logger.debug(f"Splitting position: {p.symbol} {p.date}, {shares_to_sell}+{splitpos.qty}({p.qty})")
 
-                else:
-                    shares_to_sell -= p.current_qty
-                    p.current_qty = 0
-                if shares_to_sell == 0:
-                    break
+                shares_to_sell = 0
+            else:
+                shares_to_sell -= p.current_qty
+                p.current_qty = 0
+            if shares_to_sell == 0:
+                break
+
 
     def buys(self):
         """Return report of BUYS"""
@@ -738,9 +738,10 @@ class Portfolio:
         for t in transactions:
             if t.type in ["BUY", "DEPOSIT"]:
                 self.buy(t)
+        poscopy = deepcopy(self.positions)
         for t in transactions:
             if t.type in ["SELL"]:
-                self.sell_split(t)
+                self.sell_split(t, poscopy)
         #######################
 
         for t in transactions:
