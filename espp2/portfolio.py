@@ -342,9 +342,11 @@ class Portfolio:
 
     def sell(self, transaction):
         shares_to_sell = abs(transaction.qty)
+
+        # This is the net amount after fees
         actual = transaction.amount.value
-        if transaction.fee is not None:
-            actual -= abs(transaction.fee.value)
+        # if transaction.fee is not None:
+        #     actual -= abs(transaction.fee.value)
         sell_price = Amount(
             amountdate=transaction.date,
             value=(actual / shares_to_sell),
@@ -384,8 +386,9 @@ class Portfolio:
                 if shares_to_sell == 0:
                     break
         self.cash.debit(transaction.date, transaction.amount.model_copy(), "sale")
-        if transaction.fee is not None:
-            self.cash.credit(transaction.date, transaction.fee.model_copy(), "sale fee")
+        # Sale is reported as net value after fees.
+        # if transaction.fee is not None:
+        #     self.cash.credit(transaction.date, transaction.fee.model_copy(), "sale fee")
 
     def sell_split(self, transaction):
         '''If a sale is split over multiple records, split the position'''
