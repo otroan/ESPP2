@@ -393,8 +393,11 @@ class Portfolio:
     def sell_split(self, transaction, poscopy):
         '''If a sale is split over multiple records, split the position'''
         shares_to_sell = abs(transaction.qty)
-        for i, p in enumerate(poscopy):
+        i = 0
+        while i < len(poscopy):
+            p = poscopy[i]
             if p.symbol != transaction.symbol or p.current_qty == 0:
+                i += 1
                 continue
             if p.current_qty == shares_to_sell:
                 p.current_qty = 0
@@ -405,18 +408,18 @@ class Portfolio:
                 splitpos.current_qty = p.current_qty - shares_to_sell
                 splitpos.qty = splitpos.current_qty
                 splitpos.split = True
-                p.current_qty -= shares_to_sell
+                p.current_qty = 0
                 self.positions[i].qty = self.positions[i].current_qty = shares_to_sell
                 self.positions.insert(i+1, splitpos)
+                poscopy.insert(i+1, deepcopy(splitpos))
                 logger.debug(f"Splitting position: {p.symbol} {p.date}, {shares_to_sell}+{splitpos.qty}({p.qty})")
-
                 shares_to_sell = 0
             else:
                 shares_to_sell -= p.current_qty
                 p.current_qty = 0
             if shares_to_sell == 0:
                 break
-
+            i += 1
 
     def buys(self):
         """Return report of BUYS"""
@@ -472,19 +475,13 @@ class Portfolio:
                     sales_report[p.symbol].append(s_record)
         return sales_report
     def fees(self):
+        # TODO!
         return []
 
 
     def wire(self, transaction):
-        # wire type=<EntryTypeEnum.WIRE: 'WIRE'>
-        # date=datetime.date(2022, 5, 23)
-        # amount=Amount(currency='USD', nok_exchange_rate=Decimal('9.6182'),
-        # nok_value=Decimal('-310736.245402'), value=Decimal('-32307.11'))
-        # description='Cash Disbursement' fee=NegativeAmount(currency='USD',
-        # nok_exchange_rate=Decimal('9.6182'), nok_value=Decimal('-144.273000'),
-        # value=Decimal('-15.00')) source='schwab:/Users/otroan/Stocks/erik/erik.csv'
-        # id='WIRE 2022-05-23:3'
-        pass
+        ''' Handled separately in the cash account '''
+
 
     def taxsub(self, transaction):
         self.cash.debit(transaction.date, transaction.amount, "tax returned")
