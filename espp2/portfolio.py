@@ -7,9 +7,9 @@ from io import BytesIO
 from copy import deepcopy
 from openpyxl import Workbook
 from openpyxl.formatting.rule import CellIsRule
-from openpyxl.styles import Font
+from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from datetime import date, datetime
 from decimal import Decimal
 from espp2.datamodels import (
@@ -40,6 +40,15 @@ def format_cells(ws, column, number_format):
     for cell in ws[column]:
         cell.number_format = number_format
 
+def format_fill_columns(ws, headers, columns, color):
+    # Create a dictionary mapping column headers to Excel column letters
+    header_to_letter = {header: chr(i + 65) for i, header in enumerate(headers)}
+    cols = [header_to_letter[header] for header in columns if header in header_to_letter]
+    fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+    for c in cols:
+        for cell in ws[c]:
+            cell.fill = fill
+
 
 class PortfolioPosition(BaseModel):
     """Stock positions"""
@@ -47,6 +56,7 @@ class PortfolioPosition(BaseModel):
     symbol: str
     date: date
     qty: Decimal
+    pre_split_qty: Decimal = 0
     tax_deduction: Decimal = 0  # Total available tax deduction
     tax_deduction_acc: Decimal  # accumulated tax deduction from previous years
     tax_deduction_new: Decimal = 0  # tax deduction for this year
@@ -55,6 +65,10 @@ class PortfolioPosition(BaseModel):
     records: list[Any] = []
     coord: Dict[str, str] = {}
     split: bool = False
+
+    @validator('pre_split_qty', pre=True, always=True)
+    def set_pre_split_qty(cls, v, values):
+        return v or values.get('qty')
 
     def get_coord(self, key):
         return self.coord[key]
@@ -74,6 +88,8 @@ class PortfolioPosition(BaseModel):
         col = [(row, columns.index("Symbol"), self.symbol)]
         if not self.split:
             col.append((row, columns.index("Date"), self.date))
+        if self.pre_split_qty > 0:
+            col.append((row, columns.index("pQty"), self.pre_split_qty))
         col.append((row, columns.index("Qty"), self.qty))
         col.append(
             (
@@ -88,8 +104,8 @@ class PortfolioPosition(BaseModel):
         col.append(
             (row, columns.index("Exchange Rate"), self.purchase_price.nok_exchange_rate)
         )
-        col.append((row, columns.index("Tax Ded Acc"), round(self.tax_deduction_acc, 2)))
-        col.append((row, columns.index("Tax Ded Add"), round(self.tax_deduction_new, 2)))
+        col.append((row, columns.index("Accumulated"), round(self.tax_deduction_acc, 2)))
+        col.append((row, columns.index("Added"), round(self.tax_deduction_new, 2)))
         return col
 
 
@@ -136,12 +152,12 @@ class PortfolioDividend(BaseModel):
             )
         )
         col.append(
-            (row, columns.index("Tax Ded Used"), round(self.tax_deduction_used, 2))
+            (row, columns.index("Used"), round(self.tax_deduction_used, 2))
         )
         col.append(
             (
                 row,
-                columns.index("Tax Ded Total"),
+                columns.index("TD Total"),
                 round(self.tax_deduction_used_total, 2),
             )
         )
@@ -220,12 +236,12 @@ class PortfolioSale(BaseModel):
             )
         )
         col.append(
-            (row, columns.index("Tax Ded Used"), round(self.tax_deduction_used, 2))
+            (row, columns.index("Used"), round(self.tax_deduction_used, 2))
         )
         col.append(
             (
                 row,
-                columns.index("Tax Ded Total"),
+                columns.index("TD Total"),
                 round(self.tax_deduction_used_total, 2),
             )
         )
@@ -240,8 +256,16 @@ def adjust_width(ws):
 
     # Adjust column width to fit the longest value in each column
     for column_cells in ws.columns:
+        column_cells = column_cells[1:]
+        if not column_cells:
+            continue
         length = max(len(as_text(cell.value)) for cell in column_cells)
-        ws.column_dimensions[column_cells[0].column_letter].width = length + 1
+        if length < 8:
+            length = 8
+        try:
+            ws.column_dimensions[column_cells[0].column_letter].width = length
+        except:
+            pass
 
 
 def index_to_cell(row, column):
@@ -407,8 +431,10 @@ class Portfolio:
                 splitpos = deepcopy(p)
                 splitpos.current_qty = p.current_qty - shares_to_sell
                 splitpos.qty = splitpos.current_qty
+                splitpos.pre_split_qty = 0
                 splitpos.split = True
                 p.current_qty = 0
+                self.positions[i].pre_split_qty = p.qty
                 self.positions[i].qty = self.positions[i].current_qty = shares_to_sell
                 self.positions.insert(i+1, splitpos)
                 poscopy.insert(i+1, deepcopy(splitpos))
@@ -646,25 +672,33 @@ class Portfolio:
             "Symbol",
             "Date",
             "Type",
-            "Qty",
-            "iQty",
+            # Qty
+            "pQty", # Pre-split qty
+            "Qty", # Current qty
+            "iQty", # Individual qty after split/sale
             "Price",
             "Price USD",
             "Exchange Rate",
-            "Tax Ded Acc",
-            "Tax Ded Add",
+
+            # Dividends
+            "Div PS",
+            "Div PS USD",
+            "Total Dividend",
+            "Total Dividend USD",
+
+            # Deductibe Risk-free return
+            "Accumulated",
+            "Added",
+            "Used",
+            "TD Total",
+
+            # Sales
             "Gain PS",
             "Gain PS USD",
             "Gain",
             "Gain USD",
             "Amount",
             "Amount USD",
-            "Div PS",
-            "Div PS USD",
-            "Total Dividend",
-            "Total Dividend USD",
-            "Tax Ded Used",
-            "Tax Ded Total",
         ]
 
         self.prev_holdings = holdings
@@ -779,24 +813,31 @@ class Portfolio:
         workbook = Workbook()
         ws = workbook.active
         ws.title = f"Portfolio-{year}"
-        # Extract column headers from the Stock Pydantic model
 
+
+        # Extract column headers from the Stock Pydantic model
         # Write column headers to the Excel sheet
+        ws.merge_cells('J1:M1')
+        ws['J1'] = 'Dividends'
+        ws['J1'].font = Font(bold=True)
+        ws['J1'].alignment = Alignment(horizontal='center', vertical='center')
+        ws.merge_cells('N1:Q1')
+        ws['N1'] = 'Deductible Risk-free return'
+        ws['N1'].font = Font(bold=True)
+        ws['N1'].alignment = Alignment(horizontal='center', vertical='center')
+        ws.merge_cells('R1:W1')
+        ws['R1'] = 'Sales'
+        ws['R1'].font = Font(bold=True)
+        ws['R1'].alignment = Alignment(horizontal='center', vertical='center')
+
         ws.append(self.column_headers)
         ft = Font(bold=True)
 
         title_row = ws.row_dimensions[1]
         title_row.font = ft
 
-        # Apply conditional formatting to change font color for negative numbers
-        # dxf = DifferentialStyle(font=Font(color='FF0000'))
-        ws.conditional_formatting.add(
-            "C2:P50",
-            CellIsRule(operator="lessThan", formula=["0"], font=Font(color="00FF0000")),
-        )
-
         # Write data from Stock instances to the Excel sheet
-        row = 2
+        row = 3
         for stock in portfolio:
             for row, col, value in stock.format(row, self.column_headers):
                 ws.cell(row=row, column=col + 1, value=value)
@@ -806,31 +847,63 @@ class Portfolio:
                     ws.cell(row=row, column=col + 1, value=value)
                 row += 1
 
-        # Set number format for the entire column
-        sum_cols = ["D", "M", "N", "O", "P", "S", "T", "V"]
-        no_columns = len(ws[sum_cols[0]])
-        ws[f"A{no_columns+1}"] = "Total"
-        for col in sum_cols:
-            ws[f"{col}{no_columns+1}"] = f"=SUM({col}2:{col}{no_columns})"
-            # format_cells(ws, col, number_format)
+        # Create a dictionary mapping column headers to Excel column letters
+        header_to_letter = {header: chr(i + 65) for i, header in enumerate(self.column_headers)}
+
+        # Number format
+        num_columns = ["pQty", "Qty", "iQty", "Price", "Price USD", "Gain", "Gain PS",
+                       "Gain USD", "Amount", "Amount USD", "Div PS", "Div PS USD",
+                       "Total Dividend", "Total Dividend USD", "Exchange Rate",
+                       "Accumulated", "Added",]
+        num_cols = [header_to_letter[header] for header in num_columns if header in header_to_letter]
+        for c in num_cols:
+            format_cells(ws, c, "0.00")
 
         # Tax (in a separate sheet?)
         # TODO: Include TAXSUB
-        for t in self.taxes:
-            ws.append(
-                [
-                    t["symbol"],
-                    t["date"],
-                    "Tax",
-                    round(t["amount"].nok_value, 2),
-                    round(t["amount"].value, 2),
-                ]
-            )
+        # for t in self.taxes:
+        #     ws.append(
+        #         [
+        #             t["symbol"],
+        #             t["date"],
+        #             "Tax",
+        #             round(t["amount"].nok_value, 2),
+        #             round(t["amount"].value, 2),
+        #         ]
+        #     )
 
-        adjust_width(ws)
         # Freeze the first row
         c = ws["A2"]
         ws.freeze_panes = c
+
+        # Apply conditional formatting to change font color for negative numbers
+        ws.conditional_formatting.add(
+            f"A1:{index_to_cell(ws.max_column, ws.max_row)}",
+            CellIsRule(operator="lessThan", formula=["0"], font=Font(color="00FF0000")),
+        )
+
+        adjust_width(ws)
+        # Set number format for the entire column
+        sum_columns = ["Qty", "Gain", "Gain USD", "Amount", "Amount USD", "Total Dividend",
+                    "Total Dividend USD", "TD Total"]
+
+        # Create sum_cols list with Excel column letters
+        sum_cols = [header_to_letter[header] for header in sum_columns if header in header_to_letter]
+
+        no_columns = len(ws[sum_cols[0]])
+        bold_font = Font(bold=True)
+        ws[f"A{no_columns+1}"] = "Total"
+        ws[f"A{no_columns+1}"].font = bold_font
+
+        for col in sum_cols:
+            ws[f"{col}{no_columns+1}"] = f"=SUM({col}2:{col}{no_columns})"
+            ws[f"{col}{no_columns+1}"].font = bold_font
+            ws[f"{col}{no_columns+1}"].number_format = "0.00"
+
+        # Format columns with different colors
+        format_fill_columns(ws, self.column_headers, ["Div PS", "Div PS USD", "Total Dividend", "Total Dividend USD"], "A3E4D7")
+        format_fill_columns(ws, self.column_headers, ["Gain PS", "Gain PS USD", "Gain", "Gain USD", "Amount", "Amount USD"], "F5B7B1")
+        format_fill_columns(ws, self.column_headers, ["Accumulated", "Added", "TD Total", "Used"], "F0E68C")
 
         # Separate sheet for cash
         ws = workbook.create_sheet("Cash")
