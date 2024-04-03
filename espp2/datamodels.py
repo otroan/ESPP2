@@ -547,6 +547,7 @@ class ESPPResponse(BaseModel):
     """ESPP response"""
 
     zip: str
+    excel_json: str
     tax_report: TaxReport
     summary: TaxSummary
     holdings: Holdings

@@ -152,7 +152,7 @@ async def taxreport(
     elif holdfile:
         holdfile = holdfile.file
     try:
-        report, holdings, exceldata, summary = do_taxes(
+        report, holdings, exceldata, excel_json, summary = do_taxes(
             broker, transaction_file, holdfile, wires, year, portfolio_engine=True
         )
     except Exception as e:
@@ -171,8 +171,8 @@ async def taxreport(
     zipstr = jsonable_encoder(zipdata, custom_encoder={
         bytes: lambda v: base64.b64encode(v).decode('utf-8')})
     logstr = capture_logs_stop(log_handler)
-    return ESPPResponse(tax_report=report, holdings=holdings, zip=zipstr, summary=summary,
-                        log=logstr)
+    return ESPPResponse(tax_report=report, holdings=holdings, zip=zipstr, excel_json=excel_json,
+                        summary=summary, log=logstr)
 
 
 # This seems to keep us from caching the files too agressively.

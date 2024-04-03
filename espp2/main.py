@@ -38,6 +38,7 @@ class TaxReportReturn(NamedTuple):  # inherit from typing.NamedTuple
     report: TaxReport
     holdings: Holdings
     excel: bytes
+    excel_json: str
     summary: TaxSummary
 
 
@@ -205,7 +206,8 @@ def tax_report(  # noqa: C901
         credit_deduction=credit_deductions,
         cashsummary=cashsummary,
     )
-    return TaxReportReturn(TaxReport(**report), holdings, portfolio.excel_data, summary)
+    return TaxReportReturn(TaxReport(**report), holdings, portfolio.excel_data,
+                           portfolio.excel_json, summary)
 
 
 # Merge transaction files
