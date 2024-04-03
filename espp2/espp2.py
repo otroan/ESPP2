@@ -56,7 +56,7 @@ def main(  # noqa: C901
     outwires: typer.FileTextWrite = None,
     verbose: bool = False,
     opening_balance: str = None,
-    portfolio_engine: bool = False,
+    portfolio_engine: bool = True,
     loglevel: str = typer.Option("WARNING", help="Logging level"),
     version: bool = typer.Option(
         None, "--version", callback=version_callback, is_eager=True
