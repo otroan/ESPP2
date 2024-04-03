@@ -352,6 +352,15 @@ class Portfolio:
         )
         self.cash.credit(transaction.date, transaction.amount, "tax")
 
+    def transfer(self, transaction):
+        logger.error(f"Transfer not implemented: {transaction}")
+
+    def fee(self, transaction):
+        logger.error(f"Fee as a separate record not implemented: {transaction}")
+
+    def cashadjust(self, transaction):
+        logger.error(f"Cashadjust record not implemented: {transaction}")
+
     def tax_for_symbol(self, symbol):
         total_nok = 0
         total_usd = 0
@@ -525,14 +534,14 @@ class Portfolio:
         "BUY": buy,
         "DEPOSIT": buy,
         "SELL": sell,
-        # 'TRANSFER': 'transfer',
+        "TRANSFER": transfer,
         "DIVIDEND": dividend,
         "DIVIDEND_REINV": dividend_reinv,
         "TAX": tax,
         "TAXSUB": taxsub,
         "WIRE": wire,
-        # 'FEE': 'fee',
-        # 'CASHADJUST': 'cashadjust',
+        "FEE": fee,
+        "CASHADJUST": cashadjust,
     }
 
     def eoy_balance(self, year):
