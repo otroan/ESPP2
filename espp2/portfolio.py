@@ -10,7 +10,6 @@ from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from pydantic import BaseModel, Field, validator
-from pandas import read_excel
 from datetime import date, datetime
 from decimal import Decimal
 from espp2.datamodels import (
@@ -814,7 +813,7 @@ class Portfolio:
         self.eoy_holdings = self.generate_holdings(year, broker)
         # self.summary = self.generate_tax_summary()
 
-        self.excel_data, self.excel_json = self.excel_report()
+        self.excel_data = self.excel_report()
 
     def excel_report(self):
         # Create an Excel workbook and get the active sheet
@@ -950,8 +949,4 @@ class Portfolio:
         excel_data = BytesIO()
         workbook.save(excel_data)
         excel_data.seek(0)
-
-        # Give a JSON representation to frontend
-        df = read_excel(excel_data, header=1)
-        json_data = df.to_json(orient='records')
-        return excel_data.getvalue(), json_data
+        return excel_data.getvalue()
