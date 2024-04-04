@@ -998,12 +998,20 @@ def find_tables_by_header(tables, search_header, hline=0):
 
 
 def parse_account_summary_html(tables):
-    any = re.compile(r"""(.*)""")
     search_account_summary = [
         [""],
-        [any, "", re.compile(r"""Account Summary Statement(.*)""")],
+        [None, "", re.compile(r"""Account Summary Statement(.*)""")],
     ]
     summary = find_tables_by_header(tables, search_account_summary, 1)
+
+    if len(summary) == 0:
+        # Try again to find the info in 2023 statements...
+        search_account_summary = [
+            [""],
+            [None, "", re.compile(r"""Account Summary Summary (.*)""")],
+        ]
+        summary = find_tables_by_header(tables, search_account_summary, 1)
+
     assert len(summary) == 1
     period = summary[0].data[1][2]
     # print(f'####### period={period} #######')
