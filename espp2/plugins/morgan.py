@@ -863,7 +863,6 @@ def elem_enter(elem, tag):
     for x in elem:
         if istag(x, tag):
             return x
-        return None
     return None
 
 
