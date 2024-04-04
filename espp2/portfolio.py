@@ -291,11 +291,23 @@ class Portfolio:
         # Keep stock of new positions for reporting
         self.new_positions.append(position)
 
+    def qty_at_date(self, symbol, exdate):
+        total = Decimal('0.00')
+        for p in self.positions:
+            if p.symbol == symbol:
+                total += p.qty_at_date(exdate)
+        return total
+
     def dividend(self, transaction):
         """Dividend"""
         shares_left = transaction.amount.value / transaction.dividend_dps
+        expected_number_of_shares = shares_left
+        found_number_of_shares = 0
         total = transaction.amount.value
         # Walk through positions available at exdate.
+        no_shares = self.qty_at_date(transaction.symbol, transaction.exdate)
+        if no_shares != expected_number_of_shares:
+            logger.error(f"Dividend error. Expected {expected_number_of_shares} shares, holding: {no_shares}")
         for p in self.positions:
             if p.symbol == transaction.symbol:
                 # Get qty up until exdate
@@ -311,6 +323,7 @@ class Portfolio:
                     shares_left -= qty
 
                 used = transaction.dividend_dps * qty
+                found_number_of_shares += qty
                 # used_nok = used * transaction.amount.nok_exchange_rate
                 total -= used
                 d = PortfolioDividend(
@@ -332,7 +345,7 @@ class Portfolio:
                 if shares_left == 0:
                     break
         if abs(total) > 1:
-            logger.error(f"Not all dividend used: {total}")
+            logger.error(f"Dividend issue: {transaction.date} Not all dividend used: ${total} expected {expected_number_of_shares}, found only: {found_number_of_shares}")
         self.cash.debit(transaction.date, transaction.amount, "dividend")
 
     def tax(self, transaction):
