@@ -23,7 +23,8 @@ from espp2.datamodels import (
     TaxSummary,
     ForeignShares,
     EOYDividend,
-    EOYSales
+    EOYSales,
+    SalesPosition
 )
 from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals
 from espp2.cash import Cash
@@ -175,6 +176,7 @@ class PortfolioSale(BaseModel):
     tax_deduction_used: Decimal = 0
     tax_deduction_used_total: Decimal = 0
     parent: PortfolioPosition = None
+    id: str
 
     def format(self, row, columns):
         col = [(row, columns.index("Date"), self.saledate)]
@@ -427,6 +429,7 @@ class Portfolio:
                     #                 currency=transaction.amount.currency),
                     total=sell_price * sold,
                     parent=p,
+                    id=transaction.id,
                 )
                 p.records.append(s)
                 if shares_to_sell == 0:
@@ -497,39 +500,60 @@ class Portfolio:
                 )
         return r
 
-
     def sales(self):
-        sales_report = {}
+        srecords = {}
+        for k, v in self.sale_transactions.items():
+            print(f"Sale: {k} {v}")
+            srecords[v.id] = EOYSales(
+                date=v.date,
+                symbol=v.symbol,
+                qty=v.qty,
+                # fee=r.fee,
+                amount=v.amount,
+                from_positions=[],
+                totals={
+                    'gain': 0,
+                    'purchase_price': 0,
+                    'tax_ded_used': 0,
+                    },
+            )
+
+        def portfoliosale_to_salesposition(portfoliosale):
+            return SalesPosition(
+                symbol=portfoliosale.parent.symbol,
+                qty=abs(portfoliosale.qty),
+                sale_price=portfoliosale.sell_price,
+                purchase_price=portfoliosale.parent.purchase_price,
+                purchase_date=portfoliosale.parent.date,
+                gain_ps=portfoliosale.gain_ps,
+                tax_deduction_used=portfoliosale.tax_deduction_used,
+            )
+
         for p in self.positions:
             for r in p.records:
                 if isinstance(r, PortfolioSale):
-                    s_record = EOYSales(
-                    date=r.saledate,
-                    symbol=p.symbol,
-                    qty=r.qty,
-                    # fee=r.fee,
-                    amount=r.total,
-                    from_positions=[],
-                    )
+                    record = srecords.get(r.id)
+                    record.from_positions.append(portfoliosale_to_salesposition(r))
+                    record.totals['gain'] += r.gain
 
-                    totals = {
-                    "gain": r.gain,
-                    "purchase_price": p.purchase_price,
-                    "tax_ded_used": r.tax_deduction_used * abs(r.qty),
-                    }
-                    s_record.totals = totals
-                    if p.symbol not in sales_report:
-                        sales_report[p.symbol] = []
-                    sales_report[p.symbol].append(s_record)
+                    # Average purchase price
+                    purchase_price = record.totals['purchase_price']
+                    record.totals['purchase_price'] = (purchase_price + r.parent.purchase_price.value) / len(record.from_positions)
+                    record.totals['tax_ded_used'] += (r.tax_deduction_used * r.qty)
+
+        sales_report = {}
+        for k,v in srecords.items():
+            if v.symbol not in sales_report:
+                sales_report[v.symbol] = []
+            sales_report[v.symbol].append(v)
         return sales_report
+
     def fees(self):
         # TODO!
         return []
 
-
     def wire(self, transaction):
         ''' Handled separately in the cash account '''
-
 
     def taxsub(self, transaction):
         self.cash.debit(transaction.date, transaction.amount, "tax returned")
@@ -541,7 +565,6 @@ class Portfolio:
                 "amount": transaction.amount,
             }
         )
-
 
     dispatch = {
         "BUY": buy,
@@ -649,7 +672,6 @@ class Portfolio:
                         nok += r.dividend.nok_value
                         tax_ded_used += r.tax_deduction_used_total
 
-
             result.append(EOYDividend(
                 symbol=s,
                 amount=Amount(
@@ -752,6 +774,9 @@ class Portfolio:
                 self.sell_split(t, poscopy)
         #######################
 
+        # Dictionary of Sale transactions with transaction id as key
+        self.sale_transactions = {t.id: t for t in transactions if t.type == "SELL"}
+
         for t in transactions:
             # Use dispatch to call a function per t.type
             if t.type in ["BUY", "DEPOSIT"]:    # Already handled these
@@ -835,7 +860,6 @@ class Portfolio:
         workbook = Workbook()
         ws = workbook.active
         ws.title = f"Portfolio-{year}"
-
 
         # Extract column headers from the Stock Pydantic model
         # Write column headers to the Excel sheet
