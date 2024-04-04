@@ -29,3 +29,11 @@ Aksjegevinst/tap regnes da mot Norges bank sin valutakurs på salgstidspunktet.
 Valutagevinst/tap regnes mot Norges bank sin valutakurs på overføringstidspunktet.
 Inngangsverdien til valutaen er gitt av NBs valutakurs på salgstidspunktet.
 
+## Feilmeldinger
+
+#### ERROR:espp2.portfolio:Dividend error. Expected <x> shares, holding: <y>
+Det er mottatt utbytte for <x> aksjer mens verktøyet beregner at beholdningen er <y> aksjer.
+Dette kan typisk skyldes at det er noe galt med beholdningen fra forrige år. Sjekk at beholdningen er riktig.
+
+#### ERROR:espp2.main:Expected source tax: <x> got: <y>
+Verktøyet forventer at det trekkes 15% kildeskatt. Hvis det har vært trukket mer, er det en indikasjon på at W8-BEN ikke er oppdatert hos akjsemegleren.
