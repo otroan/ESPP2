@@ -189,7 +189,7 @@ class PortfolioSale(BaseModel):
                 f'={index_to_cell(row, columns.index("Price USD"))}*{index_to_cell(row, columns.index("Exchange Rate"))}',
             )
         )
-        col.append((row, columns.index("Price USD"), round(self.sell_price.value, 2)))
+        col.append((row, columns.index("Price USD"), self.sell_price.value))
         col.append(
             (row, columns.index("Exchange Rate"), self.sell_price.nok_exchange_rate)
         )
