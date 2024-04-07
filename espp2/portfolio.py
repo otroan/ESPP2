@@ -503,7 +503,6 @@ class Portfolio:
     def sales(self):
         srecords = {}
         for k, v in self.sale_transactions.items():
-            print(f"Sale: {k} {v}")
             srecords[v.id] = EOYSales(
                 date=v.date,
                 symbol=v.symbol,
@@ -539,7 +538,7 @@ class Portfolio:
                     # Average purchase price
                     purchase_price = record.totals['purchase_price']
                     record.totals['purchase_price'] = (purchase_price + r.parent.purchase_price.value) / len(record.from_positions)
-                    record.totals['tax_ded_used'] += (r.tax_deduction_used * r.qty)
+                    record.totals['tax_ded_used'] += (r.tax_deduction_used * abs(r.qty))
 
         sales_report = {}
         for k,v in srecords.items():
@@ -786,7 +785,7 @@ class Portfolio:
         # Add tax deduction to the positions held by the end of the year
         total_tax_deduction = 0
 
-        # Find the set of different symbolds in self.positions
+        # Find the set of different symbols in self.positions
         self.symbols = {p.symbol for p in self.positions}
         for p in self.positions:
             if p.current_qty > 0:
