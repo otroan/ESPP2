@@ -138,7 +138,7 @@ class FMV:
         if r.status != 200:
             raise FMVException(f"Fetching stock data for {symbol} failed {r.status}")
         raw = json.loads(r.data.decode("utf-8"))
-        return {r["date"]: r["adjusted_close"] for r in raw}
+        return {r["date"]: r["close"] for r in raw}
 
     def fetch_currency(self, currency):
         """Returns a dictionary of date and closing value"""
