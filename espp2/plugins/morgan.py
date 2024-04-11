@@ -376,12 +376,14 @@ class ParseState:
             qty, value, ok = getitems(row, "Number of Shares", "Book Value")
             if ok:
                 qty = Decimal(qty)
-                book_value, currency = morgan_price(value)
-                purchase_price = fixup_price2(
-                    self.entry_date, currency, book_value / qty
-                )
-                self.deposit(qty, purchase_price, "RS", self.entry_date)
-                rc = True
+                if qty > 0:
+                    book_value, currency = morgan_price(value)
+                    purchase_price = fixup_price2(
+                        self.entry_date, currency, book_value / qty
+                    )
+                    self.deposit(qty, purchase_price, "RS", self.entry_date)
+                    logger.warning(f"Adhoc Adjustment adds {qty} shares on {self.entry_date}, assuming these are RSU shares")
+                    rc = True
 
             if not rc:
                 raise Exception("Adhoc adjustment not as expected")
@@ -1014,7 +1016,6 @@ def parse_account_summary_html(tables):
 
     assert len(summary) == 1
     period = summary[0].data[1][2]
-    # print(f'####### period={period} #######')
     m = re.fullmatch(r""".*Period\s*:\s+(\S+)\s+to\s+(\S+).*""", period)
     if m:
         return (fixup_date(m.group(1)), fixup_date(m.group(2)))
@@ -1099,8 +1100,6 @@ def parse_espp_holdings_html(all_tables, state, year):
         return
 
     assert len(espp_holdings) == 1
-
-    # print('#### Found ESPP holdings')
 
     parse_espp_holdings_table(state, espp_holdings[0].to_dict())
 
