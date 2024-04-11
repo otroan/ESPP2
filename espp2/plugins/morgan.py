@@ -1052,7 +1052,7 @@ def parse_rsu_holdings_html(all_tables, state):
     parse_rsu_holdings_table(state, rsu_holdings[0].to_dict())
 
 
-def parse_espp_holdings_html(all_tables, state):
+def parse_espp_holdings_html(all_tables, state, year):
     """Parse ESPP holdings table and include historic holdings as deposits"""
 
     search1 = [
@@ -1095,7 +1095,7 @@ def parse_espp_holdings_html(all_tables, state):
         espp_holdings = find_tables_by_header(all_tables, search2, 1)
 
     if len(espp_holdings) == 0:
-        print("No ESPP holdings found for 2021")
+        print(f"No ESPP holdings found for {year}")
         return
 
     assert len(espp_holdings) == 1
@@ -1205,7 +1205,7 @@ def parse_withdrawals_html(all_tables, state):
     parse_withdrawal_proceeds(state, proceeds)
 
 
-def parse_cash_holdings_html(all_tables, state):
+def parse_cash_holdings_html(all_tables, state, year):
     search_cash_holding_header = [
         ["Summary of Cash Holdings"],
         ["Fund", "Current Value"],
@@ -1220,8 +1220,8 @@ def parse_cash_holdings_html(all_tables, state):
                 total += Decimal(value)
                 print(f"### Cash: {value}")
     print(f"### Cash holdings: {total}")
-    cash = fixup_price2("2022-12-31", "USD", total)
-    state.cashadjust("2022-12-31", cash, "Closing balance 2022")
+    cash = fixup_price2(f"{year}-12-31", "USD", total)
+    state.cashadjust(f"{year}-12-31", cash, f"Closing balance {year}")
 
 
 def morgan_html_import(html_fd, filename):
@@ -1234,17 +1234,11 @@ def morgan_html_import(html_fd, filename):
 
     start_period, end_period = parse_account_summary_html(all_tables)
 
-    if end_period == "2022-12-31":
-        # Parse the holdings tables to produce deposits to establish the
-        # holdings at the end of 2021.
-        print("Parse RSU holdings ...")
-        parse_rsu_holdings_html(all_tables, state)
-        print("Parse ESPP holdings ...")
-        parse_espp_holdings_html(all_tables, state)
-        print("Parse Cash holdings ...")
-        parse_cash_holdings_html(all_tables, state)
-
-    elif start_period == "2023-01-01" and end_period == "2023-12-31":
+    # Look for start "year-01-01" and end "year-12-31" for some 'year'
+    # and assume this is the transaction file for that tax-year
+    year = int(end_period[0:4])
+    if start_period[0:5] == end_period[0:5] and \
+       start_period[5:10] == "01-01" and end_period[5:10] == "12-31":
         print("Parse RSU activity ...")
         parse_rsu_activity_html(all_tables, state)
         print("Parse ESPP activity ...")
@@ -1252,6 +1246,19 @@ def morgan_html_import(html_fd, filename):
         print("Parse withdrawals ...")
         parse_withdrawals_html(all_tables, state)
         state.flush_dividend()
+    elif end_period[4:10] == "-12-31":
+        # Assume this file will be used to find holdings up to the EOY in
+        # question. The Morgan statment must *not* start at Jan 1st of
+        # the same year, or else the file will be confused with the
+        # transaction file for the tax-year (in above if-section)
+        # Parse the holdings tables to produce deposits to establish the
+        # holdings at the end of the year.
+        print("Parse RSU holdings ...")
+        parse_rsu_holdings_html(all_tables, state)
+        print("Parse ESPP holdings ...")
+        parse_espp_holdings_html(all_tables, state, year)
+        print("Parse Cash holdings ...")
+        parse_cash_holdings_html(all_tables, state, year)
     else:
         raise ValueError(f"Period {start_period} - {end_period} is unexpected")
 
