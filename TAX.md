@@ -29,6 +29,10 @@ Aksjegevinst/tap regnes da mot Norges bank sin valutakurs på salgstidspunktet.
 Valutagevinst/tap regnes mot Norges bank sin valutakurs på overføringstidspunktet.
 Inngangsverdien til valutaen er gitt av NBs valutakurs på salgstidspunktet.
 
+## Morgan Stanley import
+
+Morgan's transaksjonsdata forvitrer over tid. Hvis man ikke har holdingsfilen for ifjor, og må regenerere denne fra transaksjonsdata så vil verktøyet resette skjermingsfradrag til 0 for alle posisjoner før siste utbyttedato. Dette fordi transaksjonsdata ikke inneholder de eksplisitte utbyttene og verktøyet ikke kan vite hvordan skjermingsfradrag har blitt brukt i tidligere år. Verktøyet prøver her å være så konservativt som mulig.
+
 ## Feilmeldinger
 
 #### ERROR:espp2.portfolio:Dividend error. Expected <x> shares, holding: <y>
