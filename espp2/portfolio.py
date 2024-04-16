@@ -5,6 +5,7 @@ ESPP portfolio class
 import logging
 from io import BytesIO
 from copy import deepcopy
+from importlib.metadata import version, PackageNotFoundError
 from openpyxl import Workbook
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -29,7 +30,6 @@ from espp2.datamodels import (
 from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals
 from espp2.cash import Cash
 from espp2.positions import Ledger
-from espp2._version import version
 from typing import Any, Dict
 from espp2.report import print_cash_ledger
 from espp2.console import console
@@ -37,6 +37,12 @@ from espp2.console import console
 fmv = FMV()
 logger = logging.getLogger(__name__)
 
+def get_version():
+    try:
+        return version("espp2")
+    except PackageNotFoundError:
+        # package is not installed
+        return "unknown"
 
 def format_cells(ws, column, number_format):
     for cell in ws[column]:
@@ -866,7 +872,7 @@ class Portfolio:
                     "are not responsible for any losses, damages, or issues that may arise "
                     "from using this tool. Always consult with a professional financial advisor "
                     "before making any financial decisions."
-                    f"This report is generated with the espp2 tool version: {version}")
+                    f"This report is generated with the espp2 tool version: {get_version()}")
 
         # Extract column headers from the Stock Pydantic model
         # Write column headers to the Excel sheet
