@@ -531,4 +531,3 @@ def preheat_cache():
         f.refresh(symbol, today, FMVTypeEnum.DIVIDENDS)
         status.update(status=" [blue] Fetching fundamentals information")
         f.refresh(symbol, today, FMVTypeEnum.FUNDAMENTALS)
-
