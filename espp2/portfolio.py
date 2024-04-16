@@ -37,6 +37,8 @@ from espp2.console import console
 fmv = FMV()
 logger = logging.getLogger(__name__)
 
+# Temporarily hard-code version
+version='0.1.dev298+g2f5062c'
 
 def format_cells(ws, column, number_format):
     for cell in ws[column]:
