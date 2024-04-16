@@ -946,9 +946,9 @@ class Portfolio:
             ws[f"{col}{no_columns+1}"].number_format = "0.00"
 
         # Format columns with different colors
-        format_fill_columns(ws, self.column_headers, ["Div PS", "Div PS USD", "Total Dividend", "Total Dividend USD"], "A3E4D7")
-        format_fill_columns(ws, self.column_headers, ["Gain PS", "Gain PS USD", "Gain", "Gain USD", "Amount", "Amount USD"], "F5B7B1")
-        format_fill_columns(ws, self.column_headers, ["Accumulated", "Added", "TD Total", "Used"], "F0E68C")
+        format_fill_columns(ws, self.column_headers, ["Div PS", "Div PS USD", "Total Dividend", "Total Dividend USD"], "CAD8EE")
+        format_fill_columns(ws, self.column_headers, ["Gain PS", "Gain PS USD", "Gain", "Gain USD", "Amount", "Amount USD"], "90ADD7")
+        format_fill_columns(ws, self.column_headers, ["Accumulated", "Added", "TD Total", "Used"], "618CCE")
 
         # Separate sheet for cash
         ws = workbook.create_sheet("Cash")
