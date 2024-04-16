@@ -28,7 +28,7 @@ from espp2.main import (
 from espp2.datamodels import ESPPResponse, Wires, Holdings, ExpectedBalance
 
 logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 app = FastAPI()
 
