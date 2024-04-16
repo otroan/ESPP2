@@ -29,6 +29,7 @@ from espp2.datamodels import (
 from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals
 from espp2.cash import Cash
 from espp2.positions import Ledger
+from espp2._version import version
 from typing import Any, Dict
 from espp2.report import print_cash_ledger
 from espp2.console import console
@@ -860,6 +861,13 @@ class Portfolio:
         ws = workbook.active
         ws.title = f"Portfolio-{year}"
 
+        disclaimer = ("Disclaimer: This tool is provided as is, without warranty of any kind. "
+                    "Use of this tool is at your own risk. The authors or distributors "
+                    "are not responsible for any losses, damages, or issues that may arise "
+                    "from using this tool. Always consult with a professional financial advisor "
+                    "before making any financial decisions."
+                    f"This report is generated with the espp2 tool version: {version}")
+
         # Extract column headers from the Stock Pydantic model
         # Write column headers to the Excel sheet
         ws.merge_cells('J1:M1')
@@ -949,6 +957,9 @@ class Portfolio:
         format_fill_columns(ws, self.column_headers, ["Div PS", "Div PS USD", "Total Dividend", "Total Dividend USD"], "CAD8EE")
         format_fill_columns(ws, self.column_headers, ["Gain PS", "Gain PS USD", "Gain", "Gain USD", "Amount", "Amount USD"], "90ADD7")
         format_fill_columns(ws, self.column_headers, ["Accumulated", "Added", "TD Total", "Used"], "618CCE")
+
+        # Write the disclaimer to the first cell in the last row
+        ws[f"A{ws.max_row + 5}"] = disclaimer
 
         # Separate sheet for cash
         ws = workbook.create_sheet("Cash")
