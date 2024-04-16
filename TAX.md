@@ -75,8 +75,21 @@ Husk at det er viktig at transaksjonsfilen inneholder transaksjoner for januar f
 
 **Q: Hvor henter dere data fra?**
 
-**A:** Vi henter valutakurser via Norges Bank APIer. Finansdata (akjsekurser, utbytte og utbyttedatoer, ISIN numre etc) fra https://eodhd.com.
+**A:** Vi henter valutakurser via Norges Bank APIer. Finansdata (akjsekurser, utbytte og utbyttedatoer, ISIN numre etc) fra EOD (https://eodhd.com).
 ESPP kurser og skjermingsrente er lagt inn manuelt.
+
+**Q:Hvordan får jeg tilgang til web grensesnittet?**
+
+**A:** Web-grensesnittet er foreløpig kun tilgjengelig internt.
+Sjekk [ESPP tax discussion](webexteams://im?space=c53d9d80-104b-11e6-bbcf-e5d12042fad8).
+
+**Q: Hva om tallene verktøyet rapporterer er feil?**
+
+**A:** Si ifra til oss. Det kan være mange grunner til at utregningen blir feil. Feil i input, eller feil i utregningene i verktøyet. Husk at du alltid er ansvarlig selv for tallene du rapporterer til skatteetaten. Studer excel-arket nøye og sørg for at balansene ved inngangen og utgangen av skatteåret er korrekte.
+
+**Q: Verktøyet gir en error eller warning. Kan jeg bare ignorere disse?**
+
+**A:** Bare hvis du ikke bryr deg om å rapportere riktig. Se feilmeldinger under med typiske årsaker.
 
 ## Feilmeldinger
 
