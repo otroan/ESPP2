@@ -25,7 +25,8 @@ Skjermingsfradraget for aksjer som beholdes over nyttår får skjermingsfradrag 
 
 **Q: Gevinst/Tap på aksjer og gevinst/tap på valuta**
 
-**A:** Verktøyet følger sammenslåingsprinsippet. Slik at et eventuelt valutatap eller gevinst slåes sammen med den underliggene aksjetransaksjonen.
+**A:** Sammenslåingsprinsippet gjelder. Slik at et eventuelt valutatap eller gevinst slåes sammen med den underliggene aksjetransaksjonen. Valutagevinst eller tap må da manuelt legges sammen med akjsegevinst/tap.
+
 Selges derimot aksjer i år 1 og valuta overføres i år 2, betrakes dette som to uavhengige transaksjoner.
 Aksjegevinst/tap regnes da mot Norges bank sin valutakurs på salgstidspunktet.
 Valutagevinst/tap regnes mot Norges bank sin valutakurs på overføringstidspunktet.
@@ -58,6 +59,24 @@ I tillegg støttes endel formater for å kunne generere fjorårets holdingfil hv
 **A:** ESPPv2 henter data fra åpne og proprietære kilder. Valutakurser hentes fra Norges Banks åpne APIer. Aksjedata, som historiske kurser, utbytte datoer, ISIN etc, hentes fra finanstjenesten EOD. Verktøyet har tidligere brukt tjenester fra Alpha Vantage og andre. Disse tjenestene er relativt kortlivede og ser ut til å endre betalingsmodell år for år.
 
 For å bruke EOD kreves ett abonnement og en API key. Alternativt kan vi gi tilgang til cachede filer. Kontakt ESPPv2 support for videre veiledning.
+
+**Q: Hva om jeg selger ESPP aksjer fra før 2013?**
+
+**A:** Vi har kun ESPP valutakurser fra 2013. Hvis du selger ESPP aksjer som er kjøpt før det må du manuelt finne og registrere disse i espp2/data.json filen.
+
+**Q: ESPP aksjer kjøpt 31/12 men som ikke registreres hos broker før noen dager inn i neste år. Hvilker skatteår blir de registrert på?**
+
+**A:** ESPP aksjer som er kjøpt 31/12 blir registrert på det året, selvom de ikke er synlige hos brokeren før noen dager senere. Det betyr at det beregnes formueskatt for disse aksjene for det året, men samtidig får man også skjermingsfradrag for dem.
+Husk at det er viktig at transaksjonsfilen inneholder transaksjoner for januar for påfølgende år for å få med dette ESPP kjøpet. Hvis transaksjonsfilen kun inneholder 1/1-31/12 har verktøyet ingen mulighet til å detektere dette. Men du vil få en feilmelding til neste år.
+
+**Q: Hva gjør jeg med aksjer kjøpt før 2006?**
+
+**A:** Hvem vet. Skjermingsfradrag ble introdusert i 2006. Aksjer kjøpt tidligere støttes ikke av dette verktøyet.
+
+**Q: Hvor henter dere data fra?**
+
+**A:** Vi henter valutakurser via Norges Bank APIer. Finansdata (akjsekurser, utbytte og utbyttedatoer, ISIN numre etc) fra https://eodhd.com.
+ESPP kurser og skjermingsrente er lagt inn manuelt.
 
 ## Feilmeldinger
 
