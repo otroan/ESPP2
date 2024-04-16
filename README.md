@@ -114,6 +114,8 @@ Another alternative is to try to manually create a Schwab CSV or JSON with all h
 
 
 ## Release notes 2023
+- Upgraded to Python 3.11/3.12
+- Upgraded to Pydantic v2
 - Added support for Schwab JSON format
 - Added support for Schwab CSV2 format
 - New tax calculation module (portfolio) that generates an excel sheet for added tracability
