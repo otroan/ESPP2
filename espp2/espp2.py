@@ -8,7 +8,6 @@ import logging
 from enum import Enum
 import typer
 import math
-from importlib.metadata import version, PackageNotFoundError
 from rich.logging import RichHandler
 from pydantic import TypeAdapter
 from espp2.main import (
@@ -19,10 +18,11 @@ from espp2.main import (
     do_holdings_4,
     console,
     get_zipdata,
-    preheat_cache,
+    preheat_cache
 )
 from espp2.datamodels import Holdings, Wires, ExpectedBalance
 from espp2.report import print_report
+from espp2._version import __version__
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
@@ -37,16 +37,10 @@ class BrokerEnum(str, Enum):
 
 logger = logging.getLogger(__name__)
 
-def get_version():
-    try:
-        return version("espp2")
-    except PackageNotFoundError:
-        # package is not installed
-        return "unknown"
 
 def version_callback(value: bool):
     if value:
-        typer.echo(f"espp2 CLI Version: {get_version()}")
+        typer.echo(f"espp2 CLI Version: {__version__}")
         raise typer.Exit()
 
 
