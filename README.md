@@ -125,23 +125,4 @@ Another alternative is to try to manually create a Schwab CSV or JSON with all h
 - For exchange rate gains/losses within the same year as the stock sale, those can be added to the stock gains/losses.
 - Don't forget to thank the ESPP2 team for their work on this tool.
 
-## Implementation notes
-
-### Data formats
-The tool uses JSON as the data format for all input and output. The JSON schema for the different data formats are defined in the `espp2/data` directory.
-
-There are additional data importers for the following formats:
-- Schwab CSV
-- TD Ameritrade CSV
-- Morgan Stanley HTML
-- ESPPv1 pickle file
-- My_ESPP_Purchases XLS
-- My_Stock_Transactions XLS
-
-### Fair Market Value
-The FMV module downloads and caches historical fair market values for shares and exchange rates.
-It has a manually maintained list of Oracle P&L 6 month sliding window rates used for ESPP that we each year receive from the stocks team.
-
-The USD to NOK exchange rate is downloaded from the Norwegian Central Bank.
-The stock prices are downloaded from Alpha Vantage.
 Dividend dates and fundamentals are fetched from the EOD Historical Data provider.
