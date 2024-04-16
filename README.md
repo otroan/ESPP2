@@ -39,7 +39,7 @@ The transaction history for Schwab can be downloaded from https://eac.schwab.com
 
 This transaction history only covers transactions from the last 4 years. If this file covers all your transactions, then you won't need more.
 
-If your history of transactions reaches further back and you have last year's holdings file ```holdings-2023.json``` at hand, then you will need to add it as a parameter as shown below. Copy the holdings file into the ESPP2 folder.
+If your history of transactions reaches further back and you have last year's holdings file ```holdings-2022.json``` at hand, then you will need to add it as a parameter as shown below.
 
 ### Add information about wires
 
@@ -59,7 +59,7 @@ Now you can perform the main run with all the information to generate the tax re
 espp2 <schwab-transactions.json> [--inholdings holdings-2022.json] --wires wires-2023.json --outholdings holdings-2023.json --output calc-2023.zip
 ```
 
-A new holdings file will be generated that you should ***store in a save place*** for next year. It will also generate a zip file with a spreadsheet that has all the transactions and underlaying calculations neatly documented, mainly in case that the tax office asks you to provide documentation.
+A new holdings file will be generated that you should ***store in a safe place*** for next year. It will also generate a zip file with a spreadsheet that has all the transactions and underlaying calculations neatly documented, mainly in case that the tax office asks you to provide documentation.
 
 ## Morgan Stanley
 
@@ -87,7 +87,7 @@ Given an expected balance for the end of the previous tax year (2022-12-31 in th
 
 ```
 espp2 <schwab-all-transactions.json> --expected-balance '{"symbol": "CSCO", "qty": 936.5268 }' --outholdings holdings-2022.json
-espp2 <schwab-all-transactions.json> --inholdings holdings-2022.json --outholdings holdings-2023.json
+espp2 <schwab-all-transactions.json> --inholdings holdings-2022.json --output calc-2023.zip
 ```
 
 ### Option 4: Schwab - Incomplete transaction history and no JSON file
@@ -104,7 +104,7 @@ espp2 My_ESPP_Purchases.xlsx My_Stock_Transactions.xlsx --outholdings holdings-2
 
 To generate taxes:
 ```
-espp2 <schwab-2023.json> --wires wires-2023.json --holdings holdings-2022.json> --outholdings holdings-2023.json
+espp2 <schwab-2023.json> --wires wires-2023.json --holdings holdings-2022.json> --output calc-2023.zip
 ```
 
 ### Option 5: Schwab - None of the above works
@@ -113,16 +113,11 @@ If none of the above works, then your best may be to run option 3 above, that ge
 Another alternative is to try to manually create a Schwab CSV or JSON with all historical trades. Again from Schwab statements.
 
 
-
-## Release notes
-
-**Note:** We only have ESPP exchange rate data back to 2013. If you sell ESPP shares that are purchased prior to 2013, you will need to manually enter the exchange rate for those shares.
-
-- Some notes in Norwegian can be found [here](TAX.md).
-- ESPP shares are purchased on the last day of the year. Although they are received in the trading account in the next year, the purchase date is used. This is correct but makes it harder to match the results with your broker statements.
-- ESPP share purchases on the last day of the year receive the tax free deduction and counts against wealth tax. Even though they are not in the broker account yet.
-- The tax-free deduction was introduced in 2006. If you hold shares purchased prior to 2006, you will need to manually enter the purchase price for those shares.
-- For exchange rate gains/losses within the same year as the stock sale, those can be added to the stock gains/losses.
-- Don't forget to thank the ESPP2 team for their work on this tool.
-
-Dividend dates and fundamentals are fetched from the EOD Historical Data provider.
+## Release notes 2023
+- Added support for Schwab JSON format
+- Added support for Schwab CSV2 format
+- New tax calculation module (portfolio) that generates an excel sheet for added tracability
+- Relay error and warning messages to the web frontend
+- Split positions with sales to correctly calculate tax-free deduction for part positions held at end of year
+- Updated tax-free deduction rates and ESPP rates for 2023.
+- Updated morgan importer for 2023
