@@ -98,4 +98,4 @@ Det er mottatt utbytte for <x> aksjer mens verktøyet beregner at beholdningen e
 Dette kan typisk skyldes at det er noe galt med beholdningen fra forrige år. Sjekk at beholdningen er riktig.
 
 #### ERROR:espp2.main:Expected source tax: <x> got: <y>
-Verktøyet forventer at det trekkes 15% kildeskatt. Hvis det har vært trukket mer, er det en indikasjon på at W8-BEN ikke er oppdatert hos akjsemegleren.
+Verktøyet forventer at det trekkes 15% kildeskatt. Hvis det har vært trukket mer, er det en indikasjon på at W8-BEN ikke er oppdatert hos aksjemegleren.
