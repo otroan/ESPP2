@@ -90,7 +90,7 @@ def print_report_sales(report: TaxReport, console: Console):
             for b in e.from_positions:
                 gain = b.gain_ps * b.qty
                 buy_positions.add_row(
-                    f"{b.qty:.2f}",
+                    f"{b.qty:.4f}",
                     f"{b.purchase_price.nok_value:.2f}",
                     f"{b.purchase_price:.2f}",
                     f"{gain.nok_value:.2f}  ${gain.value:.2f}",
@@ -98,7 +98,7 @@ def print_report_sales(report: TaxReport, console: Console):
             buy_positions.add_row("")
             table.add_row(
                 k,
-                f"{e.qty:.2f}",
+                f"{e.qty:.4f}",
                 str(e.date),
                 f"{sale_price_nok:.2f} ${sale_price:.2f}",
                 f"{e.amount.nok_value:.2f}  ${e.amount.value:.2f}",
@@ -130,13 +130,13 @@ def print_report_holdings(holdings: Holdings, console: Console):
         total += e.qty
         table.add_row(
             e.symbol,
-            f"{e.qty:.2f}",
+            f"{e.qty:.4f}",
             str(e.date),
             f"{e.purchase_price:.2f}",
             f"{e.tax_deduction:.2f}",
         )
         if i + 1 >= len(holdings.stocks) or holdings.stocks[i + 1].symbol != symbol:
-            table.add_row("", "", "", "", "", f"{total:.2f}")
+            table.add_row("", "", "", "", "", f"{total:.4f}")
             total = Decimal(0)
 
     console.print(table)
@@ -173,7 +173,7 @@ def print_ledger(ledger: dict, console: Console):
         table.add_column("Total", justify="right", style="green")
 
         for e in ledger[symbols]:
-            table.add_row(str(e[0]), symbols, f"{e[1]:.2f}", f"{e[2]:.2f}")
+            table.add_row(str(e[0]), symbols, f"{e[1]:.4f}", f"{e[2]:.4f}")
         console.print(table)
 
 
@@ -216,7 +216,7 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
                 e.isin,
                 e.country,
                 e.account,
-                f"{e.shares:.2f}",
+                f"{e.shares:.4f}",
                 f"{e.wealth:.0f}",
                 f"{dividend}",
                 f"{e.post_tax_inc_dividend}",
@@ -230,7 +230,7 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
                 e.isin,
                 e.country,
                 e.account,
-                f"{e.shares:.2f}",
+                f"{e.shares:.4f}",
                 f"{e.wealth}",
                 f"{dividend}",
                 f"{gain}",
