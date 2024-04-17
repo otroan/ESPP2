@@ -240,7 +240,7 @@ def merge_transactions_old(transaction_files: list) -> Transactions:
 
     return Transactions(transactions=transactions), years
 
-def merge_transactions(transaction_files: list) -> Transactions:
+def merge_transactions_old2(transaction_files: list) -> Transactions:
     """Merge transaction files"""
     all_transactions = []
     years = {}
@@ -265,6 +265,38 @@ def merge_transactions(transaction_files: list) -> Transactions:
             print(f'Duplicate transaction: {transaction.id} 0x{transaction._crc:08x}')
 
     return Transactions(transactions=unique_transactions), years
+
+def merge_transactions(transaction_files: list) -> Transactions:
+    """Merge transaction files"""
+    all_transactions = []
+    date_intervals = []
+    years = {}
+    # Put all transactions together
+    for tf in transaction_files:
+        t = normalize(tf)
+        # Add to date interval
+        date_intervals.append((t.fromdate, t.todate))
+        all_transactions.extend(t.transactions)
+
+    # Sort date intervals by start date
+    date_intervals.sort(key=lambda interval: interval[0])
+
+    # Check if intervals are continuous and non-overlapping
+    for i in range(1, len(date_intervals)):
+        if date_intervals[i][0] <= date_intervals[i-1][1]:
+            raise ESPPErrorException(f"Date interval is overlapping: {date_intervals[i-1][1]} is not before {date_intervals[i][0]}")
+        if date_intervals[i][0] != date_intervals[i-1][1] + datetime.timedelta(days=1):
+            raise ESPPErrorException(f"Date interval is not continuous: {date_intervals[i-1][1]} is not the day before {date_intervals[i][0]}")
+
+    all_transactions.sort(key=lambda d: d.date)
+
+    # Find all years in transactions
+    for transaction in all_transactions:
+        if transaction.date.year not in years:
+            years[transaction.date.year] = 0
+
+    return Transactions(transactions=all_transactions), years
+
 
 def generate_previous_year_holdings(
     broker, years, year, prev_holdings, transactions, portfolio_engine, verbose=False
@@ -335,7 +367,10 @@ def do_taxes(
     wires = []
     prev_holdings = []
 
-    transactions, _ = merge_transactions(transaction_files)
+    transactions, years = merge_transactions(transaction_files)
+
+    if year + 1 not in years:
+        logger.error(f"No transactions into the year after the tax year {year+1}")
 
     if holdfile and opening_balance:
         raise ESPPErrorException(
