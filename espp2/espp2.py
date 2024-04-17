@@ -160,6 +160,7 @@ def main(  # noqa: C901
                 inholdings,
                 wires,
                 year,
+                portfolio_engine=portfolio_engine,
                 verbose=verbose,
                 opening_balance=opening_balance,
             )

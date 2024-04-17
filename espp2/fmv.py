@@ -44,7 +44,7 @@ with files('espp2').joinpath('data.json').open('r', encoding='utf-8') as f:
 
 def get_espp_exchange_rate(ratedate):
     """Return the 6 month P&L average. Manually maintained for now."""
-    return Decimal(MANUALRATES["espp"][ratedate])
+    return Decimal(str(MANUALRATES["espp"][ratedate]))
 
 
 def get_tax_deduction_rate(year):
