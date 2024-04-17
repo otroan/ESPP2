@@ -63,7 +63,8 @@ async def generate_holdings_1(
         holdfile = holdfile.file
     try:
         return do_holdings_1(
-            broker, transaction_files, holdfile, year, opening_balance=opening_balance
+            broker, transaction_files, holdfile, year, portfolio_engine=True,
+            opening_balance=opening_balance
         )
     except Exception as e:
         logger.exception(e)
