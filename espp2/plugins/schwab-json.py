@@ -101,7 +101,6 @@ def sale(csv_item, source):
         amount=Amount(**grossproceeds),
         fee=NegativeAmount(**fee) if fee else None,
         source=source,
-        trecord=str(csv_item),
     )
 
 
@@ -115,7 +114,6 @@ def tax_withholding(csv_item, source):
         description=csv_item["Description"],
         amount=amount,
         source=source,
-        trecord=str(csv_item),
     )
 
 
@@ -129,7 +127,6 @@ def dividend(csv_item, source):
         description=csv_item["Description"],
         amount=PositiveAmount(**amount),
         source=source,
-        trecord=str(csv_item),
     )
 
 
@@ -144,7 +141,6 @@ def dividend_reinvested(csv_item, source):
         description=csv_item["Description"],
         amount=Amount(**amount),
         source=source,
-        trecord=str(csv_item),
     )
 
 
@@ -158,7 +154,6 @@ def tax_reversal(csv_item, source):
         description=csv_item["Description"],
         amount=Amount(**amount),
         source=source,
-        trecord=str(csv_item),
     )
 
 
@@ -178,7 +173,6 @@ def wire(csv_item, source):
         fee=NegativeAmount(**fee),
         source=source,
         currency="USD",
-        trecord=str(csv_item),
     )
 
 
@@ -204,7 +198,6 @@ def deposit(csv_item, source):
         purchase_date=purchase_date,
         purchase_price=Amount(**purchase_price),
         source=source,
-        trecord=str(csv_item),
     )
 
 def not_implemented(csv_item, source):
@@ -225,7 +218,6 @@ def transfer(csv_item, source):
         qty=-fixup_number(csv_item["Quantity"]),
         fee=fee,
         source=source,
-        trecord=str(csv_item),
     )
 
 def adjustment(csv_item, source):
@@ -240,7 +232,6 @@ def adjustment(csv_item, source):
         description=csv_item["Description"],
         amount=fixup_price(d, "USD", csv_item["Amount"]),
         source=source,
-        trecord=str(csv_item),
     )
 
 dispatch = {

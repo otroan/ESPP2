@@ -3,7 +3,6 @@
 # pylint: disable=too-few-public-methods, missing-class-docstring, no-name-in-module
 # pylint: disable=no-self-argument
 
-import binascii
 from datetime import date
 from typing import List, Literal, Annotated, Union, Optional, Any, Dict
 from enum import Enum
@@ -154,17 +153,6 @@ class TransactionEntry(BaseModel):
         v.id = get_id(v)
         return v
 
-    @model_validator(mode="after")
-    @classmethod
-    def validate_crc(cls, v, info):
-        """Generate CRC"""
-        try:
-            v._crc= binascii.crc32(str(v.trecord).encode())
-        except AttributeError:
-            v._crc = binascii.crc32(str(v).encode())
-        return v
-
-
 class Buy(TransactionEntry):
     """Buy transaction"""
 
@@ -221,7 +209,6 @@ class Tax(TransactionEntry):
     amount: NegativeAmount
     source: str
     id: str = Optional[str]
-    trecord: str = None
 
 
 class Taxsub(TransactionEntry):
@@ -234,7 +221,6 @@ class Taxsub(TransactionEntry):
     amount: Amount
     source: str
     id: str = Optional[str]
-    trecord: str = None
 
 
 class Dividend(TransactionEntry):
@@ -247,7 +233,6 @@ class Dividend(TransactionEntry):
     amount_ps: Optional[PositiveAmount] = None
     source: str
     id: str = Optional[str]
-    trecord: str = None
 
     @model_validator(mode="before")
     @classmethod
@@ -273,7 +258,6 @@ class Dividend_Reinv(TransactionEntry):
     description: str
     source: str
     id: str = Optional[str]
-    trecord: str = None
 
 
 class Wire(TransactionEntry):
@@ -286,7 +270,6 @@ class Wire(TransactionEntry):
     fee: Optional[NegativeAmount] = None
     source: str
     id: str = Optional[str]
-    trecord: str = None
 
 
 class Sell(TransactionEntry):
@@ -301,7 +284,6 @@ class Sell(TransactionEntry):
     description: str
     source: str
     id: str = Optional[str]
-    trecord: str = None
 
 
 class Fee(TransactionEntry):
@@ -312,7 +294,6 @@ class Fee(TransactionEntry):
     amount: NegativeAmount
     source: str
     id: str = Optional[str]
-    trecord: str = None
 
 
 class Transfer(TransactionEntry):
@@ -326,7 +307,6 @@ class Transfer(TransactionEntry):
     fee: Optional[NegativeAmount] = 0
     source: str
     id: str = Optional[str]
-    trecord: str = None
 
 
 class Cashadjust(TransactionEntry):
@@ -338,7 +318,6 @@ class Cashadjust(TransactionEntry):
     description: str
     source: str
     id: str = Optional[str]
-    trecord: str = None
 
 
 Entry = Annotated[
