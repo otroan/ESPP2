@@ -310,8 +310,9 @@ class Portfolio:
         total = transaction.amount.value
         # Walk through positions available at exdate.
         no_shares = self.qty_at_date(transaction.symbol, transaction.exdate)
-        if no_shares != expected_number_of_shares:
-            logger.error(f"Dividend error. Expected {expected_number_of_shares} shares, holding: {no_shares}")
+        expected_dividend = round(no_shares * transaction.dividend_dps, 2)
+        if expected_dividend != transaction.amount.value:
+             logger.error(f"Dividend error. Expected {expected_number_of_shares} shares, holding: {no_shares}")
         for p in self.positions:
             if p.symbol == transaction.symbol:
                 # Get qty up until exdate
