@@ -4,6 +4,7 @@ ESPPv2 Wrapper
 
 # pylint: disable=invalid-name
 
+import os
 import logging
 from enum import Enum
 import typer
@@ -78,11 +79,19 @@ def main(  # noqa: C901
         return
 
     if opening_balance:
-        adapter = TypeAdapter(Holdings)
-        opening_balance = adapter.validate_json(opening_balance)
+        if os.path.isfile(opening_balance):
+            with open(opening_balance, 'r') as f:
+                opening_balance = Holdings.model_validate_json(f.read())
+                opening_balance_content = f.read()
+        else:
+            # opening_balance is not a file path, handle it as a string
+            adapter = TypeAdapter(Holdings)
+            opening_balance = adapter.validate_json(opening_balance)
     result = None
 
     if inholdings:
+        # h = Holdings.model_validate_json(inholdings.read())
+        # print('Using inholdings for previous tax year', h.year)
         # Check inholdings are valid for previous tax year
         if len(transaction_files) > 1:
             raise typer.BadParameter(
@@ -134,6 +143,7 @@ def main(  # noqa: C901
                 transaction_files,
                 inholdings,
                 year,
+                portfolio_engine,
                 opening_balance=opening_balance,
                 verbose=verbose,
             )
