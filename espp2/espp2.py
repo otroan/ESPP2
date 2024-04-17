@@ -90,8 +90,6 @@ def main(  # noqa: C901
     result = None
 
     if inholdings:
-        # h = Holdings.model_validate_json(inholdings.read())
-        # print('Using inholdings for previous tax year', h.year)
         # Check inholdings are valid for previous tax year
         if len(transaction_files) > 1:
             raise typer.BadParameter(
