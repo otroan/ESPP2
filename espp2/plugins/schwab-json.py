@@ -190,10 +190,12 @@ def deposit(csv_item, source):
             csv_item["TransactionDetails"][0]["Details"]["PurchaseDate"]
         )
         d = purchase_date
+        currency = "ESPPUSD"
     else:
         d = fixup_date(csv_item["Date"])
+        currency = "USD"
     qty = fixup_number(csv_item["Quantity"])
-    purchase_price = fixup_price(d, "USD", get_purchaseprice(csv_item))
+    purchase_price = fixup_price(d, currency, get_purchaseprice(csv_item))
     return Deposit(
         date=d,
         symbol=csv_item["Symbol"],
