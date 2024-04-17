@@ -29,7 +29,6 @@ from espp2.datamodels import (
 from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals
 from espp2.cash import Cash
 from espp2.positions import Ledger
-from espp2._version import version
 from typing import Any, Dict
 from espp2.report import print_cash_ledger
 from espp2.console import console
@@ -38,7 +37,7 @@ fmv = FMV()
 logger = logging.getLogger(__name__)
 
 # Temporarily hard-code version
-version='0.1.dev298+g2f5062c'
+version='0.1.dev300+g328e721.d20240417'
 
 def format_cells(ws, column, number_format):
     for cell in ws[column]:
