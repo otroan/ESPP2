@@ -251,6 +251,17 @@ class PortfolioSale(BaseModel):
         )
         return col
 
+class PortfolioTransfer(BaseModel):
+    date: date
+    qty: Decimal
+    parent: PortfolioPosition = None
+    id: str
+
+    def format(self, row, columns):
+        col = [(row, columns.index("Date"), self.date)]
+        col.append((row, columns.index("Type"), "Transfer"))
+        col.append((row, columns.index("Qty"), self.qty))
+        return col
 
 def adjust_width(ws):
     def as_text(value):
@@ -350,7 +361,7 @@ class Portfolio:
                 if shares_left == 0:
                     break
         if abs(total) > 1:
-            logger.error(f"Dividend issue: {transaction.date} Not all dividend used: ${total} expected {expected_number_of_shares}, found only: {found_number_of_shares}")
+            logger.error(f"Dividend issue: {transaction.date} Not all dividend used: ${total} expected {expected_number_of_shares}, found: {found_number_of_shares}")
         self.cash.debit(transaction.date, transaction.amount, "dividend")
 
     def tax(self, transaction):
@@ -371,7 +382,29 @@ class Portfolio:
         self.cash.credit(transaction.date, transaction.amount, "tax")
 
     def transfer(self, transaction):
-        logger.error(f"Transfer not implemented: {transaction}")
+        shares_to_sell = abs(transaction.qty)
+        for p in self.positions:
+            sold = 0
+            if p.symbol == transaction.symbol:
+                if p.current_qty == 0:
+                    continue
+                if p.current_qty >= shares_to_sell:
+                    p.current_qty -= shares_to_sell
+                    sold = shares_to_sell
+                    shares_to_sell = 0
+                else:
+                    sold = p.current_qty
+                    shares_to_sell -= p.current_qty
+                    p.current_qty = 0
+                s = PortfolioTransfer(
+                    date=transaction.date,
+                    qty=-sold,
+                    parent=p,
+                    id=transaction.id,
+                )
+                p.records.append(s)
+                if shares_to_sell == 0:
+                    break
 
     def fee(self, transaction):
         logger.error(f"Fee as a separate record not implemented: {transaction}")
@@ -711,7 +744,10 @@ class Portfolio:
         self.taxes = []
         self.positions = []
         self.new_positions = []
-        self.cash = Cash(year=year, opening_balance=holdings.cash)
+        if holdings and holdings.cash:
+            self.cash = Cash(year=year, opening_balance=holdings.cash)
+        else:
+            self.cash = Cash(year=year)
         self.broker = broker
 
         self.column_headers = [

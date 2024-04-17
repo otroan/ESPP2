@@ -213,7 +213,7 @@ def tax_report(  # noqa: C901
 # - Pickle and others represent sales differently so a simple "key" based deduplication fails
 # - Prefer last file in list then fill in up to first complete year
 # - Limit to two files?
-def merge_transactions(transaction_files: list) -> Transactions:
+def merge_transactions_old(transaction_files: list) -> Transactions:
     """Merge transaction files"""
     sets = []
     for tf in transaction_files:
@@ -240,9 +240,34 @@ def merge_transactions(transaction_files: list) -> Transactions:
 
     return Transactions(transactions=transactions), years
 
+def merge_transactions(transaction_files: list) -> Transactions:
+    """Merge transaction files"""
+    all_transactions = []
+    years = {}
+    # Put all transactions together
+    for tf in transaction_files:
+        t = normalize(tf)
+        all_transactions.extend(t.transactions)
+
+    # Sort transactions
+    all_transactions.sort(key=lambda d: d.date)
+
+    # Remove duplicates
+    seen = set()
+    unique_transactions = []
+    for transaction in all_transactions:
+        if transaction.date.year not in years:
+            years[transaction.date.year] = 0
+        if transaction._crc not in seen:
+            unique_transactions.append(transaction)
+            seen.add(transaction._crc)
+        else:
+            print(f'Duplicate transaction: {transaction.id} 0x{transaction._crc:08x}')
+
+    return Transactions(transactions=unique_transactions), years
 
 def generate_previous_year_holdings(
-    broker, years, year, prev_holdings, transactions, verbose=False
+    broker, years, year, prev_holdings, transactions, portfolio_engine, verbose=False
 ):
     """Start from earliest year and generate taxes for every year until previous year."""
 
@@ -256,12 +281,15 @@ def generate_previous_year_holdings(
         this_year = [t for t in transactions.transactions if t.date.year == y]
         logger.info("Calculating tax for previous year: %s", y)
 
-        p = Positions(
-            y, holdings, this_year, received_wires=Wires([]), generate_holdings=True
-        )
+        if portfolio_engine:
+            p = Portfolio(y, broker, this_year, Wires([]), holdings, verbose)
+        else:
+            p = Positions(
+                y, holdings, this_year, received_wires=Wires([]), generate_holdings=True
+            )
+            p.process()
 
         # Calculate taxes for the year
-        p.process()
         holdings = p.holdings(y, broker)
 
         if verbose:
@@ -334,9 +362,9 @@ def do_taxes(
 
     return tax_report(year, broker, transactions, wires, prev_holdings, portfolio_engine, verbose=verbose)
 
-
 def do_holdings_1(
-    broker, transaction_files: list, holdfile, year, verbose=False, opening_balance=None
+    broker, transaction_files: list, holdfile, year, portfolio_engine,
+    verbose=False, opening_balance=None
 ) -> Holdings:
     """Generate holdings file"""
     prev_holdings = []
@@ -356,7 +384,7 @@ def do_holdings_1(
 
     logger.info("Changes in holdings for previous year")
     holdings = generate_previous_year_holdings(
-        broker, years, year, prev_holdings, transactions, verbose
+        broker, years, year, prev_holdings, transactions, portfolio_engine, verbose
     )
 
     return holdings
