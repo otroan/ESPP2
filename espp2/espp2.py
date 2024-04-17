@@ -91,13 +91,13 @@ def main(  # noqa: C901
 
     if inholdings:
         # Check inholdings are valid for previous tax year
-        if len(transaction_files) > 1:
-            raise typer.BadParameter(
-                "Cannot use inholdings with multiple transaction files"
-            )
+        # if len(transaction_files) > 1:
+        #     raise typer.BadParameter(
+        #         "Cannot use inholdings with multiple transaction files"
+        #     )
         result = do_taxes(
             broker,
-            transaction_files[0],
+            transaction_files,
             inholdings,
             wires,
             year,
