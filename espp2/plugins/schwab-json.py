@@ -265,9 +265,11 @@ def read(json_file, filename="") -> Transactions:
 
     data = json.load(json_file)
     records = []
+    fromdate = fixup_date(data["FromDate"])
+    todate = fixup_date(data["ToDate"])
     for t in data["Transactions"]:
         logger.debug("Processing record: %s", t)
         r = dispatch[t["Action"]](t, source=f"schwab:{filename}")
         records.append(r)
 
-    return Transactions(transactions=records)
+    return Transactions(transactions=records, fromdate=fromdate, todate=todate)

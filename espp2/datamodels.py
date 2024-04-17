@@ -361,7 +361,8 @@ Entry = Annotated[
 
 class Transactions(BaseModel):
     """Transactions"""
-
+    fromdate: date = None
+    todate: date = None
     transactions: list[Entry]
 
 
