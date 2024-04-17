@@ -317,7 +317,7 @@ def get_zipdata(files) -> bytes:
 
 def do_taxes(
     broker,
-    transaction_file,
+    transaction_files: list,
     holdfile,
     wirefile,
     year,
@@ -334,9 +334,8 @@ def do_taxes(
     """
     wires = []
     prev_holdings = []
-    t = normalize(transaction_file)
-    t = sorted(t.transactions, key=lambda d: d.date)
-    transactions = Transactions(transactions=t)
+
+    transactions, _ = merge_transactions(transaction_files)
 
     if holdfile and opening_balance:
         raise ESPPErrorException(
