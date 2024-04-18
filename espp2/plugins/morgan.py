@@ -346,12 +346,10 @@ class ParseState:
             return True
         raise ValueError(f"Unexpected opening balance: {row}")
 
-    def parse_cash_adjustments(self, row):
-        """Parse misc cash-balance adjustment records"""
-        if (
-            self.activity == "Nonresident Alien Withholding Transfer"
-            or self.activity == "Backup Withholding Refund Transfer"
-        ):
+    def parse_tax_returned(self, row):
+        """Parse records that returns paid tax to cash-account"""
+        if self.activity == "Nonresident Alien Withholding Transfer" or \
+           self.activity == "Backup Withholding Refund Transfer":
             # Assume this is getting tax back? Looks like it...
             # Or it should mean the withheld amount wasn't used for tax
             cash, ok = getitems(row, "Cash")
@@ -361,7 +359,10 @@ class ParseState:
             amount = fixup_price2(self.entry_date, currency, value)
             self.taxreversal(amount)
             return True
+        return False
 
+    def parse_cash_adjustments(self, row):
+        """Parse misc cash-balance adjustment records"""
         if self.activity == "Adhoc Adjustment":
             # We have no idea what this is, but it affects chash holdings...
             # But we've also seen it affect number of shares, probably as
@@ -700,6 +701,9 @@ def parse_rsu_activity_table(state, recs):  # noqa: C901
         if state.parse_cash_adjustments(row):
             continue
 
+        if state.parse_tax_returned(row):
+            continue
+
         if state.activity in ignore:
             continue
 
@@ -737,6 +741,9 @@ def parse_espp_activity_table(state, recs):
             continue
 
         if state.parse_tax_withholding(row):
+            continue
+
+        if state.parse_tax_returned(row):
             continue
 
         if state.activity in ignore:
