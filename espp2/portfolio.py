@@ -906,13 +906,17 @@ class Portfolio:
         header_to_letter = {header: chr(i + 65) for i, header in enumerate(self.column_headers)}
 
         # Number format
-        num_columns = ["pQty", "Qty", "iQty", "Price", "Price USD", "Gain", "Gain PS",
+        num_columns = ["Price", "Price USD", "Gain", "Gain PS",
                        "Gain USD", "Amount", "Amount USD", "Div PS", "Div PS USD",
                        "Total Dividend", "Total Dividend USD", "Exchange Rate",
                        "Accumulated", "Added",]
         num_cols = [header_to_letter[header] for header in num_columns if header in header_to_letter]
         for c in num_cols:
             format_cells(ws, c, "0.00")
+        num_columns = ["pQty", "Qty", "iQty",]
+        num_cols = [header_to_letter[header] for header in num_columns if header in header_to_letter]
+        for c in num_cols:
+            format_cells(ws, c, "0.0000")
 
         # Tax (in a separate sheet?)
         # TODO: Include TAXSUB
@@ -930,12 +934,6 @@ class Portfolio:
         # Freeze the first row
         c = ws["A2"]
         ws.freeze_panes = c
-
-        # Apply conditional formatting to change font color for negative numbers
-        ws.conditional_formatting.add(
-            f"A1:{index_to_cell(ws.max_column, ws.max_row)}",
-            CellIsRule(operator="lessThan", formula=["0"], font=Font(color="00FF0000")),
-        )
 
         adjust_width(ws)
         # Set number format for the entire column
@@ -962,6 +960,12 @@ class Portfolio:
 
         # Write the disclaimer to the first cell in the last row
         ws[f"A{ws.max_row + 5}"] = disclaimer
+
+        # Apply conditional formatting to change font color for negative numbers
+        ws.conditional_formatting.add(
+            ws.dimensions,
+            CellIsRule(operator="lessThan", formula=["0.00"], font=Font(color="00FF0000")),
+        )
 
         # Separate sheet for cash
         ws = workbook.create_sheet("Cash")
