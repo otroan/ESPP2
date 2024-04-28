@@ -7,7 +7,7 @@
 
 **Q: ESPP inngangsverdi i NOK**
 
-**A:** ESPP inngangsverdien i NOK er aksjens FMV på kjøpstidspunktet multiplisert med Norges Bank valutakursen på samme dag.
+**A:** ESPP inngangsverdien i NOK er aksjens FMV på kjøpstidspunktet multiplisert med ESPP valutakursen på samme dag.
 Den rabatterte prisen som ansatt betaler for aksjene er ikke tatt med i beregningen, siden forskjellen mellom FMV og rabattert pris er rapportert som inntektsskatt.
 
 **Q: Skjermingsfradrag**
