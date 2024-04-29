@@ -59,7 +59,7 @@ def tax_report(  # noqa: C901
     prev_holdings: Holdings,
     portfolio_engine: bool,
     verbose: bool = False,
-    feature_flags=None,
+    feature_flags=[],
 ) -> Tuple[TaxReport, Holdings, TaxSummary]:
     """Generate tax report"""
 
@@ -357,7 +357,7 @@ def do_taxes(
     portfolio_engine,
     verbose=False,
     opening_balance=None,
-    feature_flags=None
+    feature_flags=[]
 ) -> Tuple[TaxReport, Holdings, TaxSummary]:
     """Do taxes
     This function is run in two phases:
