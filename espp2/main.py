@@ -59,13 +59,14 @@ def tax_report(  # noqa: C901
     prev_holdings: Holdings,
     portfolio_engine: bool,
     verbose: bool = False,
+    feature_flags=None,
 ) -> Tuple[TaxReport, Holdings, TaxSummary]:
     """Generate tax report"""
 
     this_year = [t for t in transactions.transactions if t.date.year == year]
 
     # Run the chosen tax calculation engine
-    portfolio = Portfolio(year, broker, this_year, wires, prev_holdings, verbose)
+    portfolio = Portfolio(year, broker, this_year, wires, prev_holdings, verbose, feature_flags)
     if portfolio_engine is False:
         p = Positions(year, prev_holdings, this_year, wires)
         p.process()
@@ -314,7 +315,7 @@ def generate_previous_year_holdings(
         logger.info("Calculating tax for previous year: %s", y)
 
         if portfolio_engine:
-            p = Portfolio(y, broker, this_year, Wires([]), holdings, verbose)
+            p = Portfolio(y, broker, this_year, Wires([]), holdings, verbose, feature_flags=[])
         else:
             p = Positions(
                 y, holdings, this_year, received_wires=Wires([]), generate_holdings=True
@@ -325,8 +326,8 @@ def generate_previous_year_holdings(
         holdings = p.holdings(y, broker)
 
         if verbose:
-            print_ledger(p.ledger.entries, console)
-            print_cash_ledger(p.cash.ledger(), console)
+            print_ledger(y, p.ledger.entries, console)
+            print_cash_ledger(y, p.cash.ledger(), console)
             print_report_holdings(holdings, console)
 
     # Return holdings for previous year
@@ -356,6 +357,7 @@ def do_taxes(
     portfolio_engine,
     verbose=False,
     opening_balance=None,
+    feature_flags=None
 ) -> Tuple[TaxReport, Holdings, TaxSummary]:
     """Do taxes
     This function is run in two phases:
@@ -394,7 +396,8 @@ def do_taxes(
     if prev_holdings and prev_holdings.year != year - 1:
         raise ESPPErrorException("Holdings file for previous year not found")
 
-    return tax_report(year, broker, transactions, wires, prev_holdings, portfolio_engine, verbose=verbose)
+    return tax_report(year, broker, transactions, wires, prev_holdings, portfolio_engine, verbose=verbose,
+                      feature_flags=feature_flags)
 
 def do_holdings_1(
     broker, transaction_files: list, holdfile, year, portfolio_engine,

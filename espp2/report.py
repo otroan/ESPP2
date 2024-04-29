@@ -25,9 +25,9 @@ def print_report_dividends(dividends: list[EOYDividend], console: Console):
     console.print(table)
 
 
-def print_cash_ledger(ledger: list, console: Console):
+def print_cash_ledger(year, ledger: list, console: Console):
     """Cash ledger"""
-    table = Table(title="Cash Ledger:")
+    table = Table(title=f"Cash Ledger {year}:")
     table.add_column("Date", justify="center", style="cyan", no_wrap=True)
     table.add_column("Amount", justify="right", style="black", no_wrap=True)
     table.add_column("Amount NOK", style="magenta", justify="right")
@@ -164,9 +164,9 @@ def print_report_holdings(holdings: Holdings, console: Console):
     console.print(table)
 
 
-def print_ledger(ledger: dict, console: Console):
+def print_ledger(year, ledger: dict, console: Console):
     for symbols in ledger:
-        table = Table(title=f"Ledger: {symbols}")
+        table = Table(title=f"Ledger {year}: {symbols}")
         table.add_column("Date", justify="center", style="cyan", no_wrap=True)
         table.add_column("Symbol", justify="center", style="black", no_wrap=True)
         table.add_column("Adjust", style="magenta", justify="right")
@@ -299,14 +299,14 @@ def print_report(
         if report.prev_holdings:
             print_report_holdings(report.prev_holdings, console)
 
-        print_ledger(report.ledger, console)
+        print_ledger(year, report.ledger, console)
 
         print_report_sales(report, console)
         print_report_dividends(report.dividends, console)
         # Print current year holdings
         print_report_holdings(holdings, console)
 
-        print_cash_ledger(report.cash_ledger, console)
+        print_cash_ledger(year, report.cash_ledger, console)
 
     if report.unmatched_wires:
         print_report_unmatched_wires(report.unmatched_wires, console)
