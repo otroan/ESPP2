@@ -58,7 +58,7 @@ def main(  # noqa: C901
     verbose: bool = False,
     opening_balance: str = None,
     portfolio_engine: bool = True,
-    features: list[FeatureFlagEnum] = typer.Option(None, help="Features to enable"),
+    features: list[FeatureFlagEnum] = typer.Option([], help="Features to enable"),
     loglevel: str = typer.Option("WARNING", help="Logging level"),
     version: bool = typer.Option(
         None, "--version", callback=version_callback, is_eager=True
