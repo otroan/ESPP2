@@ -91,6 +91,12 @@ Sjekk [ESPP tax discussion](webexteams://im?space=c53d9d80-104b-11e6-bbcf-e5d120
 
 **A:** Bare hvis du ikke bryr deg om å rapportere riktig. Se feilmeldinger under med typiske årsaker.
 
+## Gjenskape transaksjonshistorikk. Hvordan gjør jeg det?
+**Q: Kan jeg laste opp flere transaksjonsfiler samtidig?**
+
+**A:** Ja, du kan benytte deg av den eksperimentelle versjonen på rf1159-staging.rd.cisco.com for å laste opp flere transaksjonsfiler som er lastet ned fra Schwab. Merk at Schwab kun tillater eksport av transaksjonsdata i fireårsblokker. Det er viktig at du eksporterer hele din transaksjonshistorikk i ikke-overlappende blokker. Verktøyet vil gi deg nødvendige instruksjoner. Når du blir spurt om din beholdningsfil, velg "Nei".
+You can try rf1159-staging.rd.cisco.com, an experimental version that supports uploading multiple transaction files downloaded from Schwab (Schwab only support exporting in 4 year chunks). Note you need to export ALL of your history, in non-overlapping chunks, the tool will give you instructions. Select "No" when asked about your holdings file.
+
 ## Feilmeldinger
 
 #### ERROR:espp2.portfolio:Dividend error. Expected <x> shares, holding: <y>
