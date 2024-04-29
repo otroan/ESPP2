@@ -32,6 +32,10 @@ def get_saleprice(csv_item):
     for e in csv_item["TransactionDetails"]:
         return e["Details"]["SalePrice"]
 
+def get_grossproceeds(csv_item):
+    for e in csv_item["TransactionDetails"]:
+        return e["Details"]["GrossProceeds"]
+
 
 def get_purchaseprice(csv_item):
     # RS
@@ -88,8 +92,15 @@ def sale(csv_item, source):
         fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"], change_sign=True)
     except InvalidOperation:
         fee = None
+
+    if fee:
+        fee = NegativeAmount(**fee)
+
     saleprice = fixup_price(d, "USD", get_saleprice(csv_item))
     grossproceeds = fixup_price(d, "USD", csv_item["Amount"])
+    # grossproceeds = fixup_price(d, "USD", get_grossproceeds(csv_item))
+    grossproceeds = Amount(**grossproceeds)
+
     qty = fixup_number(csv_item["Quantity"])
 
     return Sell(
@@ -98,8 +109,8 @@ def sale(csv_item, source):
         description=csv_item["Description"],
         qty=qty * -1,
         sale_price=Amount(**saleprice),
-        amount=Amount(**grossproceeds),
-        fee=NegativeAmount(**fee) if fee else None,
+        amount=grossproceeds,
+        fee=fee,
         source=source,
     )
 
@@ -220,6 +231,24 @@ def transfer(csv_item, source):
         source=source,
     )
 
+def exercise_and_sell(csv_item, source):
+    """Stock Options exercise and sell"""
+    d = fixup_date(csv_item["Date"])
+    if csv_item["FeesAndCommissions"]:
+        fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"], change_sign=True)
+    else:
+        fee = fixup_price(d, "USD", "$0.0")
+
+    amount = fixup_price(d, "USD", csv_item["Amount"])
+    return Wire(
+        date=d,
+        description=csv_item["Description"],
+        amount=Amount(**amount),
+        fee=NegativeAmount(**fee),
+        source=source,
+        currency="USD",
+    )
+
 def adjustment(csv_item, source):
     """Process adjustment"""
     d = fixup_date(csv_item["Date"])
@@ -249,6 +278,7 @@ dispatch = {
     "Deposit": deposit,
     "Adjustment": adjustment,
     "Transfer": transfer,
+    "Exercise and Sell": exercise_and_sell,
 }
 
 def read(json_file, filename="") -> Transactions:

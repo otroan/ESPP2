@@ -323,6 +323,16 @@ class FMV:
                 date_str = str(itemdate)
         raise FMVException(f"No dividends data for {dividend} on {date_str}")
 
+    def get_dividends(self, symbol: str) -> dict:
+        """Lookup a symbol and return dividends"""
+        self.refresh(symbol, None, FMVTypeEnum.DIVIDENDS)
+
+        try:
+            return self.table[FMVTypeEnum.DIVIDENDS][symbol]
+
+        except KeyError as e:
+            raise FMVException(f"No dividends data for {symbol}") from e
+
     def get_fundamentals(self, symbol: str) -> dict:
         """Lookup a symbol and return fundamentals"""
         self.refresh(symbol, None, FMVTypeEnum.FUNDAMENTALS)

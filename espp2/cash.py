@@ -160,9 +160,9 @@ class Cash:
                     debit[posidx].amount.value -= amount_to_sell
                     amount_to_sell = 0
 
-            # if amount_to_sell > 0:
-            #     raise CashException(
-            #         f'Transferring more money than is in cash account {amount_to_sell} {e}')
+            if amount_to_sell > 0:
+                logger.error(
+                    f'Transferring more money than is in cash account {amount_to_sell} {e}')
 
             # Only care about tranfers
             if is_transfer:
