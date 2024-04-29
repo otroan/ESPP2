@@ -249,6 +249,16 @@ def exercise_and_sell(csv_item, source):
         currency="USD",
     )
 
+def journal(csv_item, source):
+    """Process journal"""
+    # Stocks
+    if csv_item["Quantity"]:
+        return transfer(csv_item, source)
+
+    # Wires
+    return wire(csv_item, source)
+
+
 def adjustment(csv_item, source):
     """Process adjustment"""
     d = fixup_date(csv_item["Date"])
@@ -273,7 +283,7 @@ dispatch = {
     "Dividend": dividend,
     "Dividend Reinvested": dividend_reinvested,
     "Tax Reversal": tax_reversal,
-    "Journal": wire,
+    "Journal": journal,
     "Service Fee": not_implemented,
     "Deposit": deposit,
     "Adjustment": adjustment,

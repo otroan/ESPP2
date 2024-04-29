@@ -327,7 +327,7 @@ class Portfolio:
         no_shares = self.qty_at_date(transaction.symbol, transaction.exdate)
         expected_dividend = round(no_shares * transaction.dividend_dps, 2)
         if expected_dividend != transaction.amount.value:
-             logger.error(f"Dividend error. {transaction.date} Expected {expected_number_of_shares} shares, holding: {no_shares}")
+            logger.error(f"Dividend error. {transaction.date} Expected {expected_number_of_shares} shares, holding: {no_shares}")
         for p in self.positions:
             if p.symbol == transaction.symbol:
                 # Get qty up until exdate
@@ -904,7 +904,10 @@ class Portfolio:
                 # Walk through records looking for dividends
                 for r in p.records:
                     # The qty we get dividends for is different from the qty we get tax dividends for
-                    if isinstance(r, PortfolioDividend):
+                    if (
+                        isinstance(r, PortfolioDividend)
+                        and not FeatureFlagEnum.FEATURE_TFD_ACCUMULATE in feature_flags
+                    ):
                         if p.tax_deduction >= r.dividend_dps.nok_value:
                             p.tax_deduction -= r.dividend_dps.nok_value
                             r.tax_deduction_used = r.dividend_dps.nok_value
