@@ -4,6 +4,7 @@ Schwab JSON normalizer.
 
 # pylint: disable=invalid-name, too-many-locals, too-many-branches
 
+import math
 import json
 from decimal import Decimal, InvalidOperation
 import logging
@@ -33,9 +34,13 @@ def get_saleprice(csv_item):
         return e["Details"]["SalePrice"]
 
 def get_grossproceeds(csv_item):
+    total = Decimal("0.00")
     for e in csv_item["TransactionDetails"]:
-        return e["Details"]["GrossProceeds"]
+        price = e["Details"]["GrossProceeds"]
+        total += Decimal(price.replace("$", "").replace(",", ""))
 
+    datestr = fixup_date(csv_item["Date"])
+    return Amount(amountdate=datestr, currency="USD", value=total)
 
 def get_purchaseprice(csv_item):
     # RS
@@ -100,7 +105,12 @@ def sale(csv_item, source):
     grossproceeds = fixup_price(d, "USD", csv_item["Amount"])
     # grossproceeds = fixup_price(d, "USD", get_grossproceeds(csv_item))
     grossproceeds = Amount(**grossproceeds)
+    g = get_grossproceeds(csv_item)
+    g += fee
 
+    if not math.isclose(g.value, grossproceeds.value, abs_tol=5):
+        logger.error(f"Gross proceeds mismatch: {g} != {grossproceeds}. {d} {csv_item["Description"]}")
+        grossproceeds = g
     qty = fixup_number(csv_item["Quantity"])
 
     return Sell(

@@ -86,9 +86,10 @@ class PortfolioPosition(BaseModel):
             return 0
         qty = self.qty
         for r in self.records:
-            transdate = r.saledate if isinstance(r, PortfolioSale) else r.date
-            if isinstance(r, (PortfolioSale, PortfolioTransfer)) and transdate < exdate:
-                qty -= abs(r.qty)
+            if isinstance(r, (PortfolioSale, PortfolioTransfer)):
+                transdate = r.saledate if isinstance(r, PortfolioSale) else r.date
+                if transdate < exdate:
+                    qty -= abs(r.qty)
         return qty
 
     def format(self, row, columns):
