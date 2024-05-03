@@ -335,15 +335,15 @@ class ParseState:
         """Opening balance for shares is used to add historic shares..."""
         if self.activity != "Opening Balance":
             return False
-        qty, bookvalue, ok = getitems(row, "Number of Shares", "Book Value")
+        qty, bookvalue_txt, ok = getitems(row, "Number of Shares", "Book Value")
         if ok:
             qty = Decimal(qty)
-            # bookvalue = Decimal(bookvalue)
-            price = currency_converter[(self.symbol, self.entry_date)]
-            purchase_price = fixup_price2(self.entry_date, "USD", price)  # noqa: F841
-
-            # self.deposit(qty, purchase_price, 'RS', self.entry_date)
-            return True
+            if qty > 0 and False:
+                # Disabled for now, check more thoroughly before enabling
+                book_value, currency = morgan_price(bookvalue_txt)
+                purchase_price = fixup_price2(self.entry_date, currency, book_value / qty)
+                self.deposit(qty, purchase_price, 'RS', self.entry_date)
+                return True
         raise ValueError(f"Unexpected opening balance: {row}")
 
     def parse_tax_returned(self, row):
