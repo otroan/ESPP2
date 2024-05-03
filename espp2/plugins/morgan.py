@@ -14,6 +14,7 @@ from espp2.fmv import FMV
 from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount, NegativeAmount
 import re
 import logging
+import datetime
 from pandas import MultiIndex, Index
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,7 @@ class ParseState:
         self.entry_date = None
         self.date2dividend = dict()
         self.adapter = TypeAdapter(Entry)
+        self.settledate2selldate = dict()
 
     def parse_activity(self, row):
         """Parse the "Activity" column"""
@@ -212,6 +214,20 @@ class ParseState:
 
         self.transactions.append(self.adapter.validate_python(r))
         return True
+
+    def record_selldate(self, sell_date, settle_date):
+        """Record a pair of dates for selling and settlement."""
+        self.settledate2selldate[settle_date] = sell_date
+
+    def fixup_selldates(self):
+        """Change SELL-records to use actual selldate"""
+        for t in self.transactions:
+            if t.type == EntryTypeEnum.SELL:
+                settledate = t.date.isoformat()
+                if settledate in self.settledate2selldate:
+                    selldate = self.settledate2selldate[settledate]
+                    t.date = datetime.date.fromisoformat(selldate)
+                    logger.warning(f"Sale on {settledate} assumed to have happened on {t.date} (Withdrawal-date)")
 
     def parse_rsu_release(self, row):
         """Handle what appears to be RSUs added to account"""
@@ -572,6 +588,39 @@ def fixup_date(morgandate):  # noqa: C901
 
     raise ValueError(f'Illegal date: "{morgandate}"')
 
+def fixup_date2(morgandate):
+    m = re.fullmatch(r"""(\S+)\s+(\d+), (20\d\d)""", morgandate)
+    if m:
+        textmonth = m.group(1)
+        day = f"{int(m.group(2)):02d}"
+        year = m.group(3)
+
+        if textmonth == "January":
+            return f"{year}-01-{day}"
+        elif textmonth == "February":
+            return f"{year}-02-{day}"
+        elif textmonth == "March":
+            return f"{year}-03-{day}"
+        elif textmonth == "April":
+            return f"{year}-04-{day}"
+        elif textmonth == "May":
+            return f"{year}-05-{day}"
+        elif textmonth == "June":
+            return f"{year}-06-{day}"
+        elif textmonth == "July":
+            return f"{year}-07-{day}"
+        elif textmonth == "August":
+            return f"{year}-08-{day}"
+        elif textmonth == "September":
+            return f"{year}-09-{day}"
+        elif textmonth == "October":
+            return f"{year}-10-{day}"
+        elif textmonth == "November":
+            return f"{year}-11-{day}"
+        elif textmonth == "December":
+            return f"{year}-12-{day}"
+
+    raise ValueError(f'Illegal date 2: "{morgandate}"')
 
 def getitem(row, colname):
     """Get a named item from a row, or None if nothing there"""
@@ -768,7 +817,8 @@ class Withdrawal:
         self.has_wire_fee = False
 
         assert self.wd.data[3][2] == "Settlement Date:"
-        self.entry_date = fixup_date(self.wd.data[3][3])
+        self.settlement_date = fixup_date(self.wd.data[3][3])
+        self.withdrawal_date = fixup_date2(self.wd.header[0][0])
 
         assert self.wd.data[3][0] == "Fund"
         self.fund = self.wd.data[3][1]
@@ -783,15 +833,15 @@ class Withdrawal:
 
         for row in self.sb.rows:
             if "Gross Proceeds" in row[0]:
-                gross.append(create_amount(self.entry_date, row[1]))
+                gross.append(create_amount(self.settlement_date, row[1]))
             if "Fee" in row[0]:
-                fees.append(create_amount(self.entry_date, row[1]))
+                fees.append(create_amount(self.settlement_date, row[1]))
             if "Wire Fee" in row[0]:
                 has_wire_fee = True
 
         m = re.fullmatch(r"""Net Proceeds: (.*)""", self.np.data[0][0])
         if m:
-            net.append(create_amount(self.entry_date, m.group(1)))
+            net.append(create_amount(self.settlement_date, m.group(1)))
 
         assert len(gross) == 1
         assert len(net) == 1
@@ -820,7 +870,9 @@ def parse_withdrawal_sales(state, sales):
         w = Withdrawal(wd, sb, np)
         if w.is_wire:
             assert w.symbol != "Cash"  # No Cash-fund for sale withdrawals
-            state.wire_transfer(w.entry_date, w.net_amount, w.fees_amount)
+            state.wire_transfer(w.settlement_date, w.net_amount, w.fees_amount)
+            print(f"### Found settlement {w.settlement_date} for withdrawal date {w.withdrawal_date}")
+            state.record_selldate(w.withdrawal_date, w.settlement_date)
         else:
             raise ValueError(
                 f"Sales withdrawal w/o wire-transfer: wd={wd.data} sb={sb.data} np={np.data}"
@@ -833,9 +885,9 @@ def parse_withdrawal_proceeds(state, proceeds):
         w = Withdrawal(wd, pb, np)
         if w.is_wire:
             assert w.symbol == "Cash"  # Proceeds withdrawal is for cash
-            state.wire_transfer(w.entry_date, w.net_amount, w.fees_amount)
+            state.wire_transfer(w.withdrawal_date, w.net_amount, w.fees_amount)
         elif w.is_transfer:
-            state.cashadjust(w.entry_date, w.net_amount, w.description)
+            state.cashadjust(w.withdrawal_date, w.net_amount, w.description)
         else:
             raise ValueError(
                 f"Proceeds withdrawal w/o wire-transfer: wd={wd.data} pb={pb.data} np={np.data}"
@@ -1272,6 +1324,8 @@ def morgan_html_import(html_fd, filename):
         raise ValueError(f"Period {start_period} - {end_period} is unexpected")
 
     print("Done")
+
+    state.fixup_selldates()
 
     transes = sorted(state.transactions, key=lambda d: d.date)
 
