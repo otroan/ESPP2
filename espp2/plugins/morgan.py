@@ -1128,6 +1128,9 @@ def parse_rsu_activity_html(all_tables, state):
     ]
 
     rsu = find_tables_by_header(all_tables, search_rsu_header, 1)
+
+    print(f"#### RSU activity tables found: {len(rsu)}")
+
     if len(rsu) == 0:
         return
 
