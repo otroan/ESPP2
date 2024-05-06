@@ -63,7 +63,8 @@ async def generate_holdings_1(
         holdfile = holdfile.file
     try:
         return do_holdings_1(
-            broker, transaction_files, holdfile, year, opening_balance=opening_balance
+            broker, transaction_files, holdfile, year, portfolio_engine=True,
+            opening_balance=opening_balance
         )
     except Exception as e:
         logger.exception(e)
@@ -129,7 +130,7 @@ async def generate_holdings_4(
 
 @app.post("/taxreport/", response_model=ESPPResponse)
 async def taxreport(
-    transaction_file: UploadFile,
+    transaction_files: list[UploadFile],
     broker: str = Form(...),
     holdfile: UploadFile | None = None,
     wires: str = Form(""),
@@ -153,7 +154,7 @@ async def taxreport(
         holdfile = holdfile.file
     try:
         report, holdings, exceldata, summary = do_taxes(
-            broker, transaction_file, holdfile, wires, year, portfolio_engine=True
+            broker, transaction_files, holdfile, wires, year, portfolio_engine=True
         )
     except Exception as e:
         logger.exception(e)

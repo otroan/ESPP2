@@ -145,7 +145,6 @@ def get_id(values: Dict[str, Any]):
         pass
     return id + ":" + str(duplicates[d])
 
-
 class TransactionEntry(BaseModel):
     @model_validator(mode="after")
     @classmethod
@@ -153,7 +152,6 @@ class TransactionEntry(BaseModel):
         """Validate id"""
         v.id = get_id(v)
         return v
-
 
 class Buy(TransactionEntry):
     """Buy transaction"""
@@ -342,7 +340,8 @@ Entry = Annotated[
 
 class Transactions(BaseModel):
     """Transactions"""
-
+    fromdate: date = None
+    todate: date = None
     transactions: list[Entry]
 
 
