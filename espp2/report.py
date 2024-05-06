@@ -25,9 +25,9 @@ def print_report_dividends(dividends: list[EOYDividend], console: Console):
     console.print(table)
 
 
-def print_cash_ledger(ledger: list, console: Console):
+def print_cash_ledger(year, ledger: list, console: Console):
     """Cash ledger"""
-    table = Table(title="Cash Ledger:")
+    table = Table(title=f"Cash Ledger {year}:")
     table.add_column("Date", justify="center", style="cyan", no_wrap=True)
     table.add_column("Amount", justify="right", style="black", no_wrap=True)
     table.add_column("Amount NOK", style="magenta", justify="right")
@@ -90,7 +90,7 @@ def print_report_sales(report: TaxReport, console: Console):
             for b in e.from_positions:
                 gain = b.gain_ps * b.qty
                 buy_positions.add_row(
-                    f"{b.qty:.2f}",
+                    f"{b.qty:.4f}",
                     f"{b.purchase_price.nok_value:.2f}",
                     f"{b.purchase_price:.2f}",
                     f"{gain.nok_value:.2f}  ${gain.value:.2f}",
@@ -98,7 +98,7 @@ def print_report_sales(report: TaxReport, console: Console):
             buy_positions.add_row("")
             table.add_row(
                 k,
-                f"{e.qty:.2f}",
+                f"{e.qty:.4f}",
                 str(e.date),
                 f"{sale_price_nok:.2f} ${sale_price:.2f}",
                 f"{e.amount.nok_value:.2f}  ${e.amount.value:.2f}",
@@ -130,13 +130,13 @@ def print_report_holdings(holdings: Holdings, console: Console):
         total += e.qty
         table.add_row(
             e.symbol,
-            f"{e.qty:.2f}",
+            f"{e.qty:.4f}",
             str(e.date),
             f"{e.purchase_price:.2f}",
             f"{e.tax_deduction:.2f}",
         )
         if i + 1 >= len(holdings.stocks) or holdings.stocks[i + 1].symbol != symbol:
-            table.add_row("", "", "", "", "", f"{total:.2f}")
+            table.add_row("", "", "", "", "", f"{total:.4f}")
             total = Decimal(0)
 
     console.print(table)
@@ -164,16 +164,16 @@ def print_report_holdings(holdings: Holdings, console: Console):
     console.print(table)
 
 
-def print_ledger(ledger: dict, console: Console):
+def print_ledger(year, ledger: dict, console: Console):
     for symbols in ledger:
-        table = Table(title=f"Ledger: {symbols}")
+        table = Table(title=f"Ledger {year}: {symbols}")
         table.add_column("Date", justify="center", style="cyan", no_wrap=True)
         table.add_column("Symbol", justify="center", style="black", no_wrap=True)
         table.add_column("Adjust", style="magenta", justify="right")
         table.add_column("Total", justify="right", style="green")
 
         for e in ledger[symbols]:
-            table.add_row(str(e[0]), symbols, f"{e[1]:.2f}", f"{e[2]:.2f}")
+            table.add_row(str(e[0]), symbols, f"{e[1]:.4f}", f"{e[2]:.4f}")
         console.print(table)
 
 
@@ -216,7 +216,7 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
                 e.isin,
                 e.country,
                 e.account,
-                f"{e.shares:.2f}",
+                f"{e.shares:.4f}",
                 f"{e.wealth:.0f}",
                 f"{dividend}",
                 f"{e.post_tax_inc_dividend}",
@@ -230,7 +230,7 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
                 e.isin,
                 e.country,
                 e.account,
-                f"{e.shares:.2f}",
+                f"{e.shares:.4f}",
                 f"{e.wealth}",
                 f"{dividend}",
                 f"{gain}",
@@ -299,14 +299,14 @@ def print_report(
         if report.prev_holdings:
             print_report_holdings(report.prev_holdings, console)
 
-        print_ledger(report.ledger, console)
+        print_ledger(year, report.ledger, console)
 
         print_report_sales(report, console)
         print_report_dividends(report.dividends, console)
         # Print current year holdings
         print_report_holdings(holdings, console)
 
-        print_cash_ledger(report.cash_ledger, console)
+        print_cash_ledger(year, report.cash_ledger, console)
 
     if report.unmatched_wires:
         print_report_unmatched_wires(report.unmatched_wires, console)

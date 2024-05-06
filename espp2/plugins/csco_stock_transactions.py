@@ -48,6 +48,7 @@ def stock_transactions_xls_import(fd, filename):
             source=f"csco_rsu:{filename}",
         )
         transes.append(d)
+
     return Transactions(transactions=sorted(transes, key=lambda d: d.date))
 
 

@@ -4,6 +4,7 @@ Schwab JSON normalizer.
 
 # pylint: disable=invalid-name, too-many-locals, too-many-branches
 
+import math
 import json
 from decimal import Decimal, InvalidOperation
 import logging
@@ -32,6 +33,14 @@ def get_saleprice(csv_item):
     for e in csv_item["TransactionDetails"]:
         return e["Details"]["SalePrice"]
 
+def get_grossproceeds(csv_item):
+    total = Decimal("0.00")
+    for e in csv_item["TransactionDetails"]:
+        price = e["Details"]["GrossProceeds"]
+        total += Decimal(price.replace("$", "").replace(",", ""))
+
+    datestr = fixup_date(csv_item["Date"])
+    return Amount(amountdate=datestr, currency="USD", value=total)
 
 def get_purchaseprice(csv_item):
     # RS
@@ -88,8 +97,20 @@ def sale(csv_item, source):
         fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"], change_sign=True)
     except InvalidOperation:
         fee = None
+
+    if fee:
+        fee = NegativeAmount(**fee)
+
     saleprice = fixup_price(d, "USD", get_saleprice(csv_item))
     grossproceeds = fixup_price(d, "USD", csv_item["Amount"])
+    # grossproceeds = fixup_price(d, "USD", get_grossproceeds(csv_item))
+    grossproceeds = Amount(**grossproceeds)
+    g = get_grossproceeds(csv_item)
+    g += fee
+
+    if not math.isclose(g.value, grossproceeds.value, abs_tol=5):
+        logger.error(f"Gross proceeds mismatch: {g} != {grossproceeds}. {d} {csv_item["Description"]}")
+        grossproceeds = g
     qty = fixup_number(csv_item["Quantity"])
 
     return Sell(
@@ -98,8 +119,8 @@ def sale(csv_item, source):
         description=csv_item["Description"],
         qty=qty * -1,
         sale_price=Amount(**saleprice),
-        amount=Amount(**grossproceeds),
-        fee=NegativeAmount(**fee) if fee else None,
+        amount=grossproceeds,
+        fee=fee,
         source=source,
     )
 
@@ -108,7 +129,6 @@ def tax_withholding(csv_item, source):
     """Process tax withholding"""
     d = fixup_date(csv_item["Date"])
     amount = fixup_price(d, "USD", csv_item["Amount"])
-
     return Tax(
         date=d,
         symbol=csv_item["Symbol"],
@@ -221,6 +241,34 @@ def transfer(csv_item, source):
         source=source,
     )
 
+def exercise_and_sell(csv_item, source):
+    """Stock Options exercise and sell"""
+    d = fixup_date(csv_item["Date"])
+    if csv_item["FeesAndCommissions"]:
+        fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"], change_sign=True)
+    else:
+        fee = fixup_price(d, "USD", "$0.0")
+
+    amount = fixup_price(d, "USD", csv_item["Amount"])
+    return Wire(
+        date=d,
+        description=csv_item["Description"],
+        amount=Amount(**amount),
+        fee=NegativeAmount(**fee),
+        source=source,
+        currency="USD",
+    )
+
+def journal(csv_item, source):
+    """Process journal"""
+    # Stocks
+    if csv_item["Quantity"]:
+        return transfer(csv_item, source)
+
+    # Wires
+    return wire(csv_item, source)
+
+
 def adjustment(csv_item, source):
     """Process adjustment"""
     d = fixup_date(csv_item["Date"])
@@ -245,22 +293,24 @@ dispatch = {
     "Dividend": dividend,
     "Dividend Reinvested": dividend_reinvested,
     "Tax Reversal": tax_reversal,
-    "Journal": wire,
+    "Journal": journal,
     "Service Fee": not_implemented,
     "Deposit": deposit,
     "Adjustment": adjustment,
     "Transfer": transfer,
+    "Exercise and Sell": exercise_and_sell,
 }
-
 
 def read(json_file, filename="") -> Transactions:
     """Main entry point of plugin. Return normalized Python data structure."""
 
     data = json.load(json_file)
     records = []
+    fromdate = fixup_date(data["FromDate"])
+    todate = fixup_date(data["ToDate"])
     for t in data["Transactions"]:
         logger.debug("Processing record: %s", t)
         r = dispatch[t["Action"]](t, source=f"schwab:{filename}")
         records.append(r)
 
-    return Transactions(transactions=records)
+    return Transactions(transactions=records, fromdate=fromdate, todate=todate)

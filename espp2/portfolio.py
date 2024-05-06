@@ -1,7 +1,6 @@
 """
 ESPP portfolio class
 """
-
 import logging
 from io import BytesIO
 from copy import deepcopy
@@ -24,14 +23,19 @@ from espp2.datamodels import (
     ForeignShares,
     EOYDividend,
     EOYSales,
-    SalesPosition
+    SalesPosition,
+    Dividend,
+    Tax,
+    PositiveAmount,
+    NegativeAmount,
 )
-from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals
+from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals, todate
 from espp2.cash import Cash
 from espp2.positions import Ledger
 from typing import Any, Dict
 from espp2.report import print_cash_ledger
 from espp2.console import console
+from espp2.util import FeatureFlagEnum
 
 fmv = FMV()
 logger = logging.getLogger(__name__)
@@ -82,8 +86,10 @@ class PortfolioPosition(BaseModel):
             return 0
         qty = self.qty
         for r in self.records:
-            if isinstance(r, PortfolioSale) and r.saledate < exdate:
-                qty -= abs(r.qty)
+            if isinstance(r, (PortfolioSale, PortfolioTransfer)):
+                transdate = r.saledate if isinstance(r, PortfolioSale) else r.date
+                if transdate < exdate:
+                    qty -= abs(r.qty)
         return qty
 
     def format(self, row, columns):
@@ -251,6 +257,17 @@ class PortfolioSale(BaseModel):
         )
         return col
 
+class PortfolioTransfer(BaseModel):
+    date: date
+    qty: Decimal
+    parent: PortfolioPosition = None
+    id: str
+
+    def format(self, row, columns):
+        col = [(row, columns.index("Date"), self.date)]
+        col.append((row, columns.index("Type"), "Transfer"))
+        col.append((row, columns.index("Qty"), self.qty))
+        return col
 
 def adjust_width(ws):
     def as_text(value):
@@ -312,7 +329,7 @@ class Portfolio:
         no_shares = self.qty_at_date(transaction.symbol, transaction.exdate)
         expected_dividend = round(no_shares * transaction.dividend_dps, 2)
         if expected_dividend != transaction.amount.value:
-             logger.error(f"Dividend error. Expected {expected_number_of_shares} shares, holding: {no_shares}")
+            logger.error(f"Dividend error. {transaction.date} Expected {expected_number_of_shares} shares, holding: {no_shares}")
         for p in self.positions:
             if p.symbol == transaction.symbol:
                 # Get qty up until exdate
@@ -350,7 +367,7 @@ class Portfolio:
                 if shares_left == 0:
                     break
         if abs(total) > 1:
-            logger.error(f"Dividend issue: {transaction.date} Not all dividend used: ${total} expected {expected_number_of_shares}, found only: {found_number_of_shares}")
+            logger.error(f"Dividend issue: {transaction.date} Not all dividend used: ${total} expected {expected_number_of_shares}, found: {found_number_of_shares}")
         self.cash.debit(transaction.date, transaction.amount, "dividend")
 
     def tax(self, transaction):
@@ -371,13 +388,38 @@ class Portfolio:
         self.cash.credit(transaction.date, transaction.amount, "tax")
 
     def transfer(self, transaction):
-        logger.error(f"Transfer not implemented: {transaction}")
+        shares_to_sell = abs(transaction.qty)
+        for p in self.positions:
+            sold = 0
+            if p.symbol == transaction.symbol:
+                if p.current_qty == 0:
+                    continue
+                if p.current_qty >= shares_to_sell:
+                    p.current_qty -= shares_to_sell
+                    sold = shares_to_sell
+                    shares_to_sell = 0
+                else:
+                    sold = p.current_qty
+                    shares_to_sell -= p.current_qty
+                    p.current_qty = 0
+                s = PortfolioTransfer(
+                    date=transaction.date,
+                    qty=-sold,
+                    parent=p,
+                    id=transaction.id,
+                )
+                p.records.append(s)
+                if shares_to_sell == 0:
+                    break
 
     def fee(self, transaction):
         logger.error(f"Fee as a separate record not implemented: {transaction}")
 
     def cashadjust(self, transaction):
-        logger.error(f"Cashadjust record not implemented: {transaction}")
+        if transaction.amount.value > 0:
+            self.cash.debit(transaction.date, transaction.amount, transaction.description)
+        elif transaction.amount.value < 0:
+            self.cash.credit(transaction.date, transaction.amount, transaction.description)
 
     def tax_for_symbol(self, symbol):
         total_nok = 0
@@ -591,7 +633,15 @@ class Portfolio:
 
         eoy_exchange_rate = fmv.get_currency("USD", end_of_year)
         r = []
-        positions = self.positions if year == self.year else self.prev_holdings.stocks
+
+        if year != self.year:
+            if 'stocks' in self.prev_holdings:
+                positions = self.prev_holdings.stocks
+            else:
+                positions = []
+        else:
+            positions = self.positions
+        # positions = self.positions if year == self.year else self.prev_holdings.stocks
         for symbol in self.symbols:
             total_shares = 0
             for p in positions:
@@ -698,6 +748,40 @@ class Portfolio:
             ))
         return result
 
+    def synthesize_dividends(self, symbol):
+        '''Synthesize dividends for symbol'''
+        dividends = fmv.get_dividends(symbol)
+
+        # Filter dividends on self.year
+        for k,v in dividends.items():
+            try:
+                payment_date = todate(k)
+                exdate = todate(v['date'])
+            except ValueError:
+                continue
+            if payment_date.year != self.year:
+                continue
+            print(f'{k}: {v}')
+            qty = self.qty_at_date(symbol, exdate)
+            print(f'Qty: {qty}')
+
+            if qty > 0:
+                amount=PositiveAmount(amountdate=payment_date, currency="USD", value=qty * Decimal(str(v['value'])))
+                transaction = Dividend(date=payment_date,
+                                       symbol=symbol,
+                                       description="Synthesized dividend",
+                                       amount=amount,
+                                       source='Synthesized dividend')
+                self.dividend(transaction)
+
+                tax = Tax(date=payment_date,
+                           symbol=symbol,
+                           description="Synthesized dividend tax",
+                           amount=NegativeAmount(amountdate=payment_date, currency="USD",
+                                                 value=Decimal(-0.15) * amount.value),
+                           source='Synthesized dividend tax')
+                self.tax(tax)
+
     def __init__(  # noqa: C901
         self,
         year: int,
@@ -706,12 +790,16 @@ class Portfolio:
         wires: Wires,
         holdings: Holdings,
         verbose: bool,
+        feature_flags: list[FeatureFlagEnum],
     ):
         self.year = year
         self.taxes = []
         self.positions = []
         self.new_positions = []
-        self.cash = Cash(year=year, opening_balance=holdings.cash)
+        if holdings and holdings.cash:
+            self.cash = Cash(year=year, opening_balance=holdings.cash)
+        else:
+            self.cash = Cash(year=year)
         self.broker = broker
 
         self.column_headers = [
@@ -790,6 +878,11 @@ class Portfolio:
 
         # Find the set of different symbols in self.positions
         self.symbols = {p.symbol for p in self.positions}
+
+        # Check if we should synthesize dividends
+        if FeatureFlagEnum.FEATURE_SYNDIV in feature_flags:
+            self.synthesize_dividends(list(self.symbols)[0]) # For now, just use the first symbol
+
         for p in self.positions:
             if p.current_qty > 0:
                 tax_deduction_rate = get_tax_deduction_rate(self.year)
@@ -813,7 +906,10 @@ class Portfolio:
                 # Walk through records looking for dividends
                 for r in p.records:
                     # The qty we get dividends for is different from the qty we get tax dividends for
-                    if isinstance(r, PortfolioDividend):
+                    if (
+                        isinstance(r, PortfolioDividend)
+                        and not FeatureFlagEnum.FEATURE_TFD_ACCUMULATE in feature_flags
+                    ):
                         if p.tax_deduction >= r.dividend_dps.nok_value:
                             p.tax_deduction -= r.dividend_dps.nok_value
                             r.tax_deduction_used = r.dividend_dps.nok_value
