@@ -873,6 +873,9 @@ def parse_withdrawal_sales(state, sales):
             state.wire_transfer(w.settlement_date, w.net_amount, w.fees_amount)
             print(f"### Found settlement {w.settlement_date} for withdrawal date {w.withdrawal_date}")
             state.record_selldate(w.withdrawal_date, w.settlement_date)
+        elif w.is_transfer:
+            print(f"### Found settlement {w.settlement_date} for withdrawal date {w.withdrawal_date}")
+            state.record_selldate(w.withdrawal_date, w.settlement_date)
         else:
             raise ValueError(
                 f"Sales withdrawal w/o wire-transfer: wd={wd.data} sb={sb.data} np={np.data}"
