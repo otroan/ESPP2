@@ -75,9 +75,6 @@ def guess_format(filename, data) -> str:  # noqa: C901
     if extension == ".json":
         return "schwab-json"
 
-    # if extension == ".pickle":
-    #     return "pickle"
-
     if extension in (".html", ".htm"):
         if filebytes[0:1] == b"<":
             return "morgan"
@@ -87,15 +84,6 @@ def guess_format(filename, data) -> str:  # noqa: C901
             return "csco_espp_purchases"
         elif "My_Stock_Transactions" in fname:
             return "csco_stock_transactions"
-
-    # Assume CSV
-    # if filebytes[0:20] == b'"Transaction Details':
-    #     return "schwab"
-    # if filebytes[0:5] == b'"Date':
-    #     return "schwab2"
-
-    # if filebytes[0:16] == b"DATE,TRANSACTION":
-    #     return "td"
 
     raise ValueError("Unable to guess format", fname, extension, filebytes)
 
