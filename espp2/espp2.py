@@ -53,7 +53,6 @@ def main(  # noqa: C901
     outholdings: typer.FileTextWrite = None,
     outwires: typer.FileTextWrite = None,
     verbose: bool = False,
-    opening_balance: str = None,
     portfolio_engine: bool = True,
     features: list[FeatureFlagEnum] = typer.Option([], help="Features to enable"),
     loglevel: str = typer.Option("WARNING", help="Logging level"),
@@ -70,15 +69,6 @@ def main(  # noqa: C901
         level=lognames[loglevel], handlers=[RichHandler(rich_tracebacks=False)]
     )
 
-    if opening_balance:
-        if os.path.isfile(opening_balance):
-            with open(opening_balance, 'r') as f:
-                opening_balance = Holdings.model_validate_json(f.read())
-                opening_balance_content = f.read()
-        else:
-            # opening_balance is not a file path, handle it as a string
-            adapter = TypeAdapter(Holdings)
-            opening_balance = adapter.validate_json(opening_balance)
     result = None
 
     if inholdings:
@@ -95,7 +85,6 @@ def main(  # noqa: C901
             year,
             portfolio_engine=portfolio_engine,
             verbose=verbose,
-            opening_balance=opening_balance,
             feature_flags=features
         )
         print_report(year, result.summary, result.report, result.holdings, verbose)
@@ -116,7 +105,6 @@ def main(  # noqa: C901
                 inholdings,
                 year,
                 portfolio_engine,
-                opening_balance=opening_balance,
                 verbose=verbose,
             )
         if not holdings or not holdings.stocks:
@@ -134,7 +122,6 @@ def main(  # noqa: C901
                 year,
                 portfolio_engine=portfolio_engine,
                 verbose=verbose,
-                opening_balance=opening_balance,
             )
             print_report(year, result.summary, result.report, result.holdings, verbose)
 
