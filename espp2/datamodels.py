@@ -551,9 +551,3 @@ class ESPPResponse(BaseModel):
     holdings: Holdings
     log: str
 
-
-class ExpectedBalance(BaseModel):
-    """Expected balance. Note only supports a single symbol"""
-
-    symbol: str
-    qty: Decimal

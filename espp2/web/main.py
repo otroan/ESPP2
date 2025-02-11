@@ -22,10 +22,9 @@ from espp2.main import (
     do_holdings_2,
     do_holdings_3,
     do_holdings_4,
-    preheat_cache,
     get_zipdata,
 )
-from espp2.datamodels import ESPPResponse, Wires, Holdings, ExpectedBalance
+from espp2.datamodels import ESPPResponse, Wires, Holdings
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger()
@@ -65,49 +64,6 @@ async def generate_holdings_1(
         return do_holdings_1(
             broker, transaction_files, holdfile, year, portfolio_engine=True,
             opening_balance=opening_balance
-        )
-    except Exception as e:
-        logger.exception(e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
-
-@app.post("/holdings_2/", response_model=Holdings)
-async def generate_holdings_2(
-    transaction_files: list[UploadFile],
-    broker: str = Form(...),
-    year: int = Form(...),
-    expected_balance: str = Form(...),
-):
-    """Generate holdings from complete purchase history from stocks web site"""
-    if expected_balance:
-        adapter = TypeAdapter(ExpectedBalance)
-        expected_balance = adapter.validate_json(expected_balance)
-    try:
-        return do_holdings_2(
-            broker, transaction_files, year, expected_balance=expected_balance
-        )
-    except Exception as e:
-        logger.exception(e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
-
-@app.post("/holdings_3/", response_model=Holdings)
-async def generate_holdings_3(
-    transaction_file: UploadFile,
-    broker: str = Form(...),
-    year: int = Form(...),
-    expected_balance: str = Form(),
-):
-    """
-    Calculate a holdings based on an expected balance and a single transaction file.
-    This will only work if any position prior to the beginngin of the transaction file has been
-    sold before the tax year. This has only been tested with Schwab.
-    """
-    adapter = TypeAdapter(ExpectedBalance)
-    expected_balance = adapter.validate_json(expected_balance)
-    try:
-        return do_holdings_3(
-            broker, transaction_file, year, expected_balance=expected_balance
         )
     except Exception as e:
         logger.exception(e)
@@ -201,5 +157,4 @@ app.mount(
 )
 
 if __name__ == "__main__":
-    preheat_cache()
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -19,9 +19,8 @@ from espp2.main import (
     do_holdings_4,
     console,
     get_zipdata,
-    preheat_cache
 )
-from espp2.datamodels import Holdings, Wires, ExpectedBalance
+from espp2.datamodels import Holdings, Wires
 from espp2.report import print_report
 from espp2._version import __version__
 from espp2.util import FeatureFlagEnum
@@ -63,7 +62,6 @@ def main(  # noqa: C901
     version: bool = typer.Option(
         None, "--version", callback=version_callback, is_eager=True
     ),
-    expected_balance: str = None,
 ):
     """ESPPv2 tax reporting tool"""
     lognames = logging.getLevelNamesMapping()
@@ -109,25 +107,6 @@ def main(  # noqa: C901
                 broker, transaction_files[0], year, verbose=verbose
             )
 
-        elif expected_balance:
-            adapter = TypeAdapter(ExpectedBalance)
-            expected_balance = adapter.validate_json(expected_balance)
-            console.print(
-                "Generating holdings from expected balance", style="bold green"
-            )
-            if len(transaction_files) > 1:
-                logger.warning("This does not work with reinvested dividends!")
-                holdings = do_holdings_2(
-                    broker, transaction_files, year, expected_balance, verbose=verbose
-                )
-            else:
-                holdings = do_holdings_3(
-                    broker,
-                    transaction_files[0],
-                    year,
-                    expected_balance=expected_balance,
-                    verbose=verbose,
-                )
         else:
             console.print(
                 f"Generating holdings for previous tax year {year-1}",
