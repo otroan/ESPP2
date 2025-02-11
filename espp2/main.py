@@ -580,19 +580,3 @@ def do_holdings_4(broker, transaction_file, year, verbose=False) -> Holdings:
             x.tax_deduction = Decimal("0.00")
 
     return holdings
-
-
-def preheat_cache():
-    """Initialize caches"""
-    today = datetime.date.today()
-    symbol = "CSCO"
-    f = FMV()
-
-    with console.status(" [blue]Refreshing currency information") as status:
-        f.refresh("USD", today, FMVTypeEnum.CURRENCY)
-        status.update(status=" [blue]Fetching stocks information")
-        f.refresh(symbol, today, FMVTypeEnum.STOCK)
-        status.update(status=" [blue] Fetching dividends information")
-        f.refresh(symbol, today, FMVTypeEnum.DIVIDENDS)
-        status.update(status=" [blue] Fetching fundamentals information")
-        f.refresh(symbol, today, FMVTypeEnum.FUNDAMENTALS)
