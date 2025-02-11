@@ -13,8 +13,6 @@ from rich.logging import RichHandler
 from pydantic import TypeAdapter
 from espp2.main import (
     do_taxes,
-    do_holdings_1,
-    do_holdings_4,
     console,
     get_zipdata,
 )
@@ -71,59 +69,17 @@ def main(  # noqa: C901
 
     result = None
 
-    if inholdings:
-        # Check inholdings are valid for previous tax year
-        # if len(transaction_files) > 1:
-        #     raise typer.BadParameter(
-        #         "Cannot use inholdings with multiple transaction files"
-        #     )
-        result = do_taxes(
-            broker,
-            transaction_files,
-            inholdings,
-            wires,
-            year,
-            portfolio_engine=portfolio_engine,
-            verbose=verbose,
-            feature_flags=features
-        )
-        print_report(year, result.summary, result.report, result.holdings, verbose)
-    else:
-        if broker == BrokerEnum.morgan:
-            holdings = do_holdings_4(
-                broker, transaction_files[0], year, verbose=verbose
-            )
-
-        else:
-            console.print(
-                f"Generating holdings for previous tax year {year-1}",
-                style="bold green",
-            )
-            holdings = do_holdings_1(
-                broker,
-                transaction_files,
-                inholdings,
-                year,
-                portfolio_engine,
-                verbose=verbose,
-            )
-        if not holdings or not holdings.stocks:
-            logger.error("No holdings found")
-            if len(transaction_files) > 1:
-                raise typer.BadParameter(
-                    "Cannot use inholdings with multiple transaction files"
-                )
-
-            result = do_taxes(
-                broker,
-                transaction_files[0],
-                inholdings,
-                wires,
-                year,
-                portfolio_engine=portfolio_engine,
-                verbose=verbose,
-            )
-            print_report(year, result.summary, result.report, result.holdings, verbose)
+    result = do_taxes(
+        broker,
+        transaction_files,
+        inholdings,
+        wires,
+        year,
+        portfolio_engine=portfolio_engine,
+        verbose=verbose,
+        feature_flags=features
+    )
+    print_report(year, result.summary, result.report, result.holdings, verbose)
 
     # New holdings
     if outholdings:
