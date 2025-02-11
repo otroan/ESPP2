@@ -32,7 +32,7 @@ class BrokerEnum(str, Enum):
     """BrokerEnum"""
 
     schwab = "schwab"
-    td = "td"
+    # td = "td"
     morgan = "morgan"
 
 
@@ -49,7 +49,7 @@ def version_callback(value: bool):
 def main(  # noqa: C901
     transaction_files: list[typer.FileBinaryRead],
     output: typer.FileBinaryWrite = None,
-    year: int = 2023,
+    year: int = 2024,
     broker: BrokerEnum = BrokerEnum.schwab,
     wires: typer.FileText = None,
     inholdings: typer.FileText = None,

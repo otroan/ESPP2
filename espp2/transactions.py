@@ -75,8 +75,8 @@ def guess_format(filename, data) -> str:  # noqa: C901
     if extension == ".json":
         return "schwab-json"
 
-    if extension == ".pickle":
-        return "pickle"
+    # if extension == ".pickle":
+    #     return "pickle"
 
     if extension in (".html", ".htm"):
         if filebytes[0:1] == b"<":
@@ -89,13 +89,13 @@ def guess_format(filename, data) -> str:  # noqa: C901
             return "csco_stock_transactions"
 
     # Assume CSV
-    if filebytes[0:20] == b'"Transaction Details':
-        return "schwab"
-    if filebytes[0:5] == b'"Date':
-        return "schwab2"
+    # if filebytes[0:20] == b'"Transaction Details':
+    #     return "schwab"
+    # if filebytes[0:5] == b'"Date':
+    #     return "schwab2"
 
-    if filebytes[0:16] == b"DATE,TRANSACTION":
-        return "td"
+    # if filebytes[0:16] == b"DATE,TRANSACTION":
+    #     return "td"
 
     raise ValueError("Unable to guess format", fname, extension, filebytes)
 
@@ -114,16 +114,3 @@ def normalize(data: Union[UploadFile, typer.FileText]) -> Transactions:
     plugin = importlib.import_module(plugin_path, package="espp2")
     logger.info("Importing transactions with importer %s: %s", trans_format, filename)
     return plugin.read(fd, filename)
-
-
-def main():
-    """Main function"""
-    args = get_arguments()
-    logger.debug("Arguments: %s", args)
-    trans_obj = normalize(args.transaction_file)
-    logger.info("Converting to JSON")
-    j = trans_obj.json(indent=4)
-
-    logger.info("Writing transaction file to: %s", args.output_file.name)
-    with args.output_file as f:
-        f.write(j)
