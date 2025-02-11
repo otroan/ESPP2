@@ -18,8 +18,6 @@ from fastapi.encoders import jsonable_encoder
 from starlette.responses import FileResponse
 from espp2.main import (
     do_taxes,
-    do_holdings_1,
-    do_holdings_4,
     get_zipdata,
 )
 from espp2.datamodels import ESPPResponse, Wires, Holdings
@@ -42,45 +40,6 @@ def capture_logs_stop(log_handler) -> str:
   log_handler.flush()
   log_handler.stream.flush()
   return log_handler.stream.getvalue()
-
-@app.post("/holdings_1/", response_model=Holdings)
-async def generate_holdings_1(
-    transaction_files: list[UploadFile],
-    broker: str = Form(...),
-    holdfile: UploadFile | None = None,
-    # opening_balance: str = Form(...),
-    year: int = Form(...),
-):
-    """Generate previous year holdings from a plethora of transaction files"""
-    opening_balance = None
-
-    if holdfile and holdfile.filename == "":
-        holdfile = None
-    elif holdfile:
-        holdfile = holdfile.file
-    try:
-        return do_holdings_1(
-            broker, transaction_files, holdfile, year, portfolio_engine=True,
-            opening_balance=opening_balance
-        )
-    except Exception as e:
-        logger.exception(e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
-
-@app.post("/holdings_4/", response_model=Holdings)
-async def generate_holdings_4(
-    transaction_file: UploadFile, broker: str = Form(...), year: int = Form(...)
-):
-    """
-    Calculate holdings based on the Morgan HTML file.
-    """
-    try:
-        return do_holdings_4(broker, transaction_file, year)
-    except Exception as e:
-        logger.exception(e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
 
 @app.post("/taxreport/", response_model=ESPPResponse)
 async def taxreport(
