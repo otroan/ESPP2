@@ -63,7 +63,6 @@ def main(  # noqa: C901
     version: bool = typer.Option(
         None, "--version", callback=version_callback, is_eager=True
     ),
-    preheat: bool = False,
     expected_balance: str = None,
 ):
     """ESPPv2 tax reporting tool"""
@@ -74,10 +73,6 @@ def main(  # noqa: C901
     logging.basicConfig(
         level=lognames[loglevel], handlers=[RichHandler(rich_tracebacks=False)]
     )
-
-    if preheat:
-        preheat_cache()
-        return
 
     if opening_balance:
         if os.path.isfile(opening_balance):
