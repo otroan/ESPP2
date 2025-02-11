@@ -19,8 +19,6 @@ from starlette.responses import FileResponse
 from espp2.main import (
     do_taxes,
     do_holdings_1,
-    do_holdings_2,
-    do_holdings_3,
     do_holdings_4,
     get_zipdata,
 )
