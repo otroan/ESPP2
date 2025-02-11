@@ -356,7 +356,6 @@ def do_taxes(
     year,
     portfolio_engine,
     verbose=False,
-    opening_balance=None,
     feature_flags=[]
 ) -> Tuple[TaxReport, Holdings, TaxSummary]:
     """Do taxes
@@ -374,11 +373,6 @@ def do_taxes(
     if year + 1 not in years:
         logger.error(f"No transactions into the year after the tax year {year+1}")
 
-    if holdfile and opening_balance:
-        raise ESPPErrorException(
-            "Cannot specify both opening balance and holdings file"
-        )
-
     if wirefile and not isinstance(wirefile, Wires):
         wires = json_load(wirefile)
         wires = Wires(wires)
@@ -390,8 +384,6 @@ def do_taxes(
         prev_holdings = json_load(holdfile)
         prev_holdings = Holdings(**prev_holdings)
         logger.info("Holdings file read")
-    elif opening_balance:
-        prev_holdings = opening_balance
 
     if prev_holdings and prev_holdings.year != year - 1:
         raise ESPPErrorException("Holdings file for previous year not found")
@@ -401,23 +393,16 @@ def do_taxes(
 
 def do_holdings_1(
     broker, transaction_files: list, holdfile, year, portfolio_engine,
-    verbose=False, opening_balance=None
+    verbose=False
 ) -> Holdings:
     """Generate holdings file"""
     prev_holdings = []
     transactions, years = merge_transactions(transaction_files)
 
-    if holdfile and opening_balance:
-        raise ESPPErrorException(
-            "Cannot specify both opening balance and holdings file"
-        )
-
     if holdfile:
         prev_holdings = json_load(holdfile)
         prev_holdings = Holdings(**prev_holdings)
         logger.info("Holdings file read")
-    elif opening_balance:
-        prev_holdings = opening_balance
 
     logger.info("Changes in holdings for previous year")
     holdings = generate_previous_year_holdings(
