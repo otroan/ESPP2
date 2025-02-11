@@ -36,6 +36,8 @@ def get_saleprice(csv_item):
 def get_grossproceeds(csv_item):
     total = Decimal("0.00")
     for e in csv_item["TransactionDetails"]:
+        if e["Details"]["Shares"] == "0":
+            continue
         price = e["Details"]["GrossProceeds"]
         total += Decimal(price.replace("$", "").replace(",", ""))
 
