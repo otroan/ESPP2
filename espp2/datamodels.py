@@ -379,17 +379,15 @@ class Stock(BaseModel):
     tax_deduction: Decimal
     purchase_price: Amount
 
-    # @validator('purchase_price', pre=True, always=True)
-    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
-    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
-    @validator("purchase_price", pre=True, always=True)
-    def set_purchase_price(cls, value, values):
+    @field_validator("purchase_price", mode="before")
+    @classmethod
+    def set_purchase_price(cls, value, info):
         """Set purchase price and calculate nok value if needed"""
         if isinstance(value, Amount):
             return value
         if "nok_exchange_rate" not in value:
             return Amount(
-                amountdate=values["date"],
+                amountdate=info.data["date"],
                 currency=value["currency"],
                 value=value["value"],
             )

@@ -8,7 +8,7 @@ from openpyxl import Workbook
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, field_validator
 from datetime import date, datetime
 from decimal import Decimal
 from espp2.datamodels import (
@@ -73,9 +73,10 @@ class PortfolioPosition(BaseModel):
     coord: Dict[str, str] = {}
     split: bool = False
 
-    @validator('pre_split_qty', pre=True, always=True)
-    def set_pre_split_qty(cls, v, values):
-        return v or values.get('qty')
+    @field_validator('pre_split_qty', mode='before')
+    @classmethod
+    def set_pre_split_qty(cls, v, info):
+        return v or info.data.get('qty')
 
     def get_coord(self, key):
         return self.coord[key]

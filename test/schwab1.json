@@ -1,0 +1,236 @@
+{
+  "FromDate": "02/11/2021",
+  "ToDate": "02/11/2025",
+  "Transactions": [
+    {
+      "Date": "01/22/2025",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$6.18",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/22/2025",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$41.20",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "11/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "9",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/09/2022",
+            "AwardId": "1610233",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "11/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "25",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/08/2023",
+            "AwardId": "1630903",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "10/23/2024",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$27.60",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "10/23/2024",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$4.14",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "08/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "9",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/09/2022",
+            "AwardId": "1610233",
+            "VestDate": "08/10/2024",
+            "VestFairMarketValue": "$45.47"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "07/24/2024",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$3.60",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "07/24/2024",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$24.00",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "05/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "9",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/09/2022",
+            "AwardId": "1610233",
+            "VestDate": "05/10/2024",
+            "VestFairMarketValue": "$47.79"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "04/24/2024",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$3.06",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "04/24/2024",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$20.40",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "02/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "10",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/09/2022",
+            "AwardId": "1610233",
+            "VestDate": "02/10/2024",
+            "VestFairMarketValue": "$50.13"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "01/24/2024",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$2.40",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/24/2024",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$15.99",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "11/13/2023",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "41",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/09/2022",
+            "AwardId": "1610233",
+            "VestDate": "11/10/2023",
+            "VestFairMarketValue": "$52.00"
+          }
+        }
+      ]
+    }
+  ]
+}

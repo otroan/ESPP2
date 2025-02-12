@@ -1,5 +1,3 @@
-import espp2.plugins.csco_espp_purchases as csco_espp_purchases
-import espp2.plugins.csco_stock_transactions as csco_stock_transactions
 from espp2.datamodels import Transactions
 from espp2.positions import Ledger
 from espp2.report import print_ledger
@@ -8,77 +6,26 @@ from espp2.espp2 import app
 from typer.testing import CliRunner
 
 
-def test_cisco_import():
-    trans = []
-    with open("test/My_ESPP_Purchases.xlsx", "rb") as f:
-        t = csco_espp_purchases.read(f)
-    assert isinstance(t, Transactions)
-    trans += t.transactions
-    # with open('test/My_ESPP_Transactions.xlsx', 'rb') as f:
-    #     t = csco_espp_transactions.read(f)
-    # assert isinstance(t, Transactions)
-    # trans += t.transactions
-
-    with open("test/My_Stock_Transactions.xlsx", "rb") as f:
-        t = csco_stock_transactions.read(f)
-    assert isinstance(t, Transactions)
-    trans += t.transactions
-
-    all = Transactions(transactions=trans)
-
-    ledger = Ledger([], all.transactions)
-    console = Console()
-    print_ledger(ledger.entries, console)
-
 
 runner = CliRunner()
 
+# Test files:
+# test/schwab1.json:
+#   - Complete transactions from 2023 until 2025
+#     Requires first to generate holdings for 2023, then tax generation for 2024
 
 def test_full_run(tmp_path):
-    outholdings_2021 = tmp_path / "outholdings-2021.json"
-    outholdings_2022 = tmp_path / "outholdings-2022.json"
+    holdings_2023 = tmp_path / "holdings-2023.json"
 
+    # Run for 2023 to generate outholdings
     result = runner.invoke(
-        app, ["test/schwab.csv", "test/espp.pickle", "--outholdings", outholdings_2021]
+        app, ["test/schwab1.json", "--verbose", "--year=2023", "--outholdings", holdings_2023]
     )
+    print('RESULT', result.stdout)
     assert result.exit_code == 0
 
     result = runner.invoke(
-        app,
-        [
-            "test/schwab.csv",
-            "--inholdings",
-            outholdings_2021,
-            "--outholdings",
-            outholdings_2022,
-        ],
+        app, ["test/schwab1.json", "--verbose", "--year=2024", "--inholdings", holdings_2023]
     )
-    print('RESULT', result)
-    assert result.exit_code == 0
-
-
-def test_opening_balance():
-    opening_balance = """
-{
-    "stocks": [
-        {
-            "symbol": "CSCO",
-            "date": "2019-12-31",
-            "qty": 1885,
-            "tax_deduction": 0,
-            "purchase_price": {
-                "currency": "USD",
-                "value": 53.43
-            }
-        }
-    ],
-    "cash": [],
-    "year": 2019,
-    "broker": "schwab"
-}
-"""
-
-    result = runner.invoke(
-        app, ["test/schwab.csv", "--verbose", "--opening-balance", opening_balance]
-    )
+    print('RESULT', result.stdout)
     assert result.exit_code == 0
