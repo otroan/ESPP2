@@ -9,7 +9,7 @@ caches them in a set of JSON files.
 
 import os
 import json
-from importlib.resources import files
+from importlib import resources
 from enum import Enum
 from datetime import date, datetime, timedelta
 from typing import Union, Tuple
@@ -38,9 +38,8 @@ class FMVException(Exception):
 logger = logging.getLogger(__name__)
 
 # Load manually maintained exchange rates / tax deduction rates
-with files('espp2').joinpath('data.json').open('r', encoding='utf-8') as f:
+with resources.files('espp2').joinpath('data.json').open('r', encoding='utf-8') as f:
     MANUALRATES = json.load(f)
-
 
 def get_espp_exchange_rate(ratedate):
     """Return the 6 month P&L average. Manually maintained for now."""
@@ -80,8 +79,9 @@ class FMVTypeEnum(Enum):
 
 
 # Store downloaded files in cache directory under current directory
-CACHE_DIR = "cache"
-
+# CACHE_DIR = "cache"
+# Find data directory from resources
+DATA_DIR = resources.files('espp2').joinpath('data')
 
 def todate(datestr: str) -> date:
     """Convert string to datetime"""
@@ -97,8 +97,8 @@ class FMV:
         if cls._instance is None:
             cls._instance = super(FMV, cls).__new__(cls)
             # Put any initialization here.
-            if not os.path.exists(CACHE_DIR):
-                os.makedirs(CACHE_DIR)
+            # if not os.path.exists(CACHE_DIR):
+            #     os.makedirs(CACHE_DIR)
 
             cls.fetchers = {
                 FMVTypeEnum.STOCK: cls.fetch_stock2,
@@ -197,7 +197,7 @@ class FMV:
 
     def get_filename(self, fmvtype: FMVTypeEnum, symbol):
         """Get filename for symbol"""
-        return f"{CACHE_DIR}/{fmvtype}_{symbol}.json"
+        return f"{DATA_DIR}/{fmvtype}_{symbol}.json"
 
     def load(self, fmvtype: FMVTypeEnum, symbol):
         """Load data for symbol"""
@@ -247,10 +247,10 @@ class FMV:
         if isinstance(input_date, str):
             try:
                 date_obj = datetime.strptime(input_date, "%Y-%m-%d").date()
-            except ValueError:
+            except ValueError as exc:
                 raise ValueError(
                     f"Invalid date format '{input_date}'. Use 'YYYY-MM-DD' format."
-                )
+                ) from exc
         elif isinstance(input_date, datetime):
             date_obj = input_date.date()
         elif isinstance(input_date, date):
