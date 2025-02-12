@@ -111,7 +111,7 @@ def sale(csv_item, source):
     g += fee
 
     if not math.isclose(g.value, grossproceeds.value, abs_tol=5):
-        logger.error(f"Gross proceeds mismatch: {g} != {grossproceeds}. {d} {csv_item["Description"]}")
+        logger.error(f"Gross proceeds mismatch: {g} != {grossproceeds}. {d} {csv_item['Description']}")
         grossproceeds = g
     qty = fixup_number(csv_item["Quantity"])
 
