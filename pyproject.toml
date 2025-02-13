@@ -14,7 +14,9 @@ write_to = "espp2/_version.py"
 
 [tool.setuptools]
 packages = ['espp2']
-package_data = { "espp2" = ["data/*"] }
+
+[tool.setuptools.package-data]
+espp2 = ["data/*"]
 
 [project]
 name = "espp2"
@@ -39,4 +41,3 @@ repository = "https://github.com/otroan/ESPP2"
 [project.scripts]
 espp2 = "espp2.espp2:app"
 espp2_transactions = "espp2.transactions:main"
-espp2_dataproxy = "espp2.dataproxy.dataproxy:app"
