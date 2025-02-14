@@ -16,8 +16,10 @@ logger = logging.getLogger(__name__)
 
 f = FMV()
 
+
 class CashException(Exception):
     """Cash exception"""
+
 
 class Cash:
     """Cash balance"""
@@ -143,10 +145,7 @@ class Cash:
                     continue
                 if amount_to_sell >= amount:
                     if is_transfer:
-                        total_paid_price_nok += (
-                            debit[posidx].amount.value
-                            * debit[posidx].amount.nok_exchange_rate
-                        )
+                        total_paid_price_nok += debit[posidx].amount.nok_value
                     amount_to_sell -= amount
                     # Clear the amount??
                     # Amount(**dict.fromkeys(debit[posidx].amount, 0))
@@ -162,7 +161,8 @@ class Cash:
 
             if amount_to_sell > 0:
                 logger.error(
-                    f'Transferring more money than is in cash account {amount_to_sell} {e}')
+                    f"Transferring more money than is in cash account {amount_to_sell} {e}"
+                )
 
             # Only care about tranfers
             if is_transfer:
@@ -193,9 +193,6 @@ class Cash:
         cash_holdings = []
         for e in debit:
             if e.amount.value > 0:
-                e.amount.nok_value = (
-                    e.amount.value * e.amount.nok_exchange_rate
-                )  # Reset this after selling
                 cash_holdings.append(
                     CashEntry(date=e.date, description=e.description, amount=e.amount)
                 )

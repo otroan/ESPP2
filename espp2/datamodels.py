@@ -47,65 +47,170 @@ class EntryTypeEnum(str, Enum):
 
 
 class Amount(BaseModel):
-    """Amount"""
+    """Amount represents a monetary value in a specific currency with lazy conversion capabilities"""
 
     currency: str
-    nok_exchange_rate: Decimal
-    nok_value: Decimal
     value: Decimal
+    _exchange_rates: Dict[str, Decimal] = {}
+    _converted_values: Dict[str, Decimal] = {}
+    amountdate: Optional[date] = None
+    legacy_nok_rate: Optional[Decimal] = None
 
-    def __init__(self, amountdate=None, **data):
-        """Initialize amount from currency, date and value"""
-        if amountdate and "nok_exchange_rate" not in data:
-            exchange_rate = fmv.get_currency(data["currency"], amountdate)
-            data["nok_exchange_rate"] = exchange_rate
-            data["nok_value"] = Decimal(str(data["value"])) * exchange_rate
-        elif not data:
-            data["nok_exchange_rate"] = 0
-            data["nok_value"] = 0
-            data["currency"] = "NA"
-            data["value"] = 0
-        super().__init__(**data)
+    @model_validator(mode="before")
+    @classmethod
+    def handle_legacy_format(cls, values):
+        """Handle legacy format that includes nok_exchange_rate and nok_value"""
+        if isinstance(values, dict) and "nok_exchange_rate" in values:
+            return {
+                "currency": values["currency"],
+                "value": Decimal(values["value"]),
+                "legacy_nok_rate": Decimal(values["nok_exchange_rate"]),
+                "amountdate": values.get("amountdate", None),
+            }
+        return values
+
+    def get_in(self, target_currency: str) -> Decimal:
+        """Get the amount in the target currency"""
+        if target_currency == self.currency:
+            return self.value
+        # Handle legacy USD-NOK conversion
+        if self.legacy_nok_rate is not None:
+            if self.currency == "USD" and target_currency == "NOK":
+                return self.value * self.legacy_nok_rate
+            if self.currency == "NOK" and target_currency == "USD":
+                return self.value / self.legacy_nok_rate
+
+        # For all other conversions, require a date
+        if self.amountdate is None:
+            raise ValueError(
+                f"Cannot convert {self.currency} to {target_currency} without a date"
+            )
+
+        if target_currency not in self._converted_values:
+            rate = self._get_exchange_rate(target_currency)
+            self._converted_values[target_currency] = self.value * rate
+
+        return self._converted_values[target_currency]
+
+    def _get_exchange_rate(self, target_currency: str) -> Decimal:
+        """Get exchange rate for target currency (with caching)"""
+        if target_currency not in self._exchange_rates:
+            self._exchange_rates[target_currency] = fmv.get_currency(
+                self.currency, self.amountdate, target_currency
+            )
+        return self._exchange_rates[target_currency]
+
+    @property
+    def nok_value(self) -> Decimal:
+        """Convenience property for NOK conversion (maintained for compatibility)"""
+        return self.get_in("NOK")
+
+    @property
+    def nok_exchange_rate(self) -> Decimal:
+        """Convenience property for NOK conversion (maintained for compatibility)"""
+        if self.amountdate is None and self.legacy_nok_rate is not None:
+            return self.legacy_nok_rate
+        return self._get_exchange_rate("NOK")
 
     def __str__(self):
-        if self.currency == "USD":
-            return f"${self.value}"
-        return f"{self.currency}{self.value}"
+        """String representation with currency symbol"""
+        symbols = {
+            "USD": "$",
+            "EUR": "€",
+            "GBP": "£",
+            # Add more currency symbols as needed
+        }
+        symbol = symbols.get(self.currency, self.currency)
+        return f"{symbol}{self.value} ({self.amountdate})"
 
-    def __format__(self, format_spec):
-        return f"${self.value:{format_spec}}"
+    def __format__(self, format_spec: str) -> str:
+        """Format the amount. Delegates to __str__ if no format specified"""
+        if format_spec == "":
+            return self.value
+        # Handle specific format specs if needed
+        return format(self.value, format_spec)
 
-    def __mul__(self, qty: Decimal):
+    def __mul__(self, qty: Decimal) -> "Amount":
+        """Multiply amount by a quantity"""
         result = self.model_copy()
-        result.value = result.value * qty
-        result.nok_value = result.nok_value * qty
+        result.value *= qty
+        # Scale any existing converted values
+        result._converted_values = {
+            curr: value * qty for curr, value in self._converted_values.items()
+        }
         return result
 
-    def __add__(self, other):
+    def __add__(self, other: "Amount") -> "Amount":
+        """Add two amounts (must be same currency)"""
+        if self.currency != other.currency:
+            raise ValueError(
+                f"Cannot add different currencies: {self.currency} and {other.currency}"
+            )
+
         result = self.model_copy()
-        result.value = result.value + other.value
-        result.nok_value = result.nok_value + other.nok_value
+        result.value += other.value
+
+        # Combine converted values where both amounts have them
+        result._converted_values = {}
+        for currency in set(self._converted_values) & set(other._converted_values):
+            result._converted_values[currency] = (
+                self._converted_values[currency] + other._converted_values[currency]
+            )
+
         return result
 
-    def __sub__(self, other):
+    def __sub__(self, other: "Amount") -> "Amount":
+        """Subtract two amounts (must be same currency)"""
+        # Check if self.currency or other.currency are ESPPUSD and USD.
+        # Then allow the subtraction.
+        if (
+            not (self.currency == "ESPPUSD" and other.currency == "USD")
+            and not (self.currency == "USD" and other.currency == "ESPPUSD")
+            and self.currency != other.currency
+        ):
+            raise ValueError(
+                f"Cannot subtract different currencies: {self.currency} and {other.currency}"
+            )
+
         result = self.model_copy()
-        result.value = result.value - other.value
-        result.nok_value = result.nok_value - other.nok_value
+        result.value -= other.value
+
+        # Combine converted values where both amounts have them
+        result._converted_values = {}
+        for currency in set(self._converted_values) & set(other._converted_values):
+            result._converted_values[currency] = (
+                self._converted_values[currency] - other._converted_values[currency]
+            )
+
         return result
 
-    def __radd__(self, other):
+    def __radd__(self, other) -> "Amount":
+        """Support sum() operation"""
         if isinstance(other, int) and other == 0:
             return self
-        result = self.model_copy()
-        result.value = result.value + other.value
-        result.nok_value = result.nok_value + other.nok_value
-        return result
+        return self.__add__(other)
+
+    @classmethod
+    def zero(cls, currency: str = "USD") -> "Amount":
+        """Create a zero amount in the specified currency"""
+        return cls(currency=currency, value=Decimal("0"))
+
+    def convert_to(self, target_currency: str) -> "Amount":
+        """Create a new Amount instance in the target currency"""
+        if target_currency == self.currency:
+            return self.model_copy()
+
+        return Amount(
+            currency=target_currency,
+            value=self.get_in(target_currency),
+            amountdate=self.amountdate,
+        )
 
 
 class PositiveAmount(Amount):
     """Positive amount"""
 
-    @field_validator("value", "nok_value")
+    # @field_validator("value", "nok_value")
     @classmethod
     def value_validator(cls, v):
         """Validate value"""
@@ -117,13 +222,41 @@ class PositiveAmount(Amount):
 class NegativeAmount(Amount):
     """Negative amount"""
 
-    @field_validator("value", "nok_value")
+    # @field_validator("value", "nok_value")
     @classmethod
     def value_validator(cls, v):
         """Validate value"""
         if v > 0:
             raise ValueError("Must be negative value", v)
         return v
+
+
+class GainAmount(BaseModel):
+    """Represents a gain/loss between two Amount instances, handling both USD and NOK calculations"""
+
+    value: Decimal  # USD gain/loss
+    nok_buy_value: Decimal  # Original NOK cost basis
+    nok_sell_value: Decimal  # NOK value of sale
+    nok_value: Decimal  # Total NOK gain/loss
+
+    @classmethod
+    def from_amounts(cls, sell_amount: Amount, buy_amount: Amount):
+        """Calculate gain from sell and buy amounts"""
+        return cls(
+            value=sell_amount.value - buy_amount.value,
+            nok_buy_value=buy_amount.nok_value,
+            nok_sell_value=sell_amount.nok_value,
+            nok_value=sell_amount.nok_value - buy_amount.nok_value,
+        )
+
+    def __mul__(self, qty: Decimal) -> "GainAmount":
+        """Allow multiplication by quantity"""
+        return GainAmount(
+            value=self.value * qty,
+            nok_buy_value=self.nok_buy_value * qty,
+            nok_sell_value=self.nok_sell_value * qty,
+            nok_value=self.nok_value * qty,
+        )
 
 
 duplicates = {}
@@ -145,6 +278,7 @@ def get_id(values: Dict[str, Any]):
         pass
     return id + ":" + str(duplicates[d])
 
+
 class TransactionEntry(BaseModel):
     @model_validator(mode="after")
     @classmethod
@@ -152,6 +286,7 @@ class TransactionEntry(BaseModel):
         """Validate id"""
         v.id = get_id(v)
         return v
+
 
 class Buy(TransactionEntry):
     """Buy transaction"""
@@ -187,14 +322,6 @@ class Deposit(TransactionEntry):
     purchase_date: Optional[date] = None
     source: str
     id: str = Optional[str]
-
-    @field_validator("purchase_price")
-    @classmethod
-    def purchase_price_validator(cls, v, values):
-        """Validate purchase price"""
-        if v.nok_value < 0 or v.value < 0:
-            raise ValueError("Negative values for purchase price", values)
-        return v
 
     model_config = ConfigDict(extra="allow")
 
@@ -280,7 +407,7 @@ class Sell(TransactionEntry):
     symbol: str
     qty: Annotated[Decimal, Field(lt=0)]
     fee: Optional[NegativeAmount] = None
-    amount: Amount # Net amount after fees
+    amount: Amount  # Net amount after fees
     description: str
     source: str
     id: str = Optional[str]
@@ -340,6 +467,7 @@ Entry = Annotated[
 
 class Transactions(BaseModel):
     """Transactions"""
+
     fromdate: date = None
     todate: date = None
     transactions: list[Entry]
@@ -424,14 +552,59 @@ class EOYBalanceItem(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
+class NativeAmount(BaseModel):
+    """Represents monetary values in their native currencies without conversion capabilities"""
+
+    values: Dict[str, Decimal]
+
+    def __init__(self, **kwargs):
+        """Initialize from currency_value keyword arguments (e.g., usd_value=100)"""
+        values = {}
+        # If values dict is provided directly, use it
+        if "values" in kwargs:
+            values = kwargs["values"]
+        else:
+            # Otherwise parse currency_value keyword arguments
+            for key, value in kwargs.items():
+                if key.endswith("_value"):
+                    currency = key[:-6].upper()
+                    values[currency] = Decimal(str(value))
+        super().__init__(values=values)
+
+    def __getattr__(self, name: str) -> Decimal:
+        """Dynamic currency value access (e.g., usd_value, nok_value)"""
+        if name.endswith("_value"):
+            currency = name[:-6].upper()
+            if currency not in self.values:
+                raise ValueError(f"No value stored for currency {currency}")
+            return self.values[currency]
+        raise AttributeError(f"'NativeAmount' has no attribute '{name}'")
+
+    def __add__(self, other: "NativeAmount") -> "NativeAmount":
+        """Add two NativeAmount instances together"""
+        result = {}
+        # Add values from self
+        for curr, val in self.values.items():
+            result[curr] = val
+        # Add values from other, combining where currencies match
+        for curr, val in other.values.items():
+            if curr in result:
+                result[curr] += val
+            else:
+                result[curr] = val
+        return NativeAmount(values=result)
+
+    def __str__(self):
+        return ", ".join(f"{curr}{val}" for curr, val in self.values.items())
+
 class EOYDividend(BaseModel):
     """EOY dividend"""
 
     symbol: str
-    amount: Amount
-    gross_amount: Amount
-    post_tax_inc_amount: Optional[Amount] = None
-    tax: Amount  # Negative
+    amount: NativeAmount
+    gross_amount: NativeAmount
+    post_tax_inc_amount: Optional[NativeAmount] = None
+    tax: NativeAmount  # Negative
     tax_deduction_used: Decimal  # NOK
 
 
@@ -443,7 +616,7 @@ class SalesPosition(BaseModel):
     sale_price: Amount
     purchase_price: Amount
     purchase_date: date
-    gain_ps: Amount
+    gain_ps: GainAmount
     tax_deduction_used: Decimal
 
 
@@ -548,4 +721,3 @@ class ESPPResponse(BaseModel):
     summary: TaxSummary
     holdings: Holdings
     log: str
-

@@ -38,8 +38,9 @@ class FMVException(Exception):
 logger = logging.getLogger(__name__)
 
 # Load manually maintained exchange rates / tax deduction rates
-with resources.files('espp2').joinpath('data.json').open('r', encoding='utf-8') as f:
+with resources.files("espp2").joinpath("data.json").open("r", encoding="utf-8") as f:
     MANUALRATES = json.load(f)
+
 
 def get_espp_exchange_rate(ratedate):
     """Return the 6 month P&L average. Manually maintained for now."""
@@ -81,7 +82,8 @@ class FMVTypeEnum(Enum):
 # Store downloaded files in cache directory under current directory
 # CACHE_DIR = "cache"
 # Find data directory from resources
-DATA_DIR = resources.files('espp2').joinpath('data')
+DATA_DIR = resources.files("espp2").joinpath("data")
+
 
 def todate(datestr: str) -> date:
     """Convert string to datetime"""
@@ -276,10 +278,14 @@ class FMV:
                 date_str = str(itemdate)
         return math.nan
 
-    def get_currency(self, currency: str, date_union: Union[str, datetime]) -> float:
+    def get_currency(
+        self,
+        currency: str,
+        date_union: Union[str, datetime],
+        target_currency: str = "NOK",
+    ) -> float:
         """Get currency value. If not found, iterate backwards until found."""
         itemdate, date_str = self.extract_date(date_union)
-
         if currency == "ESPPUSD":
             try:
                 return get_espp_exchange_rate(date_str)

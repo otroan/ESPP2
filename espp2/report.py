@@ -18,8 +18,8 @@ def print_report_dividends(dividends: list[EOYDividend], console: Console):
     for d in dividends:
         table.add_row(
             d.symbol,
-            f"{d.amount.nok_value:.2f}  ${d.amount.value:.2f}",
-            f"{d.tax.nok_value:.2f}  ${d.tax.value:.2f}",
+            f"{d.amount.nok_value:.2f}  ${d.amount.usd_value:.2f}",
+            f"{d.tax.nok_value:.2f}  ${d.tax.usd_value:.2f}",
             f"{d.tax_deduction_used:.2f}",
         )
     console.print(table)
@@ -74,7 +74,7 @@ def print_report_sales(report: TaxReport, console: Console):
         for i, e in enumerate(v):
             sale_price = abs(e.amount.value / e.qty)
             sale_price_nok = abs(e.amount.nok_value / e.qty)
-            if e.totals["gain"].value < 0:
+            if e.totals["gain"].usd_value < 0:
                 style = "red"
             else:
                 style = "green"
@@ -102,7 +102,7 @@ def print_report_sales(report: TaxReport, console: Console):
                 str(e.date),
                 f"{sale_price_nok:.2f} ${sale_price:.2f}",
                 f"{e.amount.nok_value:.2f}  ${e.amount.value:.2f}",
-                f'{e.totals["gain"].nok_value:.2f}  ${e.totals["gain"].value:.2f}',
+                f'{e.totals["gain"].nok_value:.2f}  ${e.totals["gain"].usd_value:.2f}',
                 buy_positions,
                 style=style,
             )

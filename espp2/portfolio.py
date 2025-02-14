@@ -28,6 +28,8 @@ from espp2.datamodels import (
     Tax,
     PositiveAmount,
     NegativeAmount,
+    GainAmount,
+    NativeAmount,
 )
 from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals, todate
 from espp2.cash import Cash
@@ -179,8 +181,8 @@ class PortfolioSale(BaseModel):
     saledate: date
     qty: Decimal
     sell_price: Amount
-    gain_ps: Amount
-    gain: Amount
+    gain_ps: GainAmount
+    gain: GainAmount
     total: Amount
     tax_deduction_used: Decimal = 0
     tax_deduction_used_total: Decimal = 0
@@ -459,8 +461,8 @@ class Portfolio:
                     sold = p.current_qty
                     shares_to_sell -= p.current_qty
                     p.current_qty = 0
-                gain_ps = sell_price - p.purchase_price
-                gain = (sell_price - p.purchase_price) * sold
+                gain_ps = GainAmount.from_amounts(sell_price, p.purchase_price)
+                gain = gain_ps * abs(sold)
                 s = PortfolioSale(
                     saledate=transaction.date,
                     qty=-sold,
@@ -557,7 +559,7 @@ class Portfolio:
                 amount=v.amount,
                 from_positions=[],
                 totals={
-                    'gain': 0,
+                    'gain': NativeAmount(usd_value=0, nok_value=0),
                     'purchase_price': 0,
                     'tax_ded_used': 0,
                     },
@@ -579,8 +581,10 @@ class Portfolio:
                 if isinstance(r, PortfolioSale):
                     record = srecords.get(r.id)
                     record.from_positions.append(portfoliosale_to_salesposition(r))
-                    record.totals['gain'] += r.gain
-
+                    record.totals['gain'] += NativeAmount(
+                        usd_value=r.gain.value,
+                        nok_value=r.gain.nok_value,
+                    )
                     # Average purchase price
                     purchase_price = record.totals['purchase_price']
                     record.totals['purchase_price'] = (purchase_price + r.parent.purchase_price.value) / len(record.from_positions)
@@ -724,26 +728,19 @@ class Portfolio:
                         usd += r.dividend.value
                         nok += r.dividend.nok_value
                         tax_ded_used += r.tax_deduction_used_total
-
             result.append(EOYDividend(
                 symbol=s,
-                amount=Amount(
-                    currency="USD",
-                    value=usd,
+                amount=NativeAmount(
+                    usd_value=usd,
                     nok_value=nok - tax_ded_used,
-                    nok_exchange_rate=0,
                 ),
-                gross_amount=Amount(
-                    currency="USD",
-                    value=usd,
+                gross_amount=NativeAmount(
+                    usd_value=usd,
                     nok_value=nok,
-                    nok_exchange_rate=0,
                 ),
-                tax=Amount(
-                    currency="USD",
-                    value=tax_usd,
+                tax=NativeAmount(
+                    usd_value=tax_usd,
                     nok_value=tax_nok,
-                    nok_exchange_rate=0,
                 ),
                 tax_deduction_used=tax_ded_used,
             ))

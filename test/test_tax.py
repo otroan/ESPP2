@@ -8,6 +8,7 @@ from espp2.datamodels import (
     Wire,
 )
 from espp2.positions import Positions
+from espp2.portfolio import Portfolio
 import logging
 import datetime
 
@@ -61,10 +62,10 @@ def test_dividends(caplog):
 
     t = Transactions(transactions=transactions)
     # c = Cash(2022, t.transactions, None)
-    p = Positions(2022, None, t.transactions)
+    p = Portfolio(2022, "schwab", t.transactions, None, None, False, [])
     dividends = p.dividends()
     assert dividends[0].symbol == "CSCO"
-    assert dividends[0].amount.value == 38
+    assert dividends[0].amount.usd_value == 38
     for record in caplog.records:
         if record.funcName == "dividends":
             assert (

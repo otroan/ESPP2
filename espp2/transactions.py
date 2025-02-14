@@ -79,12 +79,6 @@ def guess_format(filename, data) -> str:  # noqa: C901
         if filebytes[0:1] == b"<":
             return "morgan"
 
-    if extension == ".xlsx":
-        if "My_ESPP_Purchases" in fname:
-            return "csco_espp_purchases"
-        elif "My_Stock_Transactions" in fname:
-            return "csco_stock_transactions"
-
     raise ValueError("Unable to guess format", fname, extension, filebytes)
 
 
