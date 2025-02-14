@@ -541,6 +541,10 @@ class Holdings(BaseModel):
     stocks: list[Stock]
     cash: list[CashEntry]
 
+    def sum_qty(self):
+        """Sum the quantity of all stocks"""
+        return sum(stock.qty for stock in self.stocks)
+
 
 class EOYBalanceItem(BaseModel):
     """EOY balance item"""

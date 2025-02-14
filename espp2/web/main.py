@@ -27,19 +27,22 @@ logger = logging.getLogger()
 
 app = FastAPI()
 
+
 def capture_logs_start() -> logging.StreamHandler:
-  log_stream = StringIO()
-  log_handler = logging.StreamHandler(log_stream)
-  formatter = logging.Formatter("%(levelname)s: %(message)s")
-  log_handler.setFormatter(formatter)
-  logger.addHandler(log_handler)
-  return log_handler
+    log_stream = StringIO()
+    log_handler = logging.StreamHandler(log_stream)
+    formatter = logging.Formatter("%(levelname)s: %(message)s")
+    log_handler.setFormatter(formatter)
+    logger.addHandler(log_handler)
+    return log_handler
+
 
 def capture_logs_stop(log_handler) -> str:
-  logger.removeHandler(log_handler)
-  log_handler.flush()
-  log_handler.stream.flush()
-  return log_handler.stream.getvalue()
+    logger.removeHandler(log_handler)
+    log_handler.flush()
+    log_handler.stream.flush()
+    return log_handler.stream.getvalue()
+
 
 @app.post("/taxreport/", response_model=ESPPResponse)
 async def taxreport(
@@ -82,11 +85,13 @@ async def taxreport(
             (f"espp-portfolio-{year}.xlsx", exceldata),
         ]
     )
-    zipstr = jsonable_encoder(zipdata, custom_encoder={
-        bytes: lambda v: base64.b64encode(v).decode('utf-8')})
+    zipstr = jsonable_encoder(
+        zipdata, custom_encoder={bytes: lambda v: base64.b64encode(v).decode("utf-8")}
+    )
     logstr = capture_logs_stop(log_handler)
-    return ESPPResponse(tax_report=report, holdings=holdings, zip=zipstr, summary=summary,
-                        log=logstr)
+    return ESPPResponse(
+        tax_report=report, holdings=holdings, zip=zipstr, summary=summary, log=logstr
+    )
 
 
 # This seems to keep us from caching the files too agressively.

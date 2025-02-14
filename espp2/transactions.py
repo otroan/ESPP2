@@ -81,18 +81,23 @@ def guess_format(filename, data) -> str:  # noqa: C901
 
     raise ValueError("Unable to guess format", fname, extension, filebytes)
 
+def plugin_read(fd, filename, trans_format):
+    plugin_path = "espp2.plugins." + trans_format
+    plugin = importlib.import_module(plugin_path, package="espp2")
+    logger.info("Importing transactions with importer %s: %s", trans_format, filename)
+    return plugin.read(fd, filename)
 
-def normalize(data: Union[UploadFile, typer.FileText]) -> Transactions:
+def normalize(data: Union[UploadFile, typer.FileText, str]) -> Transactions:
     """Normalize transactions"""
-    if isinstance(data, starlette.datastructures.UploadFile):
+    if isinstance(data, str):
+        filename = data
+        fd = open(data, 'r', encoding='utf-8')
+    elif isinstance(data, starlette.datastructures.UploadFile):
         filename = data.filename
         fd = data.file
     else:
         filename = data.name
         fd = data
     trans_format = guess_format(filename, fd)
+    return plugin_read(fd, filename, trans_format)
 
-    plugin_path = "espp2.plugins." + trans_format
-    plugin = importlib.import_module(plugin_path, package="espp2")
-    logger.info("Importing transactions with importer %s: %s", trans_format, filename)
-    return plugin.read(fd, filename)
