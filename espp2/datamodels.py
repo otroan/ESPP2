@@ -532,6 +532,18 @@ class CashEntry(BaseModel):
     amount: Amount
     transfer: Optional[bool] = False
 
+    @model_validator(mode='before')
+    @classmethod
+    def prepare_amount(cls, values):
+        """Ensure amount has the correct date during initialization"""
+        if isinstance(values, dict):
+            if 'amount' in values and 'date' in values:
+                if isinstance(values['amount'], dict):
+                    values['amount']['amountdate'] = values['date']
+        return values
+
+    model_config = ConfigDict(extra="allow")
+
 
 class Holdings(BaseModel):
     """Stock holdings"""

@@ -29,6 +29,7 @@ class BrokerEnum(str, Enum):
     schwab = "schwab"
     # td = "td"
     morgan = "morgan"
+    schwab_individual = "schwab-individual"
 
 
 logger = logging.getLogger(__name__)

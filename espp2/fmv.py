@@ -180,7 +180,8 @@ class FMV:
         raw = json.loads(r.data.decode("utf-8"))
         r = {}
         for element in raw:
-            r[element["paymentDate"]] = element
+            d = element["paymentDate"] if element["paymentDate"] else element["date"]
+            r[d] = element
         return r
 
     def fetch_fundamentals(self, symbol):

@@ -63,7 +63,7 @@ def get_arguments():
     return parser.parse_args()
 
 
-def guess_format(filename, data) -> str:  # noqa: C901
+def guess_format(broker: str, filename, data) -> str:  # noqa: C901
     """Guess format"""
     fname, extension = os.path.splitext(filename)
     extension = extension.lower()
@@ -71,6 +71,9 @@ def guess_format(filename, data) -> str:  # noqa: C901
     data.seek(0)
     filebytes = data.read(32)
     data.seek(0)
+
+    if broker == "schwab-individual":
+        return "schwab-individual"
 
     if extension == ".json":
         return "schwab-json"
@@ -87,7 +90,7 @@ def plugin_read(fd, filename, trans_format):
     logger.info("Importing transactions with importer %s: %s", trans_format, filename)
     return plugin.read(fd, filename)
 
-def normalize(data: Union[UploadFile, typer.FileText, str]) -> Transactions:
+def normalize(data: Union[UploadFile, typer.FileText, str], broker: str) -> Transactions:
     """Normalize transactions"""
     if isinstance(data, str):
         filename = data
@@ -98,6 +101,6 @@ def normalize(data: Union[UploadFile, typer.FileText, str]) -> Transactions:
     else:
         filename = data.name
         fd = data
-    trans_format = guess_format(filename, fd)
+    trans_format = guess_format(broker, filename, fd)
     return plugin_read(fd, filename, trans_format)
 

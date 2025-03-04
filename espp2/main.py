@@ -214,11 +214,11 @@ def tax_report(  # noqa: C901
 # - Pickle and others represent sales differently so a simple "key" based deduplication fails
 # - Prefer last file in list then fill in up to first complete year
 # - Limit to two files?
-def merge_transactions_old(transaction_files: list) -> Transactions:
+def merge_transactions_old(transaction_files: list, broker: str) -> Transactions:
     """Merge transaction files"""
     sets = []
     for tf in transaction_files:
-        t = normalize(tf)
+        t = normalize(tf, broker)
         t = sorted(t.transactions, key=lambda d: d.date)
         sets.append((t[0].date.year, t[-1].date.year, t))
     # Determine from which file to use for which year
@@ -241,13 +241,13 @@ def merge_transactions_old(transaction_files: list) -> Transactions:
 
     return Transactions(transactions=transactions), years
 
-def merge_transactions_old2(transaction_files: list) -> Transactions:
+def merge_transactions_old2(transaction_files: list, broker: str) -> Transactions:
     """Merge transaction files"""
     all_transactions = []
     years = {}
     # Put all transactions together
     for tf in transaction_files:
-        t = normalize(tf)
+        t = normalize(tf, broker)
         all_transactions.extend(t.transactions)
 
     # Sort transactions
@@ -267,14 +267,14 @@ def merge_transactions_old2(transaction_files: list) -> Transactions:
 
     return Transactions(transactions=unique_transactions), years
 
-def merge_transactions(transaction_files: list) -> Transactions:
+def merge_transactions(transaction_files: list, broker: str) -> Transactions:
     """Merge transaction files"""
     all_transactions = []
     date_intervals = []
     years = {}
     # Put all transactions together
     for tf in transaction_files:
-        t = normalize(tf)
+        t = normalize(tf, broker)
         # Add to date interval
         date_intervals.append((t.fromdate, t.todate))
         all_transactions.extend(t.transactions)
@@ -368,7 +368,7 @@ def do_taxes(
     wires = []
     prev_holdings = []
 
-    transactions, years = merge_transactions(transaction_files)
+    transactions, years = merge_transactions(transaction_files, broker)
 
     if year + 1 not in years:
         logger.error(f"No transactions into the year after the tax year {year+1}")
