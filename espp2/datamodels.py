@@ -126,7 +126,7 @@ class Amount(BaseModel):
     def __format__(self, format_spec: str) -> str:
         """Format the amount. Delegates to __str__ if no format specified"""
         if format_spec == "":
-            return self.value
+            return f"{self.value}"
         # Handle specific format specs if needed
         return format(self.value, format_spec)
 
