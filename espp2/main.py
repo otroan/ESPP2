@@ -395,8 +395,9 @@ def do_taxes(
 
     transactions, years = merge_transactions(transaction_files, broker)
 
-    if year + 1 not in years:
-        logger.error(f"No transactions into the year after the tax year {year+1}")
+    if broker != "morgan":
+        if year + 1 not in years:
+            logger.error(f"No transactions into the year after the tax year {year+1}")
 
     if wirefile and not isinstance(wirefile, Wires):
         wires = json_load(wirefile)
