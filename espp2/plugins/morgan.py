@@ -262,7 +262,7 @@ class ParseState:
         self.dividend_reinvest(amount)
 
         purchase_price = fixup_price2(self.entry_date, currency, price)
-        self.deposit(qty, purchase_price, "Dividend re-invest")
+        self.deposit(qty, purchase_price, "Dividend re-invest", self.entry_date)
         return True
 
     def parse_sale(self, row):
