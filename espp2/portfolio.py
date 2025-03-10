@@ -664,6 +664,7 @@ class Portfolio:
                     amount=Amount(
                         value=total_shares * eoyfmv,
                         currency="USD",
+                        amountdate=end_of_year,
                         nok_exchange_rate=eoy_exchange_rate,
                         nok_value=total_shares * eoyfmv * eoy_exchange_rate,
                     ),
