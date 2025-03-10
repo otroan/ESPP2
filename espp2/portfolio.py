@@ -9,6 +9,7 @@ from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from pydantic import BaseModel, field_validator
+from typing import Optional
 from datetime import date, datetime
 from decimal import Decimal
 from espp2.datamodels import (
@@ -70,6 +71,7 @@ class PortfolioPosition(BaseModel):
     tax_deduction_acc: Decimal  # accumulated tax deduction from previous years
     tax_deduction_new: Decimal = 0  # tax deduction for this year
     purchase_price: Amount
+    discounted_purchase_price: Optional[Amount] = None
     current_qty: Decimal = 0
     records: list[Any] = []
     coord: Dict[str, str] = {}
@@ -305,6 +307,7 @@ class Portfolio:
         position = PortfolioPosition(
                 qty=p.qty,
                 purchase_price=p.purchase_price,
+                discounted_purchase_price=p.discounted_purchase_price,
                 date=p.date,
                 symbol=p.symbol,
                 tax_deduction_acc=0,

@@ -320,6 +320,7 @@ class Deposit(TransactionEntry):
     description: str
     purchase_price: Amount
     purchase_date: Optional[date] = None
+    discounted_purchase_price: Optional[Amount] = None
     source: str
     id: str = Optional[str]
 
