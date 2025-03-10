@@ -221,6 +221,7 @@ class ParseState:
 
     def fixup_selldates(self):
         """Change SELL-records to use actual selldate"""
+        # TODO!!!! Fixing now needs to patch amountdate in the Amount instance for sales!
         for t in self.transactions:
             if t.type == EntryTypeEnum.SELL:
                 settledate = t.date.isoformat()
@@ -420,8 +421,7 @@ def find_all_tables(document):
 def create_signed_amount(
     currency,
     value,
-    nok_exchange_rate,
-    nok_value,
+    amountdate,
     negative_ok=True,
     positive_ok=True,
     negate=False,
@@ -437,16 +437,14 @@ def create_signed_amount(
         return Amount(
             currency=currency,
             value=value,
-            nok_exchange_rate=nok_exchange_rate,
-            nok_value=nok_value,
+            amountdate=amountdate,
         )
 
     if value < 0 and negative_ok:
         return NegativeAmount(
             currency=currency,
             value=value,
-            nok_exchange_rate=nok_exchange_rate,
-            nok_value=nok_value,
+            amountdate=amountdate,
         )
 
     if positive_ok:
@@ -455,8 +453,7 @@ def create_signed_amount(
         return Amount(
             currency=currency,
             value=value,
-            nok_exchange_rate=nok_exchange_rate,
-            nok_value=nok_value,
+            amountdate = amountdate
         )
 
     if negative_ok:
@@ -465,8 +462,7 @@ def create_signed_amount(
         return NegativeAmount(
             currency=currency,
             value=value,
-            nok_exchange_rate=nok_exchange_rate,
-            nok_value=nok_value,
+            amountdate = amountdate
         )
 
     raise Exception("Unexpected, should never get here")
@@ -497,12 +493,10 @@ def fixup_price(datestr, currency, pricestr, change_sign=False):
     price, currency = morgan_price(pricestr)
     if change_sign:
         price = price * -1
-    exchange_rate = currency_converter.get_currency(currency, datestr)
     return {
         "currency": currency,
         "value": price,
-        "nok_exchange_rate": exchange_rate,
-        "nok_value": price * exchange_rate,
+        "amountdate": datestr,
     }
 
 
@@ -512,8 +506,7 @@ def fixup_price2(date, currency, value):
     return create_signed_amount(
         currency=currency,
         value=value,
-        nok_exchange_rate=exchange_rate,
-        nok_value=value * exchange_rate,
+        amountdate=date,
     )
 
 
@@ -526,30 +519,27 @@ def sum_amounts(amounts, positive_ok=True, negative_ok=True, negate=False):
     if len(amounts) == 0:
         return None
 
-    total = amounts[0].value
-    nok_total = amounts[0].nok_value
-    currency = amounts[0].currency
+    expect_currency = amounts[0].currency
+    expect_amountdate = amounts[0].amountdate
 
-    verify_sign(total, positive_ok, negative_ok)
-    verify_sign(nok_total, positive_ok, negative_ok)
+    sum = Decimal(0)
 
-    for a in amounts[1:]:
-        if a.currency != currency:
-            raise ValueError(f"Summing {currency} with {a.currency}")
+    for a in amounts:
         verify_sign(a.value, positive_ok, negative_ok)
-        verify_sign(a.nok_value, positive_ok, negative_ok)
+        if a.currency != expect_currency:
+            raise ValueError(f'Mixing currencies in sum_amount()')
+        if a.amountdate != expect_amountdate:
+            raise ValueError(f'Summing amounts for different days')
 
-        total += a.value
-        nok_total += a.nok_value
+        sum += a.value
 
-    avg_nok_exchange_rate = nok_total / total
+    if negate:
+        sum *= -1
 
     return create_signed_amount(
-        currency=currency,
-        value=total,
-        nok_exchange_rate=avg_nok_exchange_rate,
-        nok_value=nok_total,
-        negate=negate,
+        currency=expect_currency,
+        value=sum,
+        amountdate=expect_amountdate,
     )
 
 
