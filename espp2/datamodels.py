@@ -513,6 +513,8 @@ class Stock(BaseModel):
         """Set purchase price and calculate nok value if needed"""
         if isinstance(value, Amount):
             return value
+        if "amountdate" not in value:
+            value["amountdate"] = info.data["date"]
         if "nok_exchange_rate" not in value:
             return Amount(
                 amountdate=info.data["date"],
