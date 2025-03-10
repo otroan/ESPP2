@@ -673,6 +673,7 @@ class TaxReport(BaseModel):
     cash_ledger: list
     unmatched_wires: list[WireAmount]
     prev_holdings: Optional[Holdings] = None
+    espp_extra_info: list[dict] = []
 
 
 class CashModel(BaseModel):

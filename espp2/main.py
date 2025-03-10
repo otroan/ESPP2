@@ -115,7 +115,7 @@ def tax_report(  # noqa: C901
     report["unmatched_wires"] = p.unmatched_wires_report
     report["cash_ledger"] = p.cash.ledger()
     cashsummary = p.cash_summary
-
+    report["espp_extra_info"] = p.espp_extra_info()
     foreignshares = []
 
     for e in report["eoy_balance"][year]:

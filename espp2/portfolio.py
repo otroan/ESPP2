@@ -784,6 +784,16 @@ class Portfolio:
                            source='Synthesized dividend tax')
                 self.tax(tax)
 
+    def espp_extra_info(self):
+        """Return extra info for ESPP"""
+        r = []
+        for p in self.positions:
+            if p.discounted_purchase_price:
+                r.append({'symbol': p.symbol, 'date': p.date,
+                           'discounted_purchase_price_total_nok': p.discounted_purchase_price.nok_value*p.qty,
+                           'purchase_price_total_nok': p.purchase_price.nok_value*p.qty})
+        return r
+
     def __init__(  # noqa: C901
         self,
         year: int,
