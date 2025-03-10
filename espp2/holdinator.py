@@ -12,7 +12,7 @@ import math
 from rich.logging import RichHandler
 from pydantic import TypeAdapter
 from espp2.main import (
-    do_holdings_1,
+    do_holdings,
     console,
     get_zipdata,
 )
@@ -63,7 +63,7 @@ def main(  # noqa: C901
         level=lognames[loglevel], handlers=[RichHandler(rich_tracebacks=False)]
     )
 
-    holdings = do_holdings_1(
+    holdings = do_holdings(
         broker,
         transaction_files,
         year,
