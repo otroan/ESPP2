@@ -93,7 +93,6 @@ def tax_report(  # noqa: C901
         raise
 
     report["eoy_balance"] = {year - 1: prev_year_eoy, year: this_year_eoy}
-
     logger.info("Previous year eoy: %s", prev_year_eoy)
     logger.info("This tax year eoy: %s", this_year_eoy)
     try:

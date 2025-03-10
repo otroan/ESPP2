@@ -643,7 +643,7 @@ class Portfolio:
         r = []
 
         if year != self.year:
-            if 'stocks' in self.prev_holdings:
+            if self.prev_holdings.stocks:
                 positions = self.prev_holdings.stocks
             else:
                 positions = []
