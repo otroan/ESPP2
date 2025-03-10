@@ -177,13 +177,10 @@ class Cash:
                 )
         remaining_usd = sum([c.amount.value for c in debit if c.amount.value > 0])
         eoy = datetime(self.year, 12, 31)
-        exchange_rate = f.get_currency("USD", eoy)
-        remaining_nok = remaining_usd * exchange_rate
         remaining_cash = Amount(
             value=remaining_usd,
             currency="USD",
-            nok_value=remaining_nok,
-            nok_exchange_rate=exchange_rate,
+            amountdate=eoy,
         )
         total_gain = sum([t.gain for t in transfers])
         total_paid_price_nok = sum([t.amount_sent for t in transfers])
