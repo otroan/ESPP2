@@ -15,6 +15,7 @@ from pydantic import (
     validator,
     Field,
     RootModel,
+    computed_field,
 )
 from espp2.fmv import FMV
 
@@ -100,17 +101,25 @@ class Amount(BaseModel):
             )
         return self._exchange_rates[target_currency]
 
+    @computed_field
     @property
-    def nok_value(self) -> Decimal:
-        """Convenience property for NOK conversion (maintained for compatibility)"""
-        return self.get_in("NOK")
+    def nok_value(self) -> Optional[Decimal]:
+        """NOK value, calculated on demand"""
+        try:
+            return self.get_in("NOK")
+        except ValueError:
+            return None
 
+    @computed_field
     @property
-    def nok_exchange_rate(self) -> Decimal:
-        """Convenience property for NOK conversion (maintained for compatibility)"""
+    def nok_exchange_rate(self) -> Optional[Decimal]:
+        """Exchange rate to NOK"""
         if self.amountdate is None and self.legacy_nok_rate is not None:
             return self.legacy_nok_rate
-        return self._get_exchange_rate("NOK")
+        try:
+            return self._get_exchange_rate("NOK")
+        except ValueError:
+            return None
 
     def __str__(self):
         """String representation with currency symbol"""

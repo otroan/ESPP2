@@ -391,7 +391,7 @@ def do_taxes(
     If holdings file is specified already for previous year, the first phase is skipped.
     """
     wires = []
-    prev_holdings = []
+    prev_holdings: Holdings = None
 
     transactions, years = merge_transactions(transaction_files, broker)
 
