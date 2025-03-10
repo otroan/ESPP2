@@ -4,24 +4,17 @@ Re-generate holdings from transaction files
 
 # pylint: disable=invalid-name
 
-import os
 import logging
 from enum import Enum
 import typer
-import math
 from rich.logging import RichHandler
-from pydantic import TypeAdapter
 from espp2.main import (
     do_holdings,
-    console,
-    get_zipdata,
 )
-from espp2.datamodels import Holdings, Wires
-from espp2.report import print_report
 from espp2._version import __version__
-from espp2.util import FeatureFlagEnum
 
 app = typer.Typer(pretty_exceptions_enable=False)
+
 
 class BrokerEnum(str, Enum):
     """BrokerEnum"""
@@ -37,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 def version_callback(value: bool):
     if value:
-        typer.echo(f"espp2 CLI Version: {__version__}")
+        typer.echo(f"holdinator CLI Version: {__version__}")
         raise typer.Exit()
 
 
@@ -58,7 +51,6 @@ def main(  # noqa: C901
     if loglevel not in lognames:
         raise typer.BadParameter(f"Invalid loglevel: {loglevel}")
 
-    print(f'{outholdings}')
     logging.basicConfig(
         level=lognames[loglevel], handlers=[RichHandler(rich_tracebacks=False)]
     )
@@ -71,11 +63,10 @@ def main(  # noqa: C901
     )
 
     # New holdings
-    if outholdings:
-        logger.info("Writing new holdings to %s", outholdings.name)
-        j = holdings.model_dump_json(indent=4)
-        with outholdings as f:
-            f.write(j)
+    logger.info("Writing new holdings to %s", outholdings.name)
+    j = holdings.model_dump_json(indent=4)
+    with outholdings as f:
+        f.write(j)
 
 
 if __name__ == "__main__":

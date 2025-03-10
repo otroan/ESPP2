@@ -46,20 +46,25 @@ def get_grossproceeds(csv_item):
     return Amount(amountdate=datestr, currency="USD", value=total)
 
 
-def get_purchaseprice(csv_item):
+def get_purchaseprice(csv_item) -> str:
     # RS
     subdata = csv_item["TransactionDetails"][0]["Details"]
     description = csv_item["Description"]
     if description == "RS" and subdata["VestFairMarketValue"] != "":
         return subdata["VestFairMarketValue"]
-    # ESPP
-    if description == "ESPP" and subdata["PurchaseFairMarketValue"] != "":
-        return subdata["PurchaseFairMarketValue"]
 
     # Div Reinv
     if description == "Div Reinv" and subdata["PurchasePrice"] != "":
         return subdata["PurchasePrice"]
 
+    raise ValueError(f"Unknown purchase price for {csv_item}")
+
+def get_espp_purchaseprice(csv_item) -> tuple[str, str]:
+    # ESPP
+    subdata = csv_item["TransactionDetails"][0]["Details"]
+    description = csv_item["Description"]
+    if description == "ESPP" and subdata["PurchaseFairMarketValue"] != "":
+        return subdata["PurchaseFairMarketValue"], subdata["PurchasePrice"]
     raise ValueError(f"Unknown purchase price for {csv_item}")
 
 
@@ -213,17 +218,22 @@ def wire(csv_item, source):
 def deposit(csv_item, source):
     """Process deposit"""
     purchase_date = None
+    discounted_purchase_price = None
     if csv_item["Description"] == "ESPP":
         purchase_date = fixup_date(
             csv_item["TransactionDetails"][0]["Details"]["PurchaseDate"]
         )
         d = purchase_date
         currency = "ESPPUSD"
+        purchase_price, discounted_purchase_price = get_espp_purchaseprice(csv_item)
+        purchase_price = fixup_price(d, currency, purchase_price)
+        discounted_purchase_price = fixup_price(d, currency, discounted_purchase_price)
     else:
         d = fixup_date(csv_item["Date"])
         currency = "USD"
+        purchase_price = fixup_price(d, currency, get_purchaseprice(csv_item))
+
     qty = fixup_number(csv_item["Quantity"])
-    purchase_price = fixup_price(d, currency, get_purchaseprice(csv_item))
 
     return Deposit(
         date=d,
@@ -232,6 +242,7 @@ def deposit(csv_item, source):
         qty=qty,
         purchase_date=purchase_date,
         purchase_price=purchase_price,
+        discounted_purchase_price=discounted_purchase_price,
         source=source,
     )
 

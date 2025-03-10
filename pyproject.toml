@@ -41,4 +41,3 @@ repository = "https://github.com/otroan/ESPP2"
 [project.scripts]
 espp2 = "espp2.espp2:app"
 holdinator = "espp2.holdinator:app"
-espp2_transactions = "espp2.transactions:main"
