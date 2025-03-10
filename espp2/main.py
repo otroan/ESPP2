@@ -66,7 +66,9 @@ def tax_report(  # noqa: C901
     this_year = [t for t in transactions.transactions if t.date.year == year]
 
     # Run the chosen tax calculation engine
-    portfolio = Portfolio(year, broker, this_year, wires, prev_holdings, verbose, feature_flags)
+    portfolio = Portfolio(
+        year, broker, this_year, wires, prev_holdings, verbose, feature_flags
+    )
     if portfolio_engine is False:
         p = Positions(year, prev_holdings, this_year, wires)
         p.process()
@@ -241,6 +243,7 @@ def merge_transactions_old(transaction_files: list, broker: str) -> Transactions
 
     return Transactions(transactions=transactions), years
 
+
 def merge_transactions_old2(transaction_files: list, broker: str) -> Transactions:
     """Merge transaction files"""
     all_transactions = []
@@ -263,9 +266,10 @@ def merge_transactions_old2(transaction_files: list, broker: str) -> Transaction
             unique_transactions.append(transaction)
             seen.add(transaction._crc)
         else:
-            print(f'Duplicate transaction: {transaction.id} 0x{transaction._crc:08x}')
+            print(f"Duplicate transaction: {transaction.id} 0x{transaction._crc:08x}")
 
     return Transactions(transactions=unique_transactions), years
+
 
 def merge_transactions(transaction_files: list, broker: str) -> Transactions:
     """Merge transaction files"""
@@ -284,10 +288,16 @@ def merge_transactions(transaction_files: list, broker: str) -> Transactions:
 
     # Check if intervals are continuous and non-overlapping
     for i in range(1, len(date_intervals)):
-        if date_intervals[i][0] <= date_intervals[i-1][1]:
-            raise ESPPErrorException(f"Date interval is overlapping: {date_intervals[i-1][1]} is not before {date_intervals[i][0]}")
-        if date_intervals[i][0] != date_intervals[i-1][1] + datetime.timedelta(days=1):
-            raise ESPPErrorException(f"Date interval is not continuous: {date_intervals[i-1][1]} is not the day before {date_intervals[i][0]}")
+        if date_intervals[i][0] <= date_intervals[i - 1][1]:
+            raise ESPPErrorException(
+                f"Date interval is overlapping: {date_intervals[i-1][1]} is not before {date_intervals[i][0]}"
+            )
+        if date_intervals[i][0] != date_intervals[i - 1][1] + datetime.timedelta(
+            days=1
+        ):
+            raise ESPPErrorException(
+                f"Date interval is not continuous: {date_intervals[i-1][1]} is not the day before {date_intervals[i][0]}"
+            )
 
     all_transactions.sort(key=lambda d: d.date)
 
@@ -315,7 +325,9 @@ def generate_previous_year_holdings(
         logger.info("Calculating tax for previous year: %s", y)
 
         if portfolio_engine:
-            p = Portfolio(y, broker, this_year, Wires([]), holdings, verbose, feature_flags=[])
+            p = Portfolio(
+                y, broker, this_year, Wires([]), holdings, verbose, feature_flags=[]
+            )
         else:
             p = Positions(
                 y, holdings, this_year, received_wires=Wires([]), generate_holdings=True
@@ -338,6 +350,19 @@ def generate_previous_year_holdings(
     return holdings
 
 
+def do_holdings(
+    broker, transaction_files: list, year, verbose=False
+) -> Holdings:
+    """Generate holdings file"""
+    transactions, years = merge_transactions(transaction_files, broker)
+
+    logger.info("Changes in holdings for previous year")
+    holdings = generate_previous_year_holdings(
+        broker, years, year, [], transactions, portfolio_engine=True, verbose=verbose
+    )
+
+    return holdings
+
 def get_zipdata(files) -> bytes:
     """Get zip data"""
     zip_buffer = BytesIO()
@@ -356,7 +381,7 @@ def do_taxes(
     year,
     portfolio_engine,
     verbose=False,
-    feature_flags=[]
+    feature_flags=[],
 ) -> Tuple[TaxReport, Holdings, TaxSummary]:
     """Do taxes
     This function is run in two phases:
@@ -388,5 +413,13 @@ def do_taxes(
     if prev_holdings and prev_holdings.year != year - 1:
         raise ESPPErrorException("Holdings file for previous year not found")
 
-    return tax_report(year, broker, transactions, wires, prev_holdings, portfolio_engine, verbose=verbose,
-                      feature_flags=feature_flags)
+    return tax_report(
+        year,
+        broker,
+        transactions,
+        wires,
+        prev_holdings,
+        portfolio_engine,
+        verbose=verbose,
+        feature_flags=feature_flags,
+    )

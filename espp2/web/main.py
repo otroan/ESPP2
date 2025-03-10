@@ -19,6 +19,7 @@ from starlette.responses import FileResponse
 from espp2.main import (
     do_taxes,
     get_zipdata,
+    do_holdings,
 )
 from espp2.datamodels import ESPPResponse, Wires, Holdings
 
@@ -92,6 +93,20 @@ async def taxreport(
     return ESPPResponse(
         tax_report=report, holdings=holdings, zip=zipstr, summary=summary, log=logstr
     )
+
+@app.post("/holdings", response_model=Holdings)
+async def generate_holdings(
+    transaction_files: list[UploadFile],
+    broker: str = Form(...),
+    year: int = Form(...),
+):
+    """Generate previous year holdings from a plethora of transaction files"""
+    try:
+        return do_holdings(
+            broker, transaction_files, year)
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # This seems to keep us from caching the files too agressively.
