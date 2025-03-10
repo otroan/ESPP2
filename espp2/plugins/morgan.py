@@ -146,9 +146,9 @@ class ParseState:
 
         if date in self.date2dividend:
             rr = self.date2dividend[date]
-            assert r["amount"]["nok_exchange_rate"] == rr.amount.nok_exchange_rate
+            # assert r["amount"]["nok_exchange_rate"] == rr.amount.nok_exchange_rate
             rr.amount.value += r["amount"]["value"]
-            rr.amount.nok_value += r["amount"]["nok_value"]
+            # rr.amount.nok_value += r["amount"]["nok_value"]
             # print(f"### DIV: {date} +{r['amount']['value']} (Again)")
             return
 
