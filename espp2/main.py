@@ -71,6 +71,7 @@ def tax_report(  # noqa: C901
         p = portfolio
 
     holdings = p.holdings(year, broker)
+    assert holdings.year == year
     report = {}
 
     fundamentals = p.fundamentals()
