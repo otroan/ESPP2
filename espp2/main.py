@@ -396,6 +396,11 @@ def do_taxes(
 
     transactions, years = merge_transactions(transaction_files, broker)
 
+    # Filter transactions into early year + 1.
+    transactions.transactions = [
+        t for t in transactions.transactions if t.date <= datetime.date(year + 1, 1, 31)
+    ]
+
     if broker != "morgan":
         if year + 1 not in years:
             logger.error(f"No transactions into the year after the tax year {year + 1}")
