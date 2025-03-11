@@ -7,7 +7,6 @@ ESPPv2 Wrapper
 import logging
 from enum import Enum
 import typer
-import math
 from rich.logging import RichHandler
 from espp2.main import (
     do_taxes,
@@ -94,7 +93,7 @@ def main(  # noqa: C901
         logger.info("Writing unmatched wires to %s", outwires.name)
         outw = Wires(result.report.unmatched_wires)
         for w in outw:
-            w.nok_value = math.nan
+            w.nok_value = None
             w.value = abs(w.value)
         j = outw.model_dump_json(indent=4)
         with outwires as f:
