@@ -1,0 +1,674 @@
+{
+  "FromDate": "03/10/2021",
+  "ToDate": "03/10/2025",
+  "Transactions": [
+    {
+      "Date": "02/25/2025",
+      "Action": "Adjustment",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$50.00",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "02/12/2025",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "5",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/08/2023",
+            "AwardId": "1630922",
+            "VestDate": "02/10/2025",
+            "VestFairMarketValue": "$62.27"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "01/22/2025",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$46.00",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/22/2025",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$6.90",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/06/2025",
+      "Action": "Sale",
+      "Symbol": "CSCO",
+      "Quantity": "115",
+      "Description": "Share Sale",
+      "FeesAndCommissions": "$0.21",
+      "DisbursementElection": null,
+      "Amount": "$6,831.24",
+      "TransactionDetails": [
+        {
+          "Details": {
+            "Type": "ESPP",
+            "Shares": "90",
+            "SalePrice": "$59.4039",
+            "SubscriptionDate": "07/01/2024",
+            "SubscriptionFairMarketValue": "$47.52",
+            "PurchaseDate": "12/31/2024",
+            "PurchasePrice": "$40.392",
+            "PurchaseFairMarketValue": "$59.20",
+            "DispositionType": "Disqualified",
+            "GrantId": null,
+            "VestDate": "",
+            "VestFairMarketValue": "",
+            "GrossProceeds": "$5,346.35"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "25",
+            "SalePrice": "$59.4039",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1630922",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06",
+            "GrossProceeds": "$1,485.10"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "01/02/2025",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "90",
+      "Description": "ESPP",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "PurchaseDate": "12/31/2024",
+            "PurchasePrice": "$40.392",
+            "SubscriptionDate": "07/01/2024",
+            "SubscriptionFairMarketValue": "$47.52",
+            "PurchaseFairMarketValue": "$59.20",
+            "TaxWithholdingMethod": null,
+            "NetSharesDeposited": "",
+            "SharesWithheld": "",
+            "SharesSold": "",
+            "CashRefund": "$24.84",
+            "CarryForward": ""
+          }
+        }
+      ]
+    },
+    {
+      "Date": "11/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "25",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/08/2023",
+            "AwardId": "1630922",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "09/30/2024",
+      "Action": "Wire Transfer",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Cash Disbursement",
+      "FeesAndCommissions": "",
+      "DisbursementElection": null,
+      "Amount": "-$5,193.84",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "09/26/2024",
+      "Action": "Sale",
+      "Symbol": "CSCO",
+      "Quantity": "98",
+      "Description": "Share Sale",
+      "FeesAndCommissions": "$0.16",
+      "DisbursementElection": null,
+      "Amount": "$5,193.84",
+      "TransactionDetails": [
+        {
+          "Details": {
+            "Type": "ESPP",
+            "Shares": "98",
+            "SalePrice": "$53.00",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseDate": "06/28/2024",
+            "PurchasePrice": "$36.21",
+            "PurchaseFairMarketValue": "$47.51",
+            "DispositionType": "Disqualified",
+            "GrantId": null,
+            "VestDate": "",
+            "VestFairMarketValue": "",
+            "GrossProceeds": "$5,194.00"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "08/20/2024",
+      "Action": "Wire Transfer",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Cash Disbursement",
+      "FeesAndCommissions": "",
+      "DisbursementElection": null,
+      "Amount": "-$5,165.47",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "08/15/2024",
+      "Action": "Sale",
+      "Symbol": "CSCO",
+      "Quantity": "100",
+      "Description": "Share Sale",
+      "FeesAndCommissions": "$0.16",
+      "DisbursementElection": null,
+      "Amount": "$4,999.84",
+      "TransactionDetails": [
+        {
+          "Details": {
+            "Type": "ESPP",
+            "Shares": "100",
+            "SalePrice": "$50.00",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseDate": "12/29/2023",
+            "PurchasePrice": "$36.21",
+            "PurchaseFairMarketValue": "$50.52",
+            "DispositionType": "Disqualified",
+            "GrantId": null,
+            "VestDate": "",
+            "VestFairMarketValue": "",
+            "GrossProceeds": "$5,000.00"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "07/24/2024",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$79.20",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "07/24/2024",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$11.88",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "07/01/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "98",
+      "Description": "ESPP",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "PurchaseDate": "06/28/2024",
+            "PurchasePrice": "$36.21",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseFairMarketValue": "$47.51",
+            "TaxWithholdingMethod": null,
+            "NetSharesDeposited": "",
+            "SharesWithheld": "",
+            "SharesSold": "",
+            "CashRefund": "",
+            "CarryForward": ""
+          }
+        }
+      ]
+    },
+    {
+      "Date": "04/24/2024",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$40.00",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "04/24/2024",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$6.00",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/24/2024",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$39.00",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/24/2024",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$5.85",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/02/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "100",
+      "Description": "ESPP",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "PurchaseDate": "12/29/2023",
+            "PurchasePrice": "$36.21",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseFairMarketValue": "$50.52",
+            "TaxWithholdingMethod": null,
+            "NetSharesDeposited": "",
+            "SharesWithheld": "",
+            "SharesSold": "",
+            "CashRefund": "",
+            "CarryForward": ""
+          }
+        }
+      ]
+    },
+    {
+      "Date": "07/26/2023",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$5.50",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "07/26/2023",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$36.66",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "07/24/2023",
+      "Action": "Wire Transfer",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Cash Disbursement",
+      "FeesAndCommissions": "-$15.00",
+      "DisbursementElection": null,
+      "Amount": "-$4,853.83",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "07/05/2023",
+      "Action": "Quick Sale",
+      "Symbol": "CSCO",
+      "Quantity": "94",
+      "Description": "Share Sale",
+      "FeesAndCommissions": "$0.04",
+      "DisbursementElection": null,
+      "Amount": "$4,837.67",
+      "TransactionDetails": [
+        {
+          "Details": {
+            "Type": "ESPP",
+            "Shares": "94",
+            "SalePrice": "$51.465",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseDate": "06/30/2023",
+            "PurchasePrice": "$36.21",
+            "PurchaseFairMarketValue": "$51.74",
+            "DispositionType": "Disqualified",
+            "GrantId": null,
+            "VestDate": "",
+            "VestFairMarketValue": "",
+            "GrossProceeds": "$4,837.71"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "07/04/2023",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "94",
+      "Description": "ESPP",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "PurchaseDate": "06/30/2023",
+            "PurchasePrice": "$36.21",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseFairMarketValue": "$51.74",
+            "TaxWithholdingMethod": null,
+            "NetSharesDeposited": "",
+            "SharesWithheld": "",
+            "SharesSold": "",
+            "CashRefund": "",
+            "CarryForward": ""
+          }
+        }
+      ]
+    },
+    {
+      "Date": "04/26/2023",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$36.66",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "04/26/2023",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$5.50",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "04/19/2023",
+      "Action": "Wire Transfer",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Cash Disbursement",
+      "FeesAndCommissions": "-$15.00",
+      "DisbursementElection": null,
+      "Amount": "-$4,764.19",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "04/14/2023",
+      "Action": "Sale",
+      "Symbol": "CSCO",
+      "Quantity": "94",
+      "Description": "Share Sale",
+      "FeesAndCommissions": "$0.05",
+      "DisbursementElection": null,
+      "Amount": "$4,748.83",
+      "TransactionDetails": [
+        {
+          "Details": {
+            "Type": "ESPP",
+            "Shares": "94",
+            "SalePrice": "$50.52",
+            "SubscriptionDate": "01/03/2022",
+            "SubscriptionFairMarketValue": "$63.16",
+            "PurchaseDate": "06/30/2022",
+            "PurchasePrice": "$36.244",
+            "PurchaseFairMarketValue": "$42.64",
+            "DispositionType": "Disqualified",
+            "GrantId": null,
+            "VestDate": "",
+            "VestFairMarketValue": "",
+            "GrossProceeds": "$4,748.88"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "01/25/2023",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$35.72",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/25/2023",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$5.36",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/06/2023",
+      "Action": "Wire Transfer",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Cash Disbursement",
+      "FeesAndCommissions": "-$15.00",
+      "DisbursementElection": null,
+      "Amount": "-$4,376.42",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/03/2023",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "91",
+      "Description": "ESPP",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "PurchaseDate": "12/30/2022",
+            "PurchasePrice": "$36.21",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseFairMarketValue": "$47.64",
+            "TaxWithholdingMethod": null,
+            "NetSharesDeposited": "",
+            "SharesWithheld": "",
+            "SharesSold": "",
+            "CashRefund": "",
+            "CarryForward": ""
+          }
+        }
+      ]
+    },
+    {
+      "Date": "01/03/2023",
+      "Action": "Quick Sale",
+      "Symbol": "CSCO",
+      "Quantity": "91",
+      "Description": "Share Sale",
+      "FeesAndCommissions": "$0.10",
+      "DisbursementElection": null,
+      "Amount": "$4,330.70",
+      "TransactionDetails": [
+        {
+          "Details": {
+            "Type": "ESPP",
+            "Shares": "91",
+            "SalePrice": "$47.5912",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseDate": "12/30/2022",
+            "PurchasePrice": "$36.21",
+            "PurchaseFairMarketValue": "$47.64",
+            "DispositionType": "Disqualified",
+            "GrantId": null,
+            "VestDate": "",
+            "VestFairMarketValue": "",
+            "GrossProceeds": "$4,330.80"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "10/26/2022",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$5.36",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "10/26/2022",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$35.72",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "08/19/2022",
+      "Action": "Tax Reversal",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$5.36",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "07/27/2022",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$35.72",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "07/27/2022",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$10.72",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "07/01/2022",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "94",
+      "Description": "ESPP",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "PurchaseDate": "06/30/2022",
+            "PurchasePrice": "$36.244",
+            "SubscriptionDate": "01/03/2022",
+            "SubscriptionFairMarketValue": "$63.16",
+            "PurchaseFairMarketValue": "$42.64",
+            "TaxWithholdingMethod": null,
+            "NetSharesDeposited": "",
+            "SharesWithheld": "",
+            "SharesSold": "",
+            "CashRefund": "",
+            "CarryForward": ""
+          }
+        }
+      ]
+    }
+  ]
+}

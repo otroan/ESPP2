@@ -1,0 +1,65 @@
+{
+    "year": 2022,
+    "broker": "schwab",
+    "stocks": [
+        {
+            "symbol": "CSCO",
+            "date": "2022-06-30",
+            "qty": 94,
+            "tax_deduction": 0,
+            "purchase_price": {
+                "currency": "ESPPUSD",
+                "nok_exchange_rate": 9.068896406,
+                "nok_value": 386.698,
+                "value": 42.64
+            }
+        },
+        {
+            "symbol": "CSCO",
+            "date": "2022-12-30",
+            "qty": 91,
+            "tax_deduction": 8.15301,
+            "purchase_price": {
+                "currency": "ESPPUSD",
+                "nok_exchange_rate": 10.06694519,
+                "nok_value": 479.589,
+                "value": 47.64
+            }
+        }
+    ],
+    "cash": [
+        {
+            "date": "2022-07-27",
+            "description": "dividend",
+            "amount": {
+                "currency": "USD",
+                "nok_exchange_rate": 9.8067,
+                "nok_value": 192.604,
+                "value": 19.64
+            },
+            "transfer": false
+        },
+        {
+            "date": "2022-08-19",
+            "description": "tax paid back",
+            "amount": {
+                "currency": "USD",
+                "nok_exchange_rate": 9.7889,
+                "nok_value": 52.4685,
+                "value": 5.36
+            },
+            "transfer": false
+        },
+        {
+            "date": "2022-10-26",
+            "description": "dividend",
+            "amount": {
+                "currency": "USD",
+                "nok_exchange_rate": 10.3171,
+                "nok_value": 368.527,
+                "value": 35.72
+            },
+            "transfer": false
+        }
+    ]
+}

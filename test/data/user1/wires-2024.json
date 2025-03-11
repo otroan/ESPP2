@@ -1,0 +1,26 @@
+[
+    {
+        "date": "2024-07-29",
+        "currency": "USD",
+        "nok_value": "162252.16",
+        "value": "14813.49"
+    },
+    {
+        "date": "2024-09-26",
+        "currency": "USD",
+        "nok_value": "83595.94",
+        "value": "7975.19"
+    },
+    {
+        "date": "2024-10-11",
+        "currency": "USD",
+        "nok_value": "283803.71",
+        "value": "26688.08"
+    },
+    {
+        "date": "2024-11-15",
+        "currency": "USD",
+        "nok_value": "263070.11",
+        "value": "23829.03"
+    }
+]
