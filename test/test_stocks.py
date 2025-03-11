@@ -59,7 +59,7 @@ def test_stock1(tmp_path):
         "schwab",
         transactions,
         None,
-        [],
+        None,
         portfolio_engine=True,
         verbose=True,
         feature_flags=[],
