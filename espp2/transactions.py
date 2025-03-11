@@ -102,8 +102,12 @@ def normalize(
     elif isinstance(data, starlette.datastructures.UploadFile):
         filename = data.filename
         fd = data.file
-    else:
+    elif hasattr(data, "name"):
         filename = data.name
         fd = data
+    elif isinstance(data, Transactions):
+        return data
+    else:
+        raise ValueError("Invalid data type", data)
     trans_format = guess_format(broker, filename, fd)
     return plugin_read(fd, filename, trans_format)

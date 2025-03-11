@@ -350,7 +350,9 @@ def generate_previous_year_holdings(
     return holdings
 
 
-def do_holdings(broker, transaction_files: list, year, verbose=False) -> Holdings:
+def do_holdings(
+    broker, transaction_files: list[Transactions], year, verbose=False
+) -> Holdings:
     """Generate holdings file"""
     transactions, years = merge_transactions(transaction_files, broker)
 
