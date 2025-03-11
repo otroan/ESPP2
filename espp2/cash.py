@@ -91,16 +91,13 @@ class Cash:
     def wire(self, wire_transactions, wires_received):
         """Process wires from sent and received (manual) records"""
         unmatched = []
-
         for w in wire_transactions:
             match = self._wire_match(w, wires_received)
             if match:
-                nok_exchange_rate = match.nok_value / match.value
-                amount = Amount(
-                    currency=match.currency,
+                amount = FixedAmount(
                     value=-match.value,
                     nok_value=-match.nok_value,
-                    nok_exchange_rate=nok_exchange_rate,
+                    amountdate=match.date,
                 )
                 self.credit(match.date, amount, "wire", transfer=True)
             else:
@@ -199,3 +196,15 @@ class Cash:
             gain=total_gain,
             holdings=cash_holdings,
         )
+
+
+class FixedAmount(Amount):
+    """Amount with fixed USD/NOK exchange rate"""
+
+    def __init__(self, value, nok_value, amountdate, currency="USD"):
+        """Initialize FixedAmount with both USD and NOK value."""
+        # Call parent constructor with minimal required args
+        super().__init__(value=value, currency=currency, amountdate=amountdate)
+        # Override the NOK values with our fixed values
+        self._nok_value = nok_value
+        self._nok_exchange_rate = abs(nok_value / value) if value != 0 else 0
