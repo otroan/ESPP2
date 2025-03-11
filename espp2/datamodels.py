@@ -54,7 +54,10 @@ class Amount(BaseModel):
     _exchange_rates: Dict[str, Decimal] = {}
     _converted_values: Dict[str, Decimal] = {}
     amountdate: Optional[date] = None
-    _legacy_nok_rate: Optional[Decimal] = None
+    legacy_nok_rate: Optional[Decimal] = None
+
+    # Allow arbitrary fields during model creation
+    model_config = {"extra": "allow"}
 
     @model_validator(mode="before")
     @classmethod
@@ -64,7 +67,7 @@ class Amount(BaseModel):
             return {
                 "currency": values["currency"],
                 "value": Decimal(values["value"]),
-                "_legacy_nok_rate": Decimal(values["nok_exchange_rate"]),
+                "legacy_nok_rate": Decimal(values["nok_exchange_rate"]),
                 "amountdate": values.get("amountdate", None),
             }
         return values
@@ -73,12 +76,17 @@ class Amount(BaseModel):
         """Get the amount in the target currency"""
         if target_currency == self.currency:
             return self.value
+
+        # Check if the conversion is already cached
+        if target_currency in self._converted_values:
+            return self._converted_values[target_currency]
+
         # Handle legacy USD-NOK conversion
-        if self._legacy_nok_rate is not None:
+        if self.legacy_nok_rate is not None:
             if self.currency == "USD" and target_currency == "NOK":
-                return self.value * self._legacy_nok_rate
+                return self.value * self.legacy_nok_rate
             if self.currency == "NOK" and target_currency == "USD":
-                return self.value / self._legacy_nok_rate
+                return self.value / self.legacy_nok_rate
 
         # For all other conversions, require a date
         if self.amountdate is None:
@@ -86,11 +94,12 @@ class Amount(BaseModel):
                 f"Cannot convert {self.currency} to {target_currency} without a date"
             )
 
-        if target_currency not in self._converted_values:
-            rate = self._get_exchange_rate(target_currency)
-            self._converted_values[target_currency] = self.value * rate
+        # Perform the conversion and cache the result
+        rate = self._get_exchange_rate(target_currency)
+        converted_value = self.value * rate
+        self._converted_values[target_currency] = converted_value
 
-        return self._converted_values[target_currency]
+        return converted_value
 
     def _get_exchange_rate(self, target_currency: str) -> Decimal:
         """Get exchange rate for target currency (with caching)"""
@@ -104,16 +113,13 @@ class Amount(BaseModel):
     @property
     def nok_value(self) -> Optional[Decimal]:
         """NOK value, calculated on demand"""
-        try:
-            return self.get_in("NOK")
-        except ValueError:
-            return None
+        return self.get_in("NOK")
 
     @computed_field
     @property
     def nok_exchange_rate(self) -> Optional[Decimal]:
         """Exchange rate to NOK"""
-        if self.amountdate is None and self._legacy_nok_rate is not None:
+        if self.amountdate is None and self.legacy_nok_rate is not None:
             return self.legacy_nok_rate
         try:
             return self._get_exchange_rate("NOK")
@@ -155,8 +161,14 @@ class Amount(BaseModel):
                 f"Cannot add different currencies: {self.currency} and {other.currency}"
             )
 
+        # Ensure both amounts have their NOK values calculated
+        self_nok_value = self.get_in("NOK")
+        other_nok_value = other.get_in("NOK")
+
         result = self.model_copy()
         result.value += other.value
+        result.legacy_nok_rate = None
+        result.amountdate = None
 
         # Combine converted values where both amounts have them
         result._converted_values = {}
@@ -164,6 +176,9 @@ class Amount(BaseModel):
             result._converted_values[currency] = (
                 self._converted_values[currency] + other._converted_values[currency]
             )
+
+        # Add NOK values
+        result._converted_values["NOK"] = self_nok_value + other_nok_value
 
         return result
 
@@ -213,6 +228,16 @@ class Amount(BaseModel):
             value=self.get_in(target_currency),
             amountdate=self.amountdate,
         )
+
+    def __neg__(self) -> "Amount":
+        """Negate the amount"""
+        result = self.model_copy()
+        result.value = -self.value
+        # Negate any existing converted values
+        result._converted_values = {
+            curr: -value for curr, value in self._converted_values.items()
+        }
+        return result
 
 
 class PositiveAmount(Amount):
