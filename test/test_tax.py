@@ -26,13 +26,12 @@ def test_dividends(caplog):
             qty=100,
             purchase_date="2022-10-26",
             purchase_price=Amount(
-                currency="USD", value=10, nok_value=100, nok_exchange_rate=10
+                currency="USD", value=10, amountdate="2022-10-26"
             ),
             description="",
             source="test",
         )
     )
-
     transactions.append(
         Deposit(
             type=EntryTypeEnum.DEPOSIT,
@@ -41,7 +40,7 @@ def test_dividends(caplog):
             qty=100,
             purchase_date="2022-10-26",
             purchase_price=Amount(
-                currency="USD", value=10, nok_value=100, nok_exchange_rate=10
+                currency="USD", value=10, amountdate="2022-10-26"
             ),
             description="",
             source="test",
@@ -53,7 +52,7 @@ def test_dividends(caplog):
         date="2022-10-26",
         symbol="CSCO",
         amount=PositiveAmount(
-            currency="USD", value=38, nok_value=100, nok_exchange_rate=10
+            currency="USD", value=38, amountdate="2022-10-26"
         ),
         source="test",
     )

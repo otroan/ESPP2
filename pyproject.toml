@@ -25,10 +25,8 @@ requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
 dynamic = ["version"]
 dependencies = [
-    "simplejson", "pydantic", "pandas",
-    "urllib3", "python-dateutil", "uvicorn", "fastapi",
-    "python-multipart", "tabulate", "pytest", "httpx",
-    "rich", "typing", "html5lib", "typer", "openpyxl",
+    "pydantic",
+    "requests",
 ]
 authors = [
     { name = "Ole Troan", email = "otroan@employees.org"},
@@ -41,3 +39,23 @@ repository = "https://github.com/otroan/ESPP2"
 [project.scripts]
 espp2 = "espp2.espp2:app"
 holdinator = "espp2.holdinator:app"
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "black",
+    "flake8",
+]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+
+# Or if you're using the older format with poetry:
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.6.0"
+pytest = "^8.0.0"
