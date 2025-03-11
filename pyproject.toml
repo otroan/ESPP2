@@ -27,6 +27,10 @@ dynamic = ["version"]
 dependencies = [
     "pydantic",
     "requests",
+     "simplejson", "pydantic", "pandas",
+    "urllib3", "python-dateutil", "uvicorn", "fastapi",
+    "python-multipart", "tabulate", "httpx",
+    "rich", "typing", "html5lib", "typer", "openpyxl",
 ]
 authors = [
     { name = "Ole Troan", email = "otroan@employees.org"},
