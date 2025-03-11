@@ -180,13 +180,14 @@ def tax_report(  # noqa: C901
     # Tax paid in the US on dividends
     credit_deductions = []
     for e in report["dividends"]:
-        expected_tax = round(Decimal(".15") * e.gross_amount.nok_value)
-        if not isclose(expected_tax, abs(round(e.tax.nok_value)), abs_tol=0.05):
+        expected_tax = Decimal(".15") * e.gross_amount.nok_value
+        if not isclose(round(expected_tax, 2), round(abs(e.tax.nok_value), 2), rel_tol=0.0001):
             logger.error(
-                "Expected source tax: %s got: %s",
-                expected_tax,
-                abs(round(e.tax.nok_value)),
+                "Expected source tax: %s (%s) got: %s (%s)",
+                expected_tax, e.gross_amount,
+                abs(e.tax.nok_value), e.tax,
             )
+        expected_tax = round(expected_tax, 0)
         credit_deductions.append(
             CreditDeduction(
                 symbol=e.symbol,
