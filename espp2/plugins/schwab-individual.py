@@ -74,6 +74,7 @@ def fixup_date_as_date(datestr) -> date:
     d = dt.parse(datestr)
     return d.date()
 
+
 def fixup_date_pick_first(datestr):
     """Fixup date"""
     #  "Date": "08/07/2024 as of 07/31/2024",
@@ -174,13 +175,14 @@ def dividend(csv_item, source):
         source=source,
     )
 
+
 def cash_dividend(csv_item, source):
     """Process cash dividend"""
     print("CASH DIVIDEND", csv_item)
     d = fixup_date(csv_item["Date"])
     amount = fixup_price(d, "USD", csv_item["Amount"])
     description = csv_item["Description"]
-    symbol = description[description.rfind("(")+1:description.rfind(")")]
+    symbol = description[description.rfind("(") + 1 : description.rfind(")")]
     return Dividend(
         date=d,
         symbol=symbol,
@@ -188,6 +190,7 @@ def cash_dividend(csv_item, source):
         amount=amount,
         source=source,
     )
+
 
 def dividend_reinvested(csv_item, source):
     """Process dividend reinvested"""
@@ -255,7 +258,7 @@ def deposit(csv_item, source):
 
 def not_implemented(csv_item, source):
     """Process not implemented"""
-    raise NotImplementedError(f"Action \"{csv_item['Action']}\" not implemented")
+    raise NotImplementedError(f'Action "{csv_item["Action"]}" not implemented')
 
 
 def transfer(csv_item, source):
@@ -307,12 +310,11 @@ def journal(csv_item, source):
 
 def adjustment(csv_item, source):
     """Process adjustment"""
-    print("ADJUSTMENT", csv_item)
     d = fixup_date_pick_first(csv_item["Date"])
-    if csv_item["Fees & Comm"]:
-        fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"])
-    else:
-        fee = fixup_price(d, "USD", "$0.0")
+    # if csv_item["Fees & Comm"]:
+    #     fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"])
+    # else:
+    #     fee = fixup_price(d, "USD", "$0.0")
     return Cashadjust(
         date=d,
         description=csv_item["Description"],
@@ -341,7 +343,6 @@ dispatch = {
     "Adjustment": adjustment,
     # "Transfer": transfer,
     # "Exercise and Sell": exercise_and_sell,
-
 }
 
 

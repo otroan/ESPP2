@@ -4,24 +4,23 @@ ESPPv2 Wrapper
 
 # pylint: disable=invalid-name
 
-import os
 import logging
 from enum import Enum
 import typer
 import math
 from rich.logging import RichHandler
-from pydantic import TypeAdapter
 from espp2.main import (
     do_taxes,
     console,
     get_zipdata,
 )
-from espp2.datamodels import Holdings, Wires
+from espp2.datamodels import Wires
 from espp2.report import print_report
 from espp2._version import __version__
 from espp2.util import FeatureFlagEnum
 
 app = typer.Typer(pretty_exceptions_enable=False)
+
 
 class BrokerEnum(str, Enum):
     """BrokerEnum"""
@@ -78,13 +77,13 @@ def main(  # noqa: C901
         year,
         portfolio_engine=portfolio_engine,
         verbose=verbose,
-        feature_flags=features
+        feature_flags=features,
     )
     print_report(year, result.summary, result.report, result.holdings, verbose)
 
     # New holdings
     if outholdings:
-        holdings = result.holdings if result else holdings
+        holdings = result.holdings
         logger.info("Writing new holdings to %s", outholdings.name)
         j = holdings.model_dump_json(indent=4)
         with outholdings as f:
@@ -117,6 +116,7 @@ def main(  # noqa: C901
 
         with output as f:
             f.write(zipdata)
+
 
 if __name__ == "__main__":
     app()

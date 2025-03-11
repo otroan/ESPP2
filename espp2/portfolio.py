@@ -1,6 +1,7 @@
 """
 ESPP portfolio class
 """
+
 import logging
 from io import BytesIO
 from copy import deepcopy
@@ -10,7 +11,7 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from pydantic import BaseModel, field_validator
 from typing import Optional
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from espp2.datamodels import (
     Stock,
@@ -20,8 +21,6 @@ from espp2.datamodels import (
     Transactions,
     Dividend_Reinv,
     EOYBalanceItem,
-    TaxSummary,
-    ForeignShares,
     EOYDividend,
     EOYSales,
     SalesPosition,
@@ -36,24 +35,26 @@ from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals, todate
 from espp2.cash import Cash
 from espp2.positions import Ledger
 from typing import Any, Dict
-from espp2.report import print_cash_ledger
-from espp2.console import console
 from espp2.util import FeatureFlagEnum
 
 fmv = FMV()
 logger = logging.getLogger(__name__)
 
 # Temporarily hard-code version
-version='0.1.dev300+g328e721.d20240417'
+version = "0.1.dev300+g328e721.d20240417"
+
 
 def format_cells(ws, column, number_format):
     for cell in ws[column]:
         cell.number_format = number_format
 
+
 def format_fill_columns(ws, headers, columns, color):
     # Create a dictionary mapping column headers to Excel column letters
     header_to_letter = {header: chr(i + 65) for i, header in enumerate(headers)}
-    cols = [header_to_letter[header] for header in columns if header in header_to_letter]
+    cols = [
+        header_to_letter[header] for header in columns if header in header_to_letter
+    ]
     fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
     for c in cols:
         for cell in ws[c]:
@@ -77,10 +78,10 @@ class PortfolioPosition(BaseModel):
     coord: Dict[str, str] = {}
     split: bool = False
 
-    @field_validator('pre_split_qty', mode='before')
+    @field_validator("pre_split_qty", mode="before")
     @classmethod
     def set_pre_split_qty(cls, v, info):
-        return v or info.data.get('qty')
+        return v or info.data.get("qty")
 
     def get_coord(self, key):
         return self.coord[key]
@@ -109,16 +110,20 @@ class PortfolioPosition(BaseModel):
             (
                 row,
                 columns.index("Price"),
-                f'={index_to_cell(row, columns.index("Price USD"))}*{index_to_cell(row, columns.index("Exchange Rate"))}',
+                f"={index_to_cell(row, columns.index('Price USD'))}*{index_to_cell(row, columns.index('Exchange Rate'))}",
             )
         )
         self.coord["Price"] = index_to_cell(row, columns.index("Price"))
         self.coord["Price USD"] = index_to_cell(row, columns.index("Price USD"))
-        col.append((row, columns.index("Price USD"), round(self.purchase_price.value, 2)))
+        col.append(
+            (row, columns.index("Price USD"), round(self.purchase_price.value, 2))
+        )
         col.append(
             (row, columns.index("Exchange Rate"), self.purchase_price.nok_exchange_rate)
         )
-        col.append((row, columns.index("Accumulated"), round(self.tax_deduction_acc, 2)))
+        col.append(
+            (row, columns.index("Accumulated"), round(self.tax_deduction_acc, 2))
+        )
         col.append((row, columns.index("Added"), round(self.tax_deduction_new, 2)))
         return col
 
@@ -146,15 +151,17 @@ class PortfolioDividend(BaseModel):
             (
                 row,
                 columns.index("Div PS"),
-                f'={index_to_cell(row, columns.index("Div PS USD"))}*{index_to_cell(row, columns.index("Exchange Rate"))}',
+                f"={index_to_cell(row, columns.index('Div PS USD'))}*{index_to_cell(row, columns.index('Exchange Rate'))}",
             )
         )
-        col.append((row, columns.index("Div PS USD"), round(self.dividend_dps.value, 2)))
+        col.append(
+            (row, columns.index("Div PS USD"), round(self.dividend_dps.value, 2))
+        )
         col.append(
             (
                 row,
                 columns.index("Total Dividend"),
-                f'={index_to_cell(row, columns.index("Div PS"))}*{index_to_cell(row, columns.index("iQty"))}',
+                f"={index_to_cell(row, columns.index('Div PS'))}*{index_to_cell(row, columns.index('iQty'))}",
             )
         )
 
@@ -162,12 +169,10 @@ class PortfolioDividend(BaseModel):
             (
                 row,
                 columns.index("Total Dividend USD"),
-                f'={index_to_cell(row, columns.index("Div PS USD"))}*{index_to_cell(row, columns.index("iQty"))}',
+                f"={index_to_cell(row, columns.index('Div PS USD'))}*{index_to_cell(row, columns.index('iQty'))}",
             )
         )
-        col.append(
-            (row, columns.index("Used"), round(self.tax_deduction_used, 2))
-        )
+        col.append((row, columns.index("Used"), round(self.tax_deduction_used, 2)))
         col.append(
             (
                 row,
@@ -199,7 +204,7 @@ class PortfolioSale(BaseModel):
             (
                 row,
                 columns.index("Price"),
-                f'={index_to_cell(row, columns.index("Price USD"))}*{index_to_cell(row, columns.index("Exchange Rate"))}',
+                f"={index_to_cell(row, columns.index('Price USD'))}*{index_to_cell(row, columns.index('Exchange Rate'))}",
             )
         )
         col.append((row, columns.index("Price USD"), self.sell_price.value))
@@ -210,7 +215,7 @@ class PortfolioSale(BaseModel):
             (
                 row,
                 columns.index("Gain PS"),
-                f'={index_to_cell(row, columns.index("Price"))}-{self.parent.get_coord("Price")}',
+                f"={index_to_cell(row, columns.index('Price'))}-{self.parent.get_coord('Price')}",
             )
         )
 
@@ -218,7 +223,7 @@ class PortfolioSale(BaseModel):
             (
                 row,
                 columns.index("Gain PS USD"),
-                f'={index_to_cell(row, columns.index("Price USD"))}-{self.parent.get_coord("Price USD")}',
+                f"={index_to_cell(row, columns.index('Price USD'))}-{self.parent.get_coord('Price USD')}",
             )
         )
 
@@ -226,33 +231,31 @@ class PortfolioSale(BaseModel):
             (
                 row,
                 columns.index("Gain"),
-                f'={index_to_cell(row, columns.index("Gain PS"))}*ABS({index_to_cell(row, columns.index("Qty"))})',
+                f"={index_to_cell(row, columns.index('Gain PS'))}*ABS({index_to_cell(row, columns.index('Qty'))})",
             )
         )
         col.append(
             (
                 row,
                 columns.index("Gain USD"),
-                f'={index_to_cell(row, columns.index("Gain PS USD"))}*ABS({index_to_cell(row, columns.index("Qty"))})',
+                f"={index_to_cell(row, columns.index('Gain PS USD'))}*ABS({index_to_cell(row, columns.index('Qty'))})",
             )
         )
         col.append(
             (
                 row,
                 columns.index("Amount"),
-                f'=ABS({index_to_cell(row, columns.index("Price"))}*{index_to_cell(row, columns.index("Qty"))})',
+                f"=ABS({index_to_cell(row, columns.index('Price'))}*{index_to_cell(row, columns.index('Qty'))})",
             )
         )
         col.append(
             (
                 row,
                 columns.index("Amount USD"),
-                f'=ABS({index_to_cell(row, columns.index("Price USD"))}*{index_to_cell(row, columns.index("Qty"))})',
+                f"=ABS({index_to_cell(row, columns.index('Price USD'))}*{index_to_cell(row, columns.index('Qty'))})",
             )
         )
-        col.append(
-            (row, columns.index("Used"), round(self.tax_deduction_used, 2))
-        )
+        col.append((row, columns.index("Used"), round(self.tax_deduction_used, 2)))
         col.append(
             (
                 row,
@@ -261,6 +264,7 @@ class PortfolioSale(BaseModel):
             )
         )
         return col
+
 
 class PortfolioTransfer(BaseModel):
     date: date
@@ -273,6 +277,7 @@ class PortfolioTransfer(BaseModel):
         col.append((row, columns.index("Type"), "Transfer"))
         col.append((row, columns.index("Qty"), self.qty))
         return col
+
 
 def adjust_width(ws):
     def as_text(value):
@@ -288,10 +293,7 @@ def adjust_width(ws):
         length = max(len(as_text(cell.value)) for cell in column_cells)
         if length < 8:
             length = 8
-        try:
-            ws.column_dimensions[column_cells[0].column_letter].width = length
-        except:
-            pass
+        ws.column_dimensions[column_cells[0].column_letter].width = length
 
 
 def index_to_cell(row, column):
@@ -305,21 +307,21 @@ def index_to_cell(row, column):
 class Portfolio:
     def buy(self, p):
         position = PortfolioPosition(
-                qty=p.qty,
-                purchase_price=p.purchase_price,
-                discounted_purchase_price=p.discounted_purchase_price,
-                date=p.date,
-                symbol=p.symbol,
-                tax_deduction_acc=0,
-                current_qty=p.qty,
-            )
+            qty=p.qty,
+            purchase_price=p.purchase_price,
+            discounted_purchase_price=p.discounted_purchase_price,
+            date=p.date,
+            symbol=p.symbol,
+            tax_deduction_acc=0,
+            current_qty=p.qty,
+        )
         self.positions.append(position)
 
         # Keep stock of new positions for reporting
         self.new_positions.append(position)
 
     def qty_at_date(self, symbol, exdate):
-        total = Decimal('0.00')
+        total = Decimal("0.00")
         for p in self.positions:
             if p.symbol == symbol:
                 total += p.qty_at_date(exdate)
@@ -335,16 +337,18 @@ class Portfolio:
         no_shares = self.qty_at_date(transaction.symbol, transaction.exdate)
         expected_dividend = round(no_shares * transaction.dividend_dps, 2)
         if expected_dividend != transaction.amount.value:
-            logger.error(f"Dividend error. {transaction.date} Expected {expected_number_of_shares} shares, holding: {no_shares}")
+            logger.error(
+                f"Dividend error. {transaction.date} Expected {expected_number_of_shares} shares, holding: {no_shares}"
+            )
         for p in self.positions:
             if p.symbol == transaction.symbol:
                 # Get qty up until exdate
                 qty = p.qty_at_date(transaction.exdate)
                 if qty == 0:
                     continue
-                assert (
-                    p.date <= transaction.exdate
-                ), f"Exdate {transaction.exdate} before purchase date {p.date} shares left {shares_left}"
+                assert p.date <= transaction.exdate, (
+                    f"Exdate {transaction.exdate} before purchase date {p.date} shares left {shares_left}"
+                )
                 if qty >= shares_left:
                     shares_left = 0
                 else:
@@ -373,7 +377,9 @@ class Portfolio:
                 if shares_left == 0:
                     break
         if abs(total) > 1:
-            logger.error(f"Dividend issue: {transaction.date} Not all dividend used: ${total} expected {expected_number_of_shares}, found: {found_number_of_shares}")
+            logger.error(
+                f"Dividend issue: {transaction.date} Not all dividend used: ${total} expected {expected_number_of_shares}, found: {found_number_of_shares}"
+            )
         self.cash.debit(transaction.date, transaction.amount, "dividend")
 
     def tax(self, transaction):
@@ -423,9 +429,13 @@ class Portfolio:
 
     def cashadjust(self, transaction):
         if transaction.amount.value > 0:
-            self.cash.debit(transaction.date, transaction.amount, transaction.description)
+            self.cash.debit(
+                transaction.date, transaction.amount, transaction.description
+            )
         elif transaction.amount.value < 0:
-            self.cash.credit(transaction.date, transaction.amount, transaction.description)
+            self.cash.credit(
+                transaction.date, transaction.amount, transaction.description
+            )
 
     def tax_for_symbol(self, symbol):
         total_nok = 0
@@ -491,7 +501,7 @@ class Portfolio:
         #     self.cash.credit(transaction.date, transaction.fee.model_copy(), "sale fee")
 
     def sell_split(self, transaction, poscopy):
-        '''If a sale is split over multiple records, split the position'''
+        """If a sale is split over multiple records, split the position"""
         shares_to_sell = abs(transaction.qty)
         i = 0
         while i < len(poscopy):
@@ -512,9 +522,11 @@ class Portfolio:
                 p.current_qty = 0
                 self.positions[i].pre_split_qty = p.qty
                 self.positions[i].qty = self.positions[i].current_qty = shares_to_sell
-                self.positions.insert(i+1, splitpos)
-                poscopy.insert(i+1, deepcopy(splitpos))
-                logger.debug(f"Splitting position: {p.symbol} {p.date}, {shares_to_sell}+{splitpos.qty}({p.qty})")
+                self.positions.insert(i + 1, splitpos)
+                poscopy.insert(i + 1, deepcopy(splitpos))
+                logger.debug(
+                    f"Splitting position: {p.symbol} {p.date}, {shares_to_sell}+{splitpos.qty}({p.qty})"
+                )
                 shares_to_sell = 0
             else:
                 shares_to_sell -= p.current_qty
@@ -562,10 +574,10 @@ class Portfolio:
                 amount=v.amount,
                 from_positions=[],
                 totals={
-                    'gain': NativeAmount(usd_value=0, nok_value=0),
-                    'purchase_price': 0,
-                    'tax_ded_used': 0,
-                    },
+                    "gain": NativeAmount(usd_value=0, nok_value=0),
+                    "purchase_price": 0,
+                    "tax_ded_used": 0,
+                },
             )
 
         def portfoliosale_to_salesposition(portfoliosale):
@@ -584,17 +596,19 @@ class Portfolio:
                 if isinstance(r, PortfolioSale):
                     record = srecords.get(r.id)
                     record.from_positions.append(portfoliosale_to_salesposition(r))
-                    record.totals['gain'] += NativeAmount(
+                    record.totals["gain"] += NativeAmount(
                         usd_value=r.gain.value,
                         nok_value=r.gain.nok_value,
                     )
                     # Average purchase price
-                    purchase_price = record.totals['purchase_price']
-                    record.totals['purchase_price'] = (purchase_price + r.parent.purchase_price.value) / len(record.from_positions)
-                    record.totals['tax_ded_used'] += (r.tax_deduction_used * abs(r.qty))
+                    purchase_price = record.totals["purchase_price"]
+                    record.totals["purchase_price"] = (
+                        purchase_price + r.parent.purchase_price.value
+                    ) / len(record.from_positions)
+                    record.totals["tax_ded_used"] += r.tax_deduction_used * abs(r.qty)
 
         sales_report = {}
-        for k,v in srecords.items():
+        for k, v in srecords.items():
             if v.symbol not in sales_report:
                 sales_report[v.symbol] = []
             sales_report[v.symbol].append(v)
@@ -605,7 +619,7 @@ class Portfolio:
         return []
 
     def wire(self, transaction):
-        ''' Handled separately in the cash account '''
+        """Handled separately in the cash account"""
 
     def taxsub(self, transaction):
         self.cash.debit(transaction.date, transaction.amount, "tax returned")
@@ -634,9 +648,9 @@ class Portfolio:
 
     def eoy_balance(self, year):
         """End of year summary of holdings"""
-        assert (
-            year == self.year or year == self.year - 1
-        ), f"Year {year} does not match portfolio year {self.year}"
+        assert year == self.year or year == self.year - 1, (
+            f"Year {year} does not match portfolio year {self.year}"
+        )
         end_of_year = f"{year}-12-31"
 
         eoy_exchange_rate = fmv.get_currency("USD", end_of_year)
@@ -679,7 +693,9 @@ class Portfolio:
     def generate_holdings(self, year, broker) -> Holdings:
         # Generate holdings for EOY.
         holdings = []
-        assert year == self.year, f"Year {year} does not match portfolio year {self.year}"
+        assert year == self.year, (
+            f"Year {year} does not match portfolio year {self.year}"
+        )
         for p in self.positions:
             if p.current_qty == 0:
                 continue
@@ -732,56 +748,69 @@ class Portfolio:
                         usd += r.dividend.value
                         nok += r.dividend.nok_value
                         tax_ded_used += r.tax_deduction_used_total
-            result.append(EOYDividend(
-                symbol=s,
-                amount=NativeAmount(
-                    usd_value=usd,
-                    nok_value=nok - tax_ded_used,
-                ),
-                gross_amount=NativeAmount(
-                    usd_value=usd,
-                    nok_value=nok,
-                ),
-                tax=NativeAmount(
-                    usd_value=tax_usd,
-                    nok_value=tax_nok,
-                ),
-                tax_deduction_used=tax_ded_used,
-            ))
+            result.append(
+                EOYDividend(
+                    symbol=s,
+                    amount=NativeAmount(
+                        usd_value=usd,
+                        nok_value=nok - tax_ded_used,
+                    ),
+                    gross_amount=NativeAmount(
+                        usd_value=usd,
+                        nok_value=nok,
+                    ),
+                    tax=NativeAmount(
+                        usd_value=tax_usd,
+                        nok_value=tax_nok,
+                    ),
+                    tax_deduction_used=tax_ded_used,
+                )
+            )
         return result
 
     def synthesize_dividends(self, symbol):
-        '''Synthesize dividends for symbol'''
+        """Synthesize dividends for symbol"""
         dividends = fmv.get_dividends(symbol)
 
         # Filter dividends on self.year
-        for k,v in dividends.items():
+        for k, v in dividends.items():
             try:
                 payment_date = todate(k)
-                exdate = todate(v['date'])
+                exdate = todate(v["date"])
             except ValueError:
                 continue
             if payment_date.year != self.year:
                 continue
-            print(f'{k}: {v}')
+            print(f"{k}: {v}")
             qty = self.qty_at_date(symbol, exdate)
-            print(f'Qty: {qty}')
+            print(f"Qty: {qty}")
 
             if qty > 0:
-                amount=PositiveAmount(amountdate=payment_date, currency="USD", value=qty * Decimal(str(v['value'])))
-                transaction = Dividend(date=payment_date,
-                                       symbol=symbol,
-                                       description="Synthesized dividend",
-                                       amount=amount,
-                                       source='Synthesized dividend')
+                amount = PositiveAmount(
+                    amountdate=payment_date,
+                    currency="USD",
+                    value=qty * Decimal(str(v["value"])),
+                )
+                transaction = Dividend(
+                    date=payment_date,
+                    symbol=symbol,
+                    description="Synthesized dividend",
+                    amount=amount,
+                    source="Synthesized dividend",
+                )
                 self.dividend(transaction)
 
-                tax = Tax(date=payment_date,
-                           symbol=symbol,
-                           description="Synthesized dividend tax",
-                           amount=NegativeAmount(amountdate=payment_date, currency="USD",
-                                                 value=Decimal(-0.15) * amount.value),
-                           source='Synthesized dividend tax')
+                tax = Tax(
+                    date=payment_date,
+                    symbol=symbol,
+                    description="Synthesized dividend tax",
+                    amount=NegativeAmount(
+                        amountdate=payment_date,
+                        currency="USD",
+                        value=Decimal(-0.15) * amount.value,
+                    ),
+                    source="Synthesized dividend tax",
+                )
                 self.tax(tax)
 
     def espp_extra_info(self):
@@ -789,9 +818,15 @@ class Portfolio:
         r = []
         for p in self.positions:
             if p.discounted_purchase_price:
-                r.append({'symbol': p.symbol, 'date': p.date,
-                           'discounted_purchase_price_total_nok': p.discounted_purchase_price.nok_value*p.qty,
-                           'purchase_price_total_nok': p.purchase_price.nok_value*p.qty})
+                r.append(
+                    {
+                        "symbol": p.symbol,
+                        "date": p.date,
+                        "discounted_purchase_price_total_nok": p.discounted_purchase_price.nok_value
+                        * p.qty,
+                        "purchase_price_total_nok": p.purchase_price.nok_value * p.qty,
+                    }
+                )
         return r
 
     def __init__(  # noqa: C901
@@ -819,25 +854,22 @@ class Portfolio:
             "Date",
             "Type",
             # Qty
-            "pQty", # Pre-split qty
-            "Qty", # Current qty
-            "iQty", # Individual qty after split/sale
+            "pQty",  # Pre-split qty
+            "Qty",  # Current qty
+            "iQty",  # Individual qty after split/sale
             "Price",
             "Price USD",
             "Exchange Rate",
-
             # Dividends
             "Div PS",
             "Div PS USD",
             "Total Dividend",
             "Total Dividend USD",
-
             # Deductibe Risk-free return
             "Accumulated",
             "Added",
             "Used",
             "TD Total",
-
             # Sales
             "Gain PS",
             "Gain PS USD",
@@ -881,7 +913,7 @@ class Portfolio:
 
         for t in transactions:
             # Use dispatch to call a function per t.type
-            if t.type in ["BUY", "DEPOSIT"]:    # Already handled these
+            if t.type in ["BUY", "DEPOSIT"]:  # Already handled these
                 continue
             self.__class__.dispatch[t.type](self, t)
 
@@ -893,7 +925,9 @@ class Portfolio:
 
         # Check if we should synthesize dividends
         if FeatureFlagEnum.FEATURE_SYNDIV in feature_flags:
-            self.synthesize_dividends(list(self.symbols)[0]) # For now, just use the first symbol
+            self.synthesize_dividends(
+                list(self.symbols)[0]
+            )  # For now, just use the first symbol
 
         for p in self.positions:
             if p.current_qty > 0:
@@ -920,7 +954,7 @@ class Portfolio:
                     # The qty we get dividends for is different from the qty we get tax dividends for
                     if (
                         isinstance(r, PortfolioDividend)
-                        and not FeatureFlagEnum.FEATURE_TFD_ACCUMULATE in feature_flags
+                        and FeatureFlagEnum.FEATURE_TFD_ACCUMULATE not in feature_flags
                     ):
                         if p.tax_deduction >= r.dividend_dps.nok_value:
                             p.tax_deduction -= r.dividend_dps.nok_value
@@ -971,27 +1005,29 @@ class Portfolio:
         ws = workbook.active
         ws.title = f"Portfolio-{year}"
 
-        disclaimer = ("Disclaimer: This tool is provided as is, without warranty of any kind. "
-                    "Use of this tool is at your own risk. The authors or distributors "
-                    "are not responsible for any losses, damages, or issues that may arise "
-                    "from using this tool. Always consult with a professional financial advisor "
-                    "before making any financial decisions."
-                    f"This report is generated with the espp2 tool version: {version}")
+        disclaimer = (
+            "Disclaimer: This tool is provided as is, without warranty of any kind. "
+            "Use of this tool is at your own risk. The authors or distributors "
+            "are not responsible for any losses, damages, or issues that may arise "
+            "from using this tool. Always consult with a professional financial advisor "
+            "before making any financial decisions."
+            f"This report is generated with the espp2 tool version: {version}"
+        )
 
         # Extract column headers from the Stock Pydantic model
         # Write column headers to the Excel sheet
-        ws.merge_cells('J1:M1')
-        ws['J1'] = 'Dividends'
-        ws['J1'].font = Font(bold=True)
-        ws['J1'].alignment = Alignment(horizontal='center', vertical='center')
-        ws.merge_cells('N1:Q1')
-        ws['N1'] = 'Deductible Risk-free return'
-        ws['N1'].font = Font(bold=True)
-        ws['N1'].alignment = Alignment(horizontal='center', vertical='center')
-        ws.merge_cells('R1:W1')
-        ws['R1'] = 'Sales'
-        ws['R1'].font = Font(bold=True)
-        ws['R1'].alignment = Alignment(horizontal='center', vertical='center')
+        ws.merge_cells("J1:M1")
+        ws["J1"] = "Dividends"
+        ws["J1"].font = Font(bold=True)
+        ws["J1"].alignment = Alignment(horizontal="center", vertical="center")
+        ws.merge_cells("N1:Q1")
+        ws["N1"] = "Deductible Risk-free return"
+        ws["N1"].font = Font(bold=True)
+        ws["N1"].alignment = Alignment(horizontal="center", vertical="center")
+        ws.merge_cells("R1:W1")
+        ws["R1"] = "Sales"
+        ws["R1"].font = Font(bold=True)
+        ws["R1"].alignment = Alignment(horizontal="center", vertical="center")
 
         ws.append(self.column_headers)
         ft = Font(bold=True)
@@ -1011,18 +1047,44 @@ class Portfolio:
                 row += 1
 
         # Create a dictionary mapping column headers to Excel column letters
-        header_to_letter = {header: chr(i + 65) for i, header in enumerate(self.column_headers)}
+        header_to_letter = {
+            header: chr(i + 65) for i, header in enumerate(self.column_headers)
+        }
 
         # Number format
-        num_columns = ["Price", "Price USD", "Gain", "Gain PS",
-                       "Gain USD", "Amount", "Amount USD", "Div PS", "Div PS USD",
-                       "Total Dividend", "Total Dividend USD", "Exchange Rate",
-                       "Accumulated", "Added",]
-        num_cols = [header_to_letter[header] for header in num_columns if header in header_to_letter]
+        num_columns = [
+            "Price",
+            "Price USD",
+            "Gain",
+            "Gain PS",
+            "Gain USD",
+            "Amount",
+            "Amount USD",
+            "Div PS",
+            "Div PS USD",
+            "Total Dividend",
+            "Total Dividend USD",
+            "Exchange Rate",
+            "Accumulated",
+            "Added",
+        ]
+        num_cols = [
+            header_to_letter[header]
+            for header in num_columns
+            if header in header_to_letter
+        ]
         for c in num_cols:
             format_cells(ws, c, "0.00")
-        num_columns = ["pQty", "Qty", "iQty",]
-        num_cols = [header_to_letter[header] for header in num_columns if header in header_to_letter]
+        num_columns = [
+            "pQty",
+            "Qty",
+            "iQty",
+        ]
+        num_cols = [
+            header_to_letter[header]
+            for header in num_columns
+            if header in header_to_letter
+        ]
         for c in num_cols:
             format_cells(ws, c, "0.0000")
 
@@ -1045,26 +1107,53 @@ class Portfolio:
 
         adjust_width(ws)
         # Set number format for the entire column
-        sum_columns = ["Qty", "Gain", "Gain USD", "Amount", "Amount USD", "Total Dividend",
-                    "Total Dividend USD", "TD Total"]
+        sum_columns = [
+            "Qty",
+            "Gain",
+            "Gain USD",
+            "Amount",
+            "Amount USD",
+            "Total Dividend",
+            "Total Dividend USD",
+            "TD Total",
+        ]
 
         # Create sum_cols list with Excel column letters
-        sum_cols = [header_to_letter[header] for header in sum_columns if header in header_to_letter]
+        sum_cols = [
+            header_to_letter[header]
+            for header in sum_columns
+            if header in header_to_letter
+        ]
 
         no_columns = len(ws[sum_cols[0]])
         bold_font = Font(bold=True)
-        ws[f"A{no_columns+1}"] = "Total"
-        ws[f"A{no_columns+1}"].font = bold_font
+        ws[f"A{no_columns + 1}"] = "Total"
+        ws[f"A{no_columns + 1}"].font = bold_font
 
         for col in sum_cols:
-            ws[f"{col}{no_columns+1}"] = f"=SUM({col}2:{col}{no_columns})"
-            ws[f"{col}{no_columns+1}"].font = bold_font
-            ws[f"{col}{no_columns+1}"].number_format = "0.00"
+            ws[f"{col}{no_columns + 1}"] = f"=SUM({col}2:{col}{no_columns})"
+            ws[f"{col}{no_columns + 1}"].font = bold_font
+            ws[f"{col}{no_columns + 1}"].number_format = "0.00"
 
         # Format columns with different colors
-        format_fill_columns(ws, self.column_headers, ["Div PS", "Div PS USD", "Total Dividend", "Total Dividend USD"], "CAD8EE")
-        format_fill_columns(ws, self.column_headers, ["Gain PS", "Gain PS USD", "Gain", "Gain USD", "Amount", "Amount USD"], "90ADD7")
-        format_fill_columns(ws, self.column_headers, ["Accumulated", "Added", "TD Total", "Used"], "618CCE")
+        format_fill_columns(
+            ws,
+            self.column_headers,
+            ["Div PS", "Div PS USD", "Total Dividend", "Total Dividend USD"],
+            "CAD8EE",
+        )
+        format_fill_columns(
+            ws,
+            self.column_headers,
+            ["Gain PS", "Gain PS USD", "Gain", "Gain USD", "Amount", "Amount USD"],
+            "90ADD7",
+        )
+        format_fill_columns(
+            ws,
+            self.column_headers,
+            ["Accumulated", "Added", "TD Total", "Used"],
+            "618CCE",
+        )
 
         # Write the disclaimer to the first cell in the last row
         ws[f"A{ws.max_row + 5}"] = disclaimer
@@ -1072,7 +1161,9 @@ class Portfolio:
         # Apply conditional formatting to change font color for negative numbers
         ws.conditional_formatting.add(
             ws.dimensions,
-            CellIsRule(operator="lessThan", formula=["0.00"], font=Font(color="00FF0000")),
+            CellIsRule(
+                operator="lessThan", formula=["0.00"], font=Font(color="00FF0000")
+            ),
         )
 
         # Separate sheet for cash

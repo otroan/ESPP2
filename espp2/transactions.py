@@ -38,7 +38,7 @@ def get_arguments():
     parser.add_argument(
         "--log",
         default="debug",
-        help=("Provide logging level. " "Example --log debug', default='warning'"),
+        help=("Provide logging level. Example --log debug', default='warning'"),
     )
 
     options = parser.parse_args()
@@ -84,17 +84,21 @@ def guess_format(broker: str, filename, data) -> str:  # noqa: C901
 
     raise ValueError("Unable to guess format", fname, extension, filebytes)
 
+
 def plugin_read(fd, filename, trans_format):
     plugin_path = "espp2.plugins." + trans_format
     plugin = importlib.import_module(plugin_path, package="espp2")
     logger.info("Importing transactions with importer %s: %s", trans_format, filename)
     return plugin.read(fd, filename)
 
-def normalize(data: Union[UploadFile, typer.FileText, str], broker: str) -> Transactions:
+
+def normalize(
+    data: Union[UploadFile, typer.FileText, str], broker: str
+) -> Transactions:
     """Normalize transactions"""
     if isinstance(data, str):
         filename = data
-        fd = open(data, 'r', encoding='utf-8')
+        fd = open(data, "r", encoding="utf-8")
     elif isinstance(data, starlette.datastructures.UploadFile):
         filename = data.filename
         fd = data.file
@@ -103,4 +107,3 @@ def normalize(data: Union[UploadFile, typer.FileText, str], broker: str) -> Tran
         fd = data
     trans_format = guess_format(broker, filename, fd)
     return plugin_read(fd, filename, trans_format)
-

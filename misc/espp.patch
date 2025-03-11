@@ -3,11 +3,11 @@
 *************** def check_for_upgrade():
 *** 187,196 ****
 --- 187,204 ----
-  
+
           url = release['html_url']
           logging.warning(f'Found new ESPP version {tag} at {url}')
           return {'tag': tag, 'url': url}
-  
+
 + import json
 + class DateTimeEncoder(json.JSONEncoder):
 +     def default(self, z):
@@ -16,7 +16,7 @@
 +             return (str(z))
 +         else:
 +             return super().default(z)
-  
+
   class ESPP():
       NASDAQHistoryURL = 'https://www.nasdaq.com/market-activity/stocks/csco/dividend-history'
       NASDAQHistoryAPI = 'https://api.nasdaq.com/api/quote/CSCO/dividends?assetclass=stocks'
@@ -30,7 +30,7 @@
                       recordType = 'REINVEST'
 -                     fee = amount(row.data['FEES & COMMISSIONS'])
                       _, newRecord = self.data.addRecord(recordType, date=date, amount=amt, fee=fee, replace=True)
-  
+
                       if reInvestRecord is None:
                           reInvestRecord = newRecord
                       else:
@@ -38,35 +38,35 @@
 *************** class ESPP():
 *** 1025,1035 ****
                                   tr.td(str(val), _class='text-center')
-  
+
           return str(page)
-  
+
       def registerReports(self, year, poster, shares):
 !         # print year
           # PP.pprint([str(p) for p in poster])
           reports = OrderedDict()
           self.data1030 = dict()
           self.data1159 = list() if year >= 2018 else None
-  
+
 --- 1032,1042 ----
                                   tr.td(str(val), _class='text-center')
-  
+
           return str(page)
-  
+
       def registerReports(self, year, poster, shares):
 !         print (year)
           # PP.pprint([str(p) for p in poster])
           reports = OrderedDict()
           self.data1030 = dict()
           self.data1159 = list() if year >= 2018 else None
-  
+
 *************** class ESPP():
 *** 1056,1066 ****
 --- 1063,1083 ----
               reports['RF-1159B'] = self.tabRF1159B(year, self.data1159)
-  
+
           reports['RF-1030'] = self.tabRF1030(year, shares)
-  
+
           self.reports[year] = reports
 +         r = []
 +         if year == 2020:
@@ -75,10 +75,10 @@
 +                     p = {'raw': post.raw, 'sold': post.sold, 'sales': post.sales,
 +                          'ubenyttet': post.ubenyttet}
 +                     r.append(p)
-  
+
 +             with open(f'positions-{year}.json', 'w') as f:
 +                 json.dump(r, f, cls=DateTimeEncoder)
-+ 
++
       def chronoGenerator(self):
           currency = self.configGet('espp', 'valuta', 'USD')
           self.holdings = CashFlow()
@@ -91,7 +91,7 @@
               spec = ''
               xRate = xRates('USD', date)
               saldoRec = dict(event=recType, date=date, xrate=xRate)
-! 
+!
               if year > curYear:  # Time to report
                   sr = dict(date='%s/%s' % (curYear, year), event="SALDO", shares=shares, USD=self.holdings.USD,
                             NOK=self.holdings.NOK, accDiv=self.dividend.USD, accTax=self.tax.USD, accFee=self.fee.USD,

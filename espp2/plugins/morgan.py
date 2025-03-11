@@ -228,7 +228,9 @@ class ParseState:
                 if settledate in self.settledate2selldate:
                     selldate = self.settledate2selldate[settledate]
                     t.date = datetime.date.fromisoformat(selldate)
-                    logger.warning(f"Sale on {settledate} assumed to have happened on {t.date} (Withdrawal-date)")
+                    logger.warning(
+                        f"Sale on {settledate} assumed to have happened on {t.date} (Withdrawal-date)"
+                    )
 
     def parse_rsu_release(self, row):
         """Handle what appears to be RSUs added to account"""
@@ -358,15 +360,19 @@ class ParseState:
             if qty > 0 and False:
                 # Disabled for now, check more thoroughly before enabling
                 book_value, currency = morgan_price(bookvalue_txt)
-                purchase_price = fixup_price2(self.entry_date, currency, book_value / qty)
-                self.deposit(qty, purchase_price, 'RS', self.entry_date)
+                purchase_price = fixup_price2(
+                    self.entry_date, currency, book_value / qty
+                )
+                self.deposit(qty, purchase_price, "RS", self.entry_date)
                 return True
         raise ValueError(f"Unexpected opening balance: {row}")
 
     def parse_tax_returned(self, row):
         """Parse records that returns paid tax to cash-account"""
-        if self.activity == "Nonresident Alien Withholding Transfer" or \
-           self.activity == "Backup Withholding Refund Transfer":
+        if (
+            self.activity == "Nonresident Alien Withholding Transfer"
+            or self.activity == "Backup Withholding Refund Transfer"
+        ):
             # Assume this is getting tax back? Looks like it...
             # Or it should mean the withheld amount wasn't used for tax
             cash, ok = getitems(row, "Cash")
@@ -400,7 +406,9 @@ class ParseState:
                         self.entry_date, currency, book_value / qty
                     )
                     self.deposit(qty, purchase_price, "RS", self.entry_date)
-                    logger.warning(f"Adhoc Adjustment adds {qty} shares on {self.entry_date}, assuming these are RSU shares")
+                    logger.warning(
+                        f"Adhoc Adjustment adds {qty} shares on {self.entry_date}, assuming these are RSU shares"
+                    )
                     rc = True
 
             if not rc:
@@ -426,12 +434,10 @@ def create_signed_amount(
     positive_ok=True,
     negate=False,
 ):
-
     assert positive_ok or negative_ok
 
     if negate:
         value *= -1
-        nok_value *= -1
 
     if value > 0 and positive_ok:
         return Amount(
@@ -450,20 +456,12 @@ def create_signed_amount(
     if positive_ok:
         if value < 0:
             raise Exception(f"Expected positive number, got {value}")
-        return Amount(
-            currency=currency,
-            value=value,
-            amountdate = amountdate
-        )
+        return Amount(currency=currency, value=value, amountdate=amountdate)
 
     if negative_ok:
         if value > 0:
             raise Exception(f"Expected negative number, got {value}")
-        return NegativeAmount(
-            currency=currency,
-            value=value,
-            amountdate = amountdate
-        )
+        return NegativeAmount(currency=currency, value=value, amountdate=amountdate)
 
     raise Exception("Unexpected, should never get here")
 
@@ -502,7 +500,6 @@ def fixup_price(datestr, currency, pricestr, change_sign=False):
 
 def fixup_price2(date, currency, value):
     """Fixup price."""
-    exchange_rate = currency_converter.get_currency(currency, date)
     return create_signed_amount(
         currency=currency,
         value=value,
@@ -527,9 +524,9 @@ def sum_amounts(amounts, positive_ok=True, negative_ok=True, negate=False):
     for a in amounts:
         verify_sign(a.value, positive_ok, negative_ok)
         if a.currency != expect_currency:
-            raise ValueError(f'Mixing currencies in sum_amount()')
+            raise ValueError("Mixing currencies in sum_amount()")
         if a.amountdate != expect_amountdate:
-            raise ValueError(f'Summing amounts for different days')
+            raise ValueError("Summing amounts for different days")
 
         sum += a.value
 
@@ -578,6 +575,7 @@ def fixup_date(morgandate):  # noqa: C901
 
     raise ValueError(f'Illegal date: "{morgandate}"')
 
+
 def fixup_date2(morgandate):
     m = re.fullmatch(r"""(\S+)\s+(\d+), (20\d\d)""", morgandate)
     if m:
@@ -611,6 +609,7 @@ def fixup_date2(morgandate):
             return f"{year}-12-{day}"
 
     raise ValueError(f'Illegal date 2: "{morgandate}"')
+
 
 def getitem(row, colname):
     """Get a named item from a row, or None if nothing there"""
@@ -861,10 +860,14 @@ def parse_withdrawal_sales(state, sales):
         if w.is_wire:
             assert w.symbol != "Cash"  # No Cash-fund for sale withdrawals
             state.wire_transfer(w.settlement_date, w.net_amount, w.fees_amount)
-            print(f"### Found settlement {w.settlement_date} for withdrawal date {w.withdrawal_date}")
+            print(
+                f"### Found settlement {w.settlement_date} for withdrawal date {w.withdrawal_date}"
+            )
             state.record_selldate(w.withdrawal_date, w.settlement_date)
         elif w.is_transfer:
-            print(f"### Found settlement {w.settlement_date} for withdrawal date {w.withdrawal_date}")
+            print(
+                f"### Found settlement {w.settlement_date} for withdrawal date {w.withdrawal_date}"
+            )
             state.record_selldate(w.withdrawal_date, w.settlement_date)
         else:
             raise ValueError(
@@ -1291,8 +1294,11 @@ def morgan_html_import(html_fd, filename):
     # Look for start "year-01-01" and end "year-12-31" for some 'year'
     # and assume this is the transaction file for that tax-year
     year = int(end_period[0:4])
-    if start_period[0:5] == end_period[0:5] and \
-       start_period[5:10] == "01-01" and end_period[5:10] == "12-31":
+    if (
+        start_period[0:5] == end_period[0:5]
+        and start_period[5:10] == "01-01"
+        and end_period[5:10] == "12-31"
+    ):
         print("Parse RSU activity ...")
         parse_rsu_activity_html(all_tables, state)
         print("Parse ESPP activity ...")

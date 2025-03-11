@@ -12,7 +12,7 @@ import datetime
 from math import isclose
 import simplejson as json
 from espp2.console import console
-from espp2.positions import Positions, InvalidPositionException, Ledger
+from espp2.positions import Positions, InvalidPositionException
 from espp2.transactions import normalize
 from espp2.datamodels import (
     TaxReport,
@@ -22,13 +22,8 @@ from espp2.datamodels import (
     ForeignShares,
     TaxSummary,
     CreditDeduction,
-    Sell,
-    EntryTypeEnum,
-    Amount,
-    Buy,
 )
 from espp2.report import print_ledger, print_cash_ledger, print_report_holdings
-from espp2.fmv import FMV, FMVTypeEnum, get_tax_deduction_rate
 from espp2.portfolio import Portfolio
 
 logger = logging.getLogger(__name__)
@@ -181,11 +176,15 @@ def tax_report(  # noqa: C901
     credit_deductions = []
     for e in report["dividends"]:
         expected_tax = Decimal(".15") * e.gross_amount.nok_value
-        if not isclose(round(expected_tax, 2), round(abs(e.tax.nok_value), 2), rel_tol=0.0001):
+        if not isclose(
+            round(expected_tax, 2), round(abs(e.tax.nok_value), 2), rel_tol=0.0001
+        ):
             logger.error(
                 "Expected source tax: %s (%s) got: %s (%s)",
-                expected_tax, e.gross_amount,
-                abs(e.tax.nok_value), e.tax,
+                expected_tax,
+                e.gross_amount,
+                abs(e.tax.nok_value),
+                e.tax,
             )
         expected_tax = round(expected_tax, 0)
         credit_deductions.append(
@@ -290,13 +289,13 @@ def merge_transactions(transaction_files: list, broker: str) -> Transactions:
     for i in range(1, len(date_intervals)):
         if date_intervals[i][0] <= date_intervals[i - 1][1]:
             raise ESPPErrorException(
-                f"Date interval is overlapping: {date_intervals[i-1][1]} is not before {date_intervals[i][0]}"
+                f"Date interval is overlapping: {date_intervals[i - 1][1]} is not before {date_intervals[i][0]}"
             )
         if date_intervals[i][0] != date_intervals[i - 1][1] + datetime.timedelta(
             days=1
         ):
             raise ESPPErrorException(
-                f"Date interval is not continuous: {date_intervals[i-1][1]} is not the day before {date_intervals[i][0]}"
+                f"Date interval is not continuous: {date_intervals[i - 1][1]} is not the day before {date_intervals[i][0]}"
             )
 
     all_transactions.sort(key=lambda d: d.date)
@@ -350,9 +349,7 @@ def generate_previous_year_holdings(
     return holdings
 
 
-def do_holdings(
-    broker, transaction_files: list, year, verbose=False
-) -> Holdings:
+def do_holdings(broker, transaction_files: list, year, verbose=False) -> Holdings:
     """Generate holdings file"""
     transactions, years = merge_transactions(transaction_files, broker)
 
@@ -362,6 +359,7 @@ def do_holdings(
     )
 
     return holdings
+
 
 def get_zipdata(files) -> bytes:
     """Get zip data"""
@@ -397,7 +395,7 @@ def do_taxes(
 
     if broker != "morgan":
         if year + 1 not in years:
-            logger.error(f"No transactions into the year after the tax year {year+1}")
+            logger.error(f"No transactions into the year after the tax year {year + 1}")
 
     if wirefile and not isinstance(wirefile, Wires):
         wires = json_load(wirefile)

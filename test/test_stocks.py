@@ -1,7 +1,3 @@
-from espp2.datamodels import Transactions
-from espp2.positions import Ledger
-from espp2.report import print_ledger
-from rich.console import Console
 from espp2.main import tax_report
 from espp2.transactions import plugin_read
 from espp2.espp2 import app

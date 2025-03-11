@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class FeatureFlagEnum(Enum):
     # Generate synthetic dividends records from the stocks API
     FEATURE_SYNDIV = "synthetic-dividend"

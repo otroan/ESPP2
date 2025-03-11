@@ -38,4 +38,3 @@ jobs:
           echo "$(cat vault.json)"
           pip install -e .
           pytest
-

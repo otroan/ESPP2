@@ -63,3 +63,7 @@ docs = [
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.6.0"
 pytest = "^8.0.0"
+
+[tool.flake8]
+max-line-length = 120
+ignore = ["E501"]

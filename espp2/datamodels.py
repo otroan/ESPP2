@@ -12,7 +12,6 @@ from pydantic import (
     model_validator,
     ConfigDict,
     BaseModel,
-    validator,
     Field,
     RootModel,
     computed_field,
@@ -544,14 +543,14 @@ class CashEntry(BaseModel):
     amount: Amount
     transfer: Optional[bool] = False
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def prepare_amount(cls, values):
         """Ensure amount has the correct date during initialization"""
         if isinstance(values, dict):
-            if 'amount' in values and 'date' in values:
-                if isinstance(values['amount'], dict):
-                    values['amount']['amountdate'] = values['date']
+            if "amount" in values and "date" in values:
+                if isinstance(values["amount"], dict):
+                    values["amount"]["amountdate"] = values["date"]
         return values
 
     model_config = ConfigDict(extra="allow")
@@ -624,6 +623,7 @@ class NativeAmount(BaseModel):
 
     def __str__(self):
         return ", ".join(f"{curr}{val}" for curr, val in self.values.items())
+
 
 class EOYDividend(BaseModel):
     """EOY dividend"""

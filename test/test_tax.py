@@ -7,7 +7,6 @@ from espp2.datamodels import (
     Deposit,
     Wire,
 )
-from espp2.positions import Positions
 from espp2.portfolio import Portfolio
 import logging
 import datetime
@@ -25,9 +24,7 @@ def test_dividends(caplog):
             symbol="CSCO",
             qty=100,
             purchase_date="2022-10-26",
-            purchase_price=Amount(
-                currency="USD", value=10, amountdate="2022-10-26"
-            ),
+            purchase_price=Amount(currency="USD", value=10, amountdate="2022-10-26"),
             description="",
             source="test",
         )
@@ -39,9 +36,7 @@ def test_dividends(caplog):
             symbol="CSCO",
             qty=100,
             purchase_date="2022-10-26",
-            purchase_price=Amount(
-                currency="USD", value=10, amountdate="2022-10-26"
-            ),
+            purchase_price=Amount(currency="USD", value=10, amountdate="2022-10-26"),
             description="",
             source="test",
         )
@@ -51,9 +46,7 @@ def test_dividends(caplog):
         type=EntryTypeEnum.DIVIDEND,
         date="2022-10-26",
         symbol="CSCO",
-        amount=PositiveAmount(
-            currency="USD", value=38, amountdate="2022-10-26"
-        ),
+        amount=PositiveAmount(currency="USD", value=38, amountdate="2022-10-26"),
         source="test",
     )
     assert d.exdate == datetime.date(2022, 10, 4)

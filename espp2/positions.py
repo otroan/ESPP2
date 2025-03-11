@@ -12,8 +12,16 @@ from datetime import datetime, date, timedelta
 from math import isclose
 from decimal import Decimal
 from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals
-from espp2.datamodels import (Holdings, Amount, EOYDividend, EOYBalanceItem,
-                              SalesPosition, EntryTypeEnum, Stock, EOYSales)
+from espp2.datamodels import (
+    Holdings,
+    Amount,
+    EOYDividend,
+    EOYBalanceItem,
+    SalesPosition,
+    EntryTypeEnum,
+    Stock,
+    EOYSales,
+)
 
 from espp2.cash import Cash
 
@@ -183,9 +191,9 @@ class Positions:
             zero_purchase_price = [
                 p for p in self.positions if p.purchase_price.value == 0
             ]
-            assert (
-                len(zero_purchase_price) == 0
-            ), f"Found {len(zero_purchase_price)} positions with zero purchase price. {zero_purchase_price}"
+            assert len(zero_purchase_price) == 0, (
+                f"Found {len(zero_purchase_price)} positions with zero purchase price. {zero_purchase_price}"
+            )
 
         # Collect last years accumulated tax deduction
         total_accumulated_tax_deduction = 0
@@ -414,9 +422,12 @@ class Positions:
                     d.dividend_dps,
                 )
                 if not isclose(dps, d.dividend_dps, abs_tol=10**-2):
-                    logger.error((f"Dividend for {exdate}/{d.date} per share calculated does not match "
-                          f"reported {dps} vs {d.dividend_dps} for {total_shares} shares. Dividend:"
-                          f" {d.amount.value}. Dividend payment indicates you had: {d.amount.value/d.dividend_dps} shares.")
+                    logger.error(
+                        (
+                            f"Dividend for {exdate}/{d.date} per share calculated does not match "
+                            f"reported {dps} vs {d.dividend_dps} for {total_shares} shares. Dividend:"
+                            f" {d.amount.value}. Dividend payment indicates you had: {d.amount.value / d.dividend_dps} shares."
+                        )
                     )
                 for entry in self[:exdate, symbol]:  # Creates a view
                     entry.dps = dps if "dps" not in entry else entry.dps + dps
@@ -439,9 +450,9 @@ class Positions:
             if tax_returned:
                 exchange_rate = tax_nok / tax_usd
                 tax_usd += tax_returned
-                assert (
-                    abs(tax_usd) > 0
-                ), f"Dividend tax after tax return is negative {tax_usd}"
+                assert abs(tax_usd) > 0, (
+                    f"Dividend tax after tax return is negative {tax_usd}"
+                )
                 tax_nok = tax_usd * exchange_rate
 
             if post_tax_inc_usd:

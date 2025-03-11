@@ -59,6 +59,7 @@ def get_purchaseprice(csv_item) -> str:
 
     raise ValueError(f"Unknown purchase price for {csv_item}")
 
+
 def get_espp_purchaseprice(csv_item) -> tuple[str, str]:
     # ESPP
     subdata = csv_item["TransactionDetails"][0]["Details"]
@@ -249,7 +250,7 @@ def deposit(csv_item, source):
 
 def not_implemented(csv_item, source):
     """Process not implemented"""
-    raise NotImplementedError(f"Action \"{csv_item['Action']}\" not implemented")
+    raise NotImplementedError(f'Action "{csv_item["Action"]}" not implemented')
 
 
 def transfer(csv_item, source):
@@ -301,10 +302,10 @@ def journal(csv_item, source):
 def adjustment(csv_item, source):
     """Process adjustment"""
     d = fixup_date(csv_item["Date"])
-    if csv_item["FeesAndCommissions"]:
-        fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"])
-    else:
-        fee = fixup_price(d, "USD", "$0.0")
+    # if csv_item["FeesAndCommissions"]:
+    #     fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"])
+    # else:
+    #     fee = fixup_price(d, "USD", "$0.0")
     return Cashadjust(
         date=fixup_date(csv_item["Date"]),
         description=csv_item["Description"],

@@ -94,6 +94,7 @@ async def taxreport(
         tax_report=report, holdings=holdings, zip=zipstr, summary=summary, log=logstr
     )
 
+
 @app.post("/holdings", response_model=Holdings)
 async def generate_holdings(
     transaction_files: list[UploadFile],
@@ -102,8 +103,7 @@ async def generate_holdings(
 ):
     """Generate previous year holdings from a plethora of transaction files"""
     try:
-        return do_holdings(
-            broker, transaction_files, year)
+        return do_holdings(broker, transaction_files, year)
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
