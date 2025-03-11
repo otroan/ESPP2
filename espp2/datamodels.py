@@ -55,7 +55,7 @@ class Amount(BaseModel):
     _exchange_rates: Dict[str, Decimal] = {}
     _converted_values: Dict[str, Decimal] = {}
     amountdate: Optional[date] = None
-    legacy_nok_rate: Optional[Decimal] = None
+    _legacy_nok_rate: Optional[Decimal] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -65,7 +65,7 @@ class Amount(BaseModel):
             return {
                 "currency": values["currency"],
                 "value": Decimal(values["value"]),
-                "legacy_nok_rate": Decimal(values["nok_exchange_rate"]),
+                "_legacy_nok_rate": Decimal(values["nok_exchange_rate"]),
                 "amountdate": values.get("amountdate", None),
             }
         return values
@@ -75,11 +75,11 @@ class Amount(BaseModel):
         if target_currency == self.currency:
             return self.value
         # Handle legacy USD-NOK conversion
-        if self.legacy_nok_rate is not None:
+        if self._legacy_nok_rate is not None:
             if self.currency == "USD" and target_currency == "NOK":
-                return self.value * self.legacy_nok_rate
+                return self.value * self._legacy_nok_rate
             if self.currency == "NOK" and target_currency == "USD":
-                return self.value / self.legacy_nok_rate
+                return self.value / self._legacy_nok_rate
 
         # For all other conversions, require a date
         if self.amountdate is None:
@@ -114,7 +114,7 @@ class Amount(BaseModel):
     @property
     def nok_exchange_rate(self) -> Optional[Decimal]:
         """Exchange rate to NOK"""
-        if self.amountdate is None and self.legacy_nok_rate is not None:
+        if self.amountdate is None and self._legacy_nok_rate is not None:
             return self.legacy_nok_rate
         try:
             return self._get_exchange_rate("NOK")
