@@ -686,6 +686,20 @@ class EOYSales(BaseModel):
     # total_gain: Amount
 
 
+class ESPPInfo(BaseModel):
+    """ESPP info"""
+
+    symbol: str
+    date: date
+    qty: Decimal
+    discounted_nok: Decimal
+    purchase_price_nok: Decimal
+    benefit_gross_nok: Decimal
+    benefit_net_nok: Decimal
+    roi_gross: Decimal
+    roi_net: Decimal
+
+
 class TaxReport(BaseModel):
     """Tax report"""
 
@@ -698,7 +712,7 @@ class TaxReport(BaseModel):
     cash_ledger: list
     unmatched_wires: list[WireAmount]
     prev_holdings: Optional[Holdings] = None
-    espp_extra_info: list[dict] = []
+    espp_extra_info: list[ESPPInfo] = []
 
 
 class CashModel(BaseModel):

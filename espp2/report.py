@@ -4,7 +4,7 @@ import setuptools_scm
 from decimal import Decimal
 from rich.console import Console
 from rich.table import Table
-from espp2.datamodels import TaxReport, TaxSummary, Holdings, EOYDividend
+from espp2.datamodels import TaxReport, TaxSummary, Holdings, EOYDividend, ESPPInfo
 from espp2.console import console
 
 
@@ -178,6 +178,35 @@ def print_ledger(year, ledger: dict, console: Console):
         console.print(table)
 
 
+def print_espp_extra_report(year, espp_extra: list[ESPPInfo], console: Console):
+    table = Table(
+        title=f"ESPP Extra Report {year}", show_header=True, header_style="bold magenta"
+    )
+    table.add_column("Symbol", justify="center", style="cyan", no_wrap=True)
+    table.add_column("Date", justify="center", style="cyan", no_wrap=True)
+    table.add_column("Qty", justify="center", style="cyan", no_wrap=True)
+    table.add_column("Invested", style="magenta", justify="right")
+    table.add_column("Purchase Price", justify="right", style="green")
+    table.add_column("Benefit (gross)", justify="right", style="green")
+    table.add_column("Benefit (net)", justify="right", style="red")
+    table.add_column("ROI Gross (%)", justify="right", style="blue")
+    table.add_column("ROI Net (%)", justify="right", style="blue")
+
+    for e in espp_extra:
+        table.add_row(
+            e.symbol,
+            str(e.date),
+            f"{e.qty:.0f}",
+            f"{e.discounted_nok:.2f}",
+            f"{e.purchase_price_nok:.2f}",
+            f"{e.benefit_gross_nok:.2f}",
+            f"{e.benefit_net_nok:.2f}",
+            f"{e.roi_gross:.2f}",
+            f"{e.roi_net:.2f}",
+        )
+    console.print(table)
+
+
 def print_report_tax_summary(summary: TaxSummary, console: Console):
     """Tax summary"""
     console.print(f"Tax Summary for {summary.year}:\n", style="bold magenta")
@@ -309,6 +338,8 @@ def print_report(
         print_report_holdings(holdings, console)
 
         print_cash_ledger(year, report.cash_ledger, console)
+
+        print_espp_extra_report(year, report.espp_extra_info, console)
 
     if report.unmatched_wires:
         print_report_unmatched_wires(report.unmatched_wires, console)

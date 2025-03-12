@@ -15,6 +15,7 @@ from typing import Optional
 from datetime import date
 from decimal import Decimal
 from espp2.datamodels import (
+    ESPPInfo,
     Stock,
     Holdings,
     Amount,
@@ -814,17 +815,40 @@ class Portfolio:
     def espp_extra_info(self):
         """Return extra info for ESPP"""
         r = []
+
         for p in self.positions:
             if p.discounted_purchase_price:
-                r.append(
-                    {
-                        "symbol": p.symbol,
-                        "date": p.date,
-                        "discounted_purchase_price_total_nok": p.discounted_purchase_price.nok_value
-                        * p.qty,
-                        "purchase_price_total_nok": p.purchase_price.nok_value * p.qty,
-                    }
+                benefit_gross = (
+                    p.purchase_price.nok_value - p.discounted_purchase_price.nok_value
+                ) * p.qty
+                taxable_benefit = benefit_gross * Decimal(0.54)
+                invested_amount = p.discounted_purchase_price.nok_value * p.qty
+
+                roi_gross = (
+                    (benefit_gross / invested_amount) * 100
+                    if invested_amount != 0
+                    else 0
                 )
+                roi_net = (
+                    (taxable_benefit / invested_amount) * 100
+                    if invested_amount != 0
+                    else 0
+                )
+
+                r.append(
+                    ESPPInfo(
+                        symbol=p.symbol,
+                        date=p.date,
+                        qty=p.qty,
+                        discounted_nok=invested_amount,
+                        purchase_price_nok=p.purchase_price.nok_value * p.qty,
+                        benefit_gross_nok=benefit_gross,
+                        benefit_net_nok=taxable_benefit,
+                        roi_gross=roi_gross,
+                        roi_net=roi_net,
+                    )
+                )
+
         return r
 
     def __init__(  # noqa: C901
