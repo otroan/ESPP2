@@ -3,6 +3,7 @@ ESPP portfolio class
 """
 
 import logging
+import setuptools_scm
 from io import BytesIO
 from copy import deepcopy
 from openpyxl import Workbook
@@ -39,9 +40,6 @@ from espp2.util import FeatureFlagEnum
 
 fmv = FMV()
 logger = logging.getLogger(__name__)
-
-# Temporarily hard-code version
-version = "0.1.dev300+g328e721.d20240417"
 
 
 def format_cells(ws, column, number_format):
@@ -1004,7 +1002,7 @@ class Portfolio:
         workbook = Workbook()
         ws = workbook.active
         ws.title = f"Portfolio-{year}"
-
+        version = setuptools_scm.get_version()
         disclaimer = (
             "Disclaimer: This tool is provided as is, without warranty of any kind. "
             "Use of this tool is at your own risk. The authors or distributors "

@@ -775,3 +775,4 @@ class ESPPResponse(BaseModel):
     summary: TaxSummary
     holdings: Holdings
     log: str
+    version: str

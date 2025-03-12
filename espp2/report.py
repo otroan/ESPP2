@@ -1,5 +1,6 @@
 # Use Rich tables to print the tax reports
 
+import setuptools_scm
 from decimal import Decimal
 from rich.console import Console
 from rich.table import Table
@@ -102,7 +103,7 @@ def print_report_sales(report: TaxReport, console: Console):
                 str(e.date),
                 f"{sale_price_nok:.2f} ${sale_price:.2f}",
                 f"{e.amount.nok_value:.2f}  ${e.amount.value:.2f}",
-                f'{e.totals["gain"].nok_value:.2f}  ${e.totals["gain"].usd_value:.2f}',
+                f"{e.totals['gain'].nok_value:.2f}  ${e.totals['gain'].usd_value:.2f}",
                 buy_positions,
                 style=style,
             )
@@ -293,6 +294,7 @@ def print_report(
     year: int, summary: TaxSummary, report: TaxReport, holdings: Holdings, verbose: bool
 ):
     """Pretty print tax report to console"""
+    console.print(f"espp2 CLI version: {setuptools_scm.get_version()}")
 
     if verbose:
         # Print previous year holdings

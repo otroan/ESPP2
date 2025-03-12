@@ -6,6 +6,7 @@ ESPP2 web server
 # pylint: disable=invalid-name
 
 import logging
+import setuptools_scm
 from io import StringIO
 import json
 import base64
@@ -90,8 +91,14 @@ async def taxreport(
         zipdata, custom_encoder={bytes: lambda v: base64.b64encode(v).decode("utf-8")}
     )
     logstr = capture_logs_stop(log_handler)
+    version = setuptools_scm.get_version()
     return ESPPResponse(
-        tax_report=report, holdings=holdings, zip=zipstr, summary=summary, log=logstr
+        tax_report=report,
+        holdings=holdings,
+        zip=zipstr,
+        summary=summary,
+        log=logstr,
+        version=version,
     )
 
 

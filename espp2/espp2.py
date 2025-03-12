@@ -5,6 +5,7 @@ ESPPv2 Wrapper
 # pylint: disable=invalid-name
 
 import logging
+import setuptools_scm
 from enum import Enum
 import typer
 from rich.logging import RichHandler
@@ -15,7 +16,6 @@ from espp2.main import (
 )
 from espp2.datamodels import Wires
 from espp2.report import print_report
-from espp2._version import __version__
 from espp2.util import FeatureFlagEnum
 
 app = typer.Typer(pretty_exceptions_enable=False)
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 def version_callback(value: bool):
     if value:
-        typer.echo(f"espp2 CLI Version: {__version__}")
+        typer.echo(f"espp2 CLI version: {setuptools_scm.get_version()}")
         raise typer.Exit()
 
 
@@ -67,7 +67,6 @@ def main(  # noqa: C901
     )
 
     result = None
-
     result = do_taxes(
         broker,
         transaction_files,

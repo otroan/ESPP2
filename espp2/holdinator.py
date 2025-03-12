@@ -5,13 +5,13 @@ Re-generate holdings from transaction files
 # pylint: disable=invalid-name
 
 import logging
+import setuptools_scm
 from enum import Enum
 import typer
 from rich.logging import RichHandler
 from espp2.main import (
     do_holdings,
 )
-from espp2._version import __version__
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 def version_callback(value: bool):
     if value:
-        typer.echo(f"holdinator CLI Version: {__version__}")
+        typer.echo(f"holdinator CLI Version: {setuptools_scm.get_version()}")
         raise typer.Exit()
 
 

@@ -10,7 +10,9 @@ build-backend = "setuptools.build_meta"
 disable = ["missing-function-docstring", "missing-module-docstring", "missing-class-docstring", "too-few-public-methods"]
 
 [tool.setuptools_scm]
-write_to = "espp2/_version.py"
+#write_to = "espp2/_version.py"
+version_scheme = "guess-next-dev"
+local_scheme = "node-and-date"
 
 [tool.setuptools]
 packages = ['espp2']
@@ -31,6 +33,7 @@ dependencies = [
     "urllib3", "python-dateutil", "uvicorn", "fastapi",
     "python-multipart", "tabulate", "httpx",
     "rich", "typing", "html5lib", "typer", "openpyxl",
+    "setuptools-scm",
 ]
 authors = [
     { name = "Ole Troan", email = "otroan@employees.org"},
