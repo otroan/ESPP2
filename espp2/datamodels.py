@@ -588,6 +588,7 @@ class Holdings(BaseModel):
     broker: str
     stocks: list[Stock]
     cash: list[CashEntry]
+    version: str = None
 
     def sum_qty(self):
         """Sum the quantity of all stocks"""

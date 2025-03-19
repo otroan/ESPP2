@@ -1,11 +1,11 @@
 # Use Rich tables to print the tax reports
 
-import setuptools_scm
 from decimal import Decimal
 from rich.console import Console
 from rich.table import Table
 from espp2.datamodels import TaxReport, TaxSummary, Holdings, EOYDividend, ESPPInfo
 from espp2.console import console
+from espp2 import __version__
 
 
 def print_report_dividends(dividends: list[EOYDividend], console: Console):
@@ -179,6 +179,8 @@ def print_ledger(year, ledger: dict, console: Console):
 
 
 def print_espp_extra_report(year, espp_extra: list[ESPPInfo], console: Console):
+    if len(espp_extra) == 0:
+        return
     table = Table(
         title=f"ESPP Extra Report {year}", show_header=True, header_style="bold magenta"
     )
@@ -191,7 +193,9 @@ def print_espp_extra_report(year, espp_extra: list[ESPPInfo], console: Console):
     table.add_column("Benefit (net)", justify="right", style="red")
     table.add_column("ROI Gross (%)", justify="right", style="blue")
     table.add_column("ROI Net (%)", justify="right", style="blue")
-
+    total_invested = Decimal(0)
+    total_benefit_gross = Decimal(0)
+    total_benefit_net = Decimal(0)
     for e in espp_extra:
         table.add_row(
             e.symbol,
@@ -204,6 +208,23 @@ def print_espp_extra_report(year, espp_extra: list[ESPPInfo], console: Console):
             f"{e.roi_gross:.2f}",
             f"{e.roi_net:.2f}",
         )
+        total_invested += e.discounted_nok
+        total_benefit_gross += e.benefit_gross_nok
+        total_benefit_net += e.benefit_net_nok
+    average_roi_gross = (total_benefit_gross / total_invested) * 100
+    average_roi_net = (total_benefit_net / total_invested) * 100
+    table.add_row(
+        "",
+        "",
+        "",
+        f"{total_invested:.2f}",
+        "",
+        f"{total_benefit_gross:.2f}",
+        f"{total_benefit_net:.2f}",
+        f"{average_roi_gross:.2f}",
+        f"{average_roi_net:.2f}",
+        style="bold",
+    )
     console.print(table)
 
 
@@ -323,7 +344,7 @@ def print_report(
     year: int, summary: TaxSummary, report: TaxReport, holdings: Holdings, verbose: bool
 ):
     """Pretty print tax report to console"""
-    console.print(f"espp2 CLI version: {setuptools_scm.get_version()}")
+    console.print(f"espp2 CLI version: {__version__}")
 
     if verbose:
         # Print previous year holdings

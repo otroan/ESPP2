@@ -5,6 +5,7 @@ ESPPv2 main entry point
 # pylint: disable=invalid-name
 import logging
 import zipfile
+from datetime import date
 from io import BytesIO
 from decimal import Decimal
 from typing import Tuple, NamedTuple
@@ -25,6 +26,7 @@ from espp2.datamodels import (
 )
 from espp2.report import print_ledger, print_cash_ledger, print_report_holdings
 from espp2.portfolio import Portfolio
+from espp2 import __version__
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +73,7 @@ def tax_report(  # noqa: C901
         p = portfolio
 
     holdings = p.holdings(year, broker)
+    holdings.version = f"{__version__} on {date.today().isoformat()}"
     assert holdings.year == year
     report = {}
 

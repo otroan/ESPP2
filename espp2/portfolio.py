@@ -3,7 +3,6 @@ ESPP portfolio class
 """
 
 import logging
-import setuptools_scm
 from io import BytesIO
 from copy import deepcopy
 from openpyxl import Workbook
@@ -38,6 +37,7 @@ from espp2.cash import Cash
 from espp2.positions import Ledger
 from typing import Any, Dict
 from espp2.util import FeatureFlagEnum
+from espp2 import __version__
 
 fmv = FMV()
 logger = logging.getLogger(__name__)
@@ -1026,14 +1026,13 @@ class Portfolio:
         workbook = Workbook()
         ws = workbook.active
         ws.title = f"Portfolio-{year}"
-        version = setuptools_scm.get_version()
         disclaimer = (
             "Disclaimer: This tool is provided as is, without warranty of any kind. "
             "Use of this tool is at your own risk. The authors or distributors "
             "are not responsible for any losses, damages, or issues that may arise "
             "from using this tool. Always consult with a professional financial advisor "
             "before making any financial decisions."
-            f"This report is generated with the espp2 tool version: {version}"
+            f"This report is generated with the espp2 tool version: {__version__} on {date.today().isoformat()}"
         )
 
         # Extract column headers from the Stock Pydantic model
