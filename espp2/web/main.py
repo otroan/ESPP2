@@ -9,6 +9,7 @@ import logging
 from io import StringIO
 import json
 import base64
+import zipfile
 from os.path import realpath
 import uvicorn
 from fastapi import FastAPI, Form, UploadFile, HTTPException
@@ -69,7 +70,12 @@ async def taxreport(
     if holdfile and holdfile.filename == "":
         holdfile = None
     elif holdfile:
-        holdfile = holdfile.file
+        if holdfile.filename.endswith(".zip"):
+            zf = zipfile.ZipFile(holdfile.file)
+            json_file = next(f for f in zf.filelist if f.filename.endswith(".json"))
+            holdfile = zf.open(json_file.filename)
+        else:
+            holdfile = holdfile.file
     try:
         report, holdings, exceldata, summary = do_taxes(
             broker, transaction_files, holdfile, wires, year, portfolio_engine=True
