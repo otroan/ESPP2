@@ -63,10 +63,11 @@ def main(  # noqa: C901
     )
 
     # New holdings
-    logger.info("Writing new holdings to %s", outholdings.name)
-    j = holdings.model_dump_json(indent=4)
-    with outholdings as f:
-        f.write(j)
+    if outholdings:
+        logger.info("Writing new holdings to %s", outholdings.name)
+        j = holdings.model_dump_json(indent=4)
+        with outholdings as f:
+            f.write(j)
 
 
 if __name__ == "__main__":

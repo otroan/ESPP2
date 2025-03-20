@@ -54,10 +54,13 @@ class Amount(BaseModel):
     _exchange_rates: Dict[str, Decimal] = {}
     _converted_values: Dict[str, Decimal] = {}
     amountdate: Optional[date] = None
-    legacy_nok_rate: Optional[Decimal] = None
+    legacy_nok_rate: Optional[Decimal] = Field(default=None, exclude=True)
 
     # Allow arbitrary fields during model creation
-    model_config = {"extra": "allow"}
+    model_config = ConfigDict(
+        extra="allow",  # Allow extra fields
+        exclude_none=True,  # Exclude None values from JSON output
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -589,6 +592,9 @@ class Holdings(BaseModel):
     stocks: list[Stock]
     cash: list[CashEntry]
     version: Optional[str] = None
+    model_config = ConfigDict(
+        exclude_none=True  # This will exclude None values from JSON output
+    )
 
     def sum_qty(self):
         """Sum the quantity of all stocks"""
