@@ -100,7 +100,7 @@ def fixup_price_negative(datestr, currency, pricestr) -> Amount:
     return NegativeAmount(
         amountdate=datestr,
         currency=currency,
-        value=price,
+        value=-1 * abs(price),
     )
 
 
@@ -119,12 +119,11 @@ def sale(csv_item, source):
         fee = fixup_price_negative(d, "USD", csv_item["FeesAndCommissions"])
     except InvalidOperation:
         fee = None
-
+    assert fee.value < Decimal("0.00")
     saleprice = fixup_price(d, "USD", get_saleprice(csv_item))
     grossproceeds = fixup_price(d, "USD", csv_item["Amount"])
     g = get_grossproceeds(csv_item)
     g += fee
-
     if not math.isclose(g.value, grossproceeds.value, abs_tol=5):
         logger.error(
             f"Gross proceeds mismatch: {g} != {grossproceeds}. {d} {csv_item['Description']}"

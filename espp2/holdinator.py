@@ -37,7 +37,7 @@ def version_callback(value: bool):
 @app.command()
 def main(  # noqa: C901
     transaction_files: list[typer.FileBinaryRead],
-    outholdings: typer.FileTextWrite,
+    outholdings: typer.FileTextWrite = None,
     year: int = 2024,
     broker: BrokerEnum = BrokerEnum.schwab,
     verbose: bool = False,

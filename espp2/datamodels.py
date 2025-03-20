@@ -255,7 +255,7 @@ class PositiveAmount(Amount):
 class NegativeAmount(Amount):
     """Negative amount"""
 
-    # @field_validator("value", "nok_value")
+    @field_validator("value")
     @classmethod
     def value_validator(cls, v):
         """Validate value"""
@@ -588,7 +588,7 @@ class Holdings(BaseModel):
     broker: str
     stocks: list[Stock]
     cash: list[CashEntry]
-    version: str = None
+    version: Optional[str] = None
 
     def sum_qty(self):
         """Sum the quantity of all stocks"""

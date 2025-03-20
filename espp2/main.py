@@ -339,7 +339,7 @@ def generate_previous_year_holdings(
 
         # Calculate taxes for the year
         holdings = p.holdings(y, broker)
-
+        holdings.version = f"{__version__} on {date.today().isoformat()}"
         if verbose:
             print_ledger(y, p.ledger.entries, console)
             print_cash_ledger(y, p.cash.ledger(), console)
