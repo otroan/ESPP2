@@ -74,6 +74,7 @@ class ParseState:
         self.date2dividend = dict()
         self.adapter = TypeAdapter(Entry)
         self.settledate2selldate = dict()
+        self.espp_purchase_date2price = dict()
 
         self.opening_value_cash = Decimal(0)
         self.opening_value_shares = Decimal(0)
@@ -120,6 +121,11 @@ class ParseState:
             "source": self.source,
             "broker": "morgan",
         }
+
+        if description == "ESPP" and purchase_date in self.espp_purchase_date2price:
+            r["discounted_purchase_price"] = self.espp_purchase_date2price[
+                purchase_date
+            ]
 
         self.transactions.append(self.adapter.validate_python(r))
 
@@ -859,6 +865,34 @@ def parse_espp_activity_table(state, recs):
     return state.transactions
 
 
+def parse_espp_purchase_price_table(state, recs):
+    for row in recs:
+        if state.parse_fund_symbol(row, "Grant Date"):
+            continue
+
+        date, price, qty_bought, qty_kept, ok = getitems(
+            row,
+            "Purchase Date",
+            "Purchase Price",
+            "Shares Purchased",
+            "Total Shares You Hold",
+        )
+        if ok:
+            qty_bought = Decimal(morgan_qty(qty_bought))
+            qty_kept = Decimal(morgan_qty(qty_kept))
+            assert qty_bought > 0
+            assert qty_kept <= qty_bought
+
+            date = fixup_date(date)
+            price, currency = morgan_price(price)
+            assert currency == "USD"
+            if date in state.espp_purchase_date2price:
+                pass
+            else:
+                amount = Amount(currency=currency, value=price, amountdate=date)
+                state.espp_purchase_date2price[date] = amount
+
+
 class Withdrawal:
     """Given three tables for withdrawal, extract information we need"""
 
@@ -1254,7 +1288,7 @@ def parse_rsu_activity_html(all_tables, state):
 
 
 def parse_espp_activity_html(all_tables, state):
-    """Look for the ESPP table and parse it"""
+    """Look for the ESPP activity/transaction table and parse it"""
     any = re.compile(r"""(.*)""")
     search_espp_header = [
         ["Activity"],
@@ -1292,6 +1326,32 @@ def parse_espp_activity_html(all_tables, state):
         parse_espp_activity_table(state, espp[0].to_dict())
     elif len(espp) != 0:
         raise ValueError(f"Expected 0 or 1 ESPP tables, got {len(espp)}")
+
+
+def parse_espp_purchase_price_table_html(all_tables, state):
+    """Look for the ESPP Holdings table and parse it for purchase prices"""
+    search_espp_holdings = [
+        ["Purchase History for Stock/Shares"],
+        [
+            "Grant Date",
+            "Subscription Date",
+            "Subscription Date FMV",
+            "Purchase Date",
+            "Purchase Date FMV",
+            "Purchase Price",
+            "Qualification Date *",
+            "Shares Purchased",
+            "Total Shares You Hold",
+            "Current Share Price",
+            "Current Value",
+        ],
+    ]
+
+    espp_holdings = find_tables_by_header(all_tables, search_espp_holdings, 1)
+    print(f"ESPP-Holdings: Found {len(espp_holdings)} tables")
+
+    if len(espp_holdings) == 1:
+        parse_espp_purchase_price_table(state, espp_holdings[0].to_dict())
 
 
 def parse_withdrawals_html(all_tables, state):
@@ -1366,6 +1426,8 @@ def morgan_html_import(html_fd, filename):
         and start_period[5:10] == "01-01"
         and end_period[5:10] == "12-31"
     ):
+        print("Parse ESPP Holdings for purchase prices ...")
+        parse_espp_purchase_price_table_html(all_tables, state)
         print("Parse RSU activity ...")
         parse_rsu_activity_html(all_tables, state)
         print("Parse ESPP activity ...")
