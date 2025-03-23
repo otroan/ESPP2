@@ -1398,7 +1398,16 @@ def morgan_html_import(html_fd, filename):
         f">>> Sum Closing value: ${state.closing_value_cash} qty={state.closing_value_shares}"
     )
 
-    state.fixup_selldates()
+    # This seems to not be the right thing to do for current test-files.
+    # Maybe reporting dates from Morgan has changed? It doesn't look like
+    # it has, so the fear is that neither the withdrawal-date, nor the
+    # settlement-date is the actual date of a sale: This would complicate
+    # the situation for sales around the dividend exdate, as we don't
+    # know if the sale happened before or after exdate. It would be
+    # possible to use dividend payout records for guidance, but the date
+    # of sale would then need to be moved (for at least some shares) to
+    # patch the sale. This would be more work and generally undesirable.
+    # state.fixup_selldates()
 
     transes = sorted(state.transactions, key=lambda d: d.date)
 
