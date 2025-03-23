@@ -507,6 +507,8 @@ class Transactions(BaseModel):
 
     fromdate: date = None
     todate: date = None
+    opening_value_cash_usd: Optional[Decimal] = None
+    opening_value_symbol_qty: Optional[Dict[str, Decimal]] = dict()
     transactions: list[Entry]
 
 
