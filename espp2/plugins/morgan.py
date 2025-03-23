@@ -100,6 +100,9 @@ class ParseState:
                 self.symbol = m.group(1)
                 if self.symbol == "Cash":
                     self.symbol = None
+                else:
+                    # Too many unknowns to support other shares than Cisco
+                    assert self.symbol == "CSCO"
                 return True  # No more parsing needed
         return False
 
