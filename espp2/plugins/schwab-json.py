@@ -116,10 +116,12 @@ def sale(csv_item, source):
     """Process sale"""
     d = fixup_date(csv_item["Date"])
     try:
-        fee = fixup_price_negative(d, "USD", csv_item["FeesAndCommissions"])
+        fee_str = csv_item["FeesAndCommissions"] or "$0.00"
+        fee = fixup_price_negative(d, "USD", fee_str)
     except InvalidOperation:
-        fee = None
-    assert fee.value < Decimal("0.00")
+        logger.error(f'Error processing fee: "{csv_item["FeesAndCommissions"]}"')
+        raise
+    assert fee.value <= Decimal("0.00")
     saleprice = fixup_price(d, "USD", get_saleprice(csv_item))
     grossproceeds = fixup_price(d, "USD", csv_item["Amount"])
     g = get_grossproceeds(csv_item)
