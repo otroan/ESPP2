@@ -31,7 +31,7 @@ dependencies = [
     "requests",
      "simplejson", "pydantic", "pandas",
     "urllib3", "python-dateutil", "uvicorn", "fastapi",
-    "python-multipart", "tabulate", "httpx",
+    "python-multipart", "tabulate", "httpx", "pytest",
     "rich", "typing", "html5lib", "typer", "openpyxl",
     "setuptools-scm",
 ]

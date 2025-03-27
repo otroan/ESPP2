@@ -75,6 +75,11 @@ class ParseState:
         self.adapter = TypeAdapter(Entry)
         self.settledate2selldate = dict()
 
+        self.opening_value_cash = Decimal(0)
+        self.opening_value_shares = Decimal(0)
+        self.closing_value_cash = Decimal(0)
+        self.closing_value_shares = Decimal(0)
+
     def parse_activity(self, row):
         """Parse the "Activity" column"""
         self.activity = getitem(row, "Activity")
@@ -95,6 +100,9 @@ class ParseState:
                 self.symbol = m.group(1)
                 if self.symbol == "Cash":
                     self.symbol = None
+                else:
+                    # Too many unknowns to support other shares than Cisco
+                    assert self.symbol == "CSCO"
                 return True  # No more parsing needed
         return False
 
@@ -231,6 +239,46 @@ class ParseState:
                     logger.warning(
                         f"Sale on {settledate} assumed to have happened on {t.date} (Withdrawal-date)"
                     )
+
+    def parse_opening_value(self, row):
+        """Record opening value for cash and shares"""
+        if self.activity != "Opening Value":
+            return False
+        cash, cash_ok = getitems(row, "Cash")
+        qty, qty_ok = getitems(row, "Number of Shares")
+
+        if cash_ok:
+            cashval, currency = morgan_price(cash)
+            assert currency == "USD"
+            self.opening_value_cash += cashval
+            print(f">>> Opening value: ${cashval}")
+
+        if qty_ok:
+            qty = morgan_qty(qty)
+            self.opening_value_shares += qty
+            print(f">>> Opening value: qty={qty}")
+
+        return True
+
+    def parse_closing_value(self, row):
+        """Record closing value for cash and shares"""
+        if self.activity != "Closing Value":
+            return False
+        cash, cash_ok = getitems(row, "Cash")
+        qty, qty_ok = getitems(row, "Number of Shares")
+
+        if cash_ok:
+            cashval, currency = morgan_price(cash)
+            assert currency == "USD"
+            self.closing_value_cash += cashval
+            print(f">>> Closing value: ${cashval}")
+
+        if qty_ok:
+            qty = morgan_qty(qty)
+            self.closing_value_shares += qty
+            print(f">>> Closing value: qty={qty}")
+
+        return True
 
     def parse_rsu_release(self, row):
         """Handle what appears to be RSUs added to account"""
@@ -485,6 +533,17 @@ def morgan_price(price_str):
     return Decimal(value.replace("$", "").replace(",", "")), currency
 
 
+def morgan_qty(qty_str):
+    """Parse a quantity entity, with comma as thousands separator"""
+    m = re.fullmatch(r"""(\d+),(\d\d\d(\.\d+)?)""", qty_str)
+    if m:
+        return Decimal(f"{m.group(1)}{m.group(2)}")
+    m = re.fullmatch(r"""(\d+(\.\d+)?)""", qty_str)
+    if m:
+        return Decimal(m.group(1))
+    raise ValueError(f"Failed to parse QTY '{qty_str}'")
+
+
 def fixup_price(datestr, currency, pricestr, change_sign=False):
     """Fixup price."""
     # print('fixup_price:::', datestr, currency, pricestr, change_sign)
@@ -698,8 +757,6 @@ def parse_espp_holdings_table(state, recs):
 
 def parse_rsu_activity_table(state, recs):  # noqa: C901
     ignore = {
-        "Opening Value": True,
-        "Closing Value": True,
         # The following are ignored, but it should be ok:
         # 'Cash Transfer Out' is for dividends moved from "Activity" table
         # to the RSU cash header of that table, and the 'Cash Transfer In'
@@ -717,6 +774,12 @@ def parse_rsu_activity_table(state, recs):  # noqa: C901
             continue
         state.parse_entry_date(row)
         state.parse_activity(row)
+
+        if state.parse_opening_value(row):
+            continue
+
+        if state.parse_closing_value(row):
+            continue
 
         if state.parse_rsu_release(row):
             continue
@@ -750,8 +813,6 @@ def parse_rsu_activity_table(state, recs):  # noqa: C901
 
 def parse_espp_activity_table(state, recs):
     ignore = {
-        "Opening Value": True,
-        "Closing Value": True,
         "Adhoc Adjustment": True,
         "Transfer out": True,
         "Historical Transaction": True,
@@ -765,6 +826,12 @@ def parse_espp_activity_table(state, recs):
             continue
         state.parse_entry_date(row)
         state.parse_activity(row)
+
+        if state.parse_opening_value(row):
+            continue
+
+        if state.parse_closing_value(row):
+            continue
 
         if state.parse_dividend_reinvest(row):
             continue
@@ -1324,11 +1391,33 @@ def morgan_html_import(html_fd, filename):
 
     print("Done")
 
-    state.fixup_selldates()
+    print(
+        f">>> Sum Opening value: ${state.opening_value_cash} qty={state.opening_value_shares}"
+    )
+    print(
+        f">>> Sum Closing value: ${state.closing_value_cash} qty={state.closing_value_shares}"
+    )
+
+    # This seems to not be the right thing to do for current test-files.
+    # Maybe reporting dates from Morgan has changed? It doesn't look like
+    # it has, so the fear is that neither the withdrawal-date, nor the
+    # settlement-date is the actual date of a sale: This would complicate
+    # the situation for sales around the dividend exdate, as we don't
+    # know if the sale happened before or after exdate. It would be
+    # possible to use dividend payout records for guidance, but the date
+    # of sale would then need to be moved (for at least some shares) to
+    # patch the sale. This would be more work and generally undesirable.
+    # state.fixup_selldates()
 
     transes = sorted(state.transactions, key=lambda d: d.date)
 
-    return Transactions(transactions=transes)
+    return Transactions(
+        fromdate=start_period,
+        enddate=end_period,
+        opening_value_cash_usd=state.opening_value_cash,
+        opening_value_symbol_qty={"CSCO": state.opening_value_shares},
+        transactions=transes,
+    )
 
 
 def read(html_file, filename="") -> Transactions:
