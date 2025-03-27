@@ -179,7 +179,9 @@ def tax_report(  # noqa: C901
     # Tax paid in the US on dividends
     credit_deductions = []
     for e in report["dividends"]:
+        # expected_tax = Decimal(".15") * e.gross_amount.usd_value
         expected_tax = Decimal(".15") * e.gross_amount.usd_value
+        expected_tax_nok = Decimal(".15") * e.gross_amount.nok_value
         actual_tax = abs(e.tax.usd_value)
 
         # Check if tax rate is close to 30% (indicating missing W8-BEN)
@@ -220,9 +222,9 @@ def tax_report(  # noqa: C901
             CreditDeduction(
                 symbol=e.symbol,
                 country="USA",
-                income_tax=expected_tax,
+                income_tax=round(expected_tax_nok),
                 gross_share_dividend=round(e.gross_amount.nok_value),
-                tax_on_gross_share_dividend=expected_tax,
+                tax_on_gross_share_dividend=round(expected_tax_nok),
             )
         )
 

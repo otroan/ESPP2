@@ -115,10 +115,12 @@ class Cash:
             if w.fee:
                 self.credit(w.date, w.fee, "wire fee")
 
-        if unmatched and not self.generate_holdings:
-            logger.warning(
-                "Wire Transfer missing corresponding received record: %s", unmatched
-            )
+        if unmatched:
+            warning_msg = "Wire Transfers missing corresponding received records:"
+            for wire in unmatched:
+                exchange_rate = wire.nok_value / wire.value if wire.value != 0 else 0
+                warning_msg += f"\n  - {wire.date.strftime('%Y-%m-%d')}: {abs(wire.value):>10.2f} USD / {abs(wire.nok_value):>12.2f} NOK @ {abs(exchange_rate):>6.4f}"
+            logger.warning(warning_msg)
         return unmatched
 
     def process(self):  # noqa: C901
