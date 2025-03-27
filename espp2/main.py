@@ -179,17 +179,42 @@ def tax_report(  # noqa: C901
     # Tax paid in the US on dividends
     credit_deductions = []
     for e in report["dividends"]:
-        expected_tax = Decimal(".15") * e.gross_amount.nok_value
-        if not isclose(
-            round(expected_tax, 2), round(abs(e.tax.nok_value), 2), rel_tol=0.0001
-        ):
+        expected_tax = Decimal(".15") * e.gross_amount.usd_value
+        actual_tax = abs(e.tax.usd_value)
+
+        # Check if tax rate is close to 30% (indicating missing W8-BEN)
+        actual_tax_rate = (
+            actual_tax / e.gross_amount.usd_value
+            if e.gross_amount.usd_value != 0
+            else Decimal("0")
+        )
+        if isclose(actual_tax_rate, Decimal("0.30"), rel_tol=0.01):
             logger.error(
-                "Expected source tax: %s (%s) got: %s (%s)",
-                expected_tax,
+                "Tax rate is 30%% for %s dividend of %s (tax: %s) - This usually indicates missing W8-BEN form",
+                e.symbol,
                 e.gross_amount,
-                abs(e.tax.nok_value),
                 e.tax,
             )
+        else:
+            # Regular tax rate check (should be 15%)
+            percent_diff = (
+                abs(expected_tax - actual_tax) / expected_tax
+                if expected_tax != 0
+                else float("inf")
+            )
+            absolute_diff = abs(expected_tax - actual_tax)
+
+            if percent_diff > Decimal("0.01") and absolute_diff > Decimal("5"):
+                logger.error(
+                    "Expected source tax: %.2f (%s) got: %.2f (%s) - diff: %.2f%% / $%.2f",
+                    expected_tax,
+                    e.gross_amount.usd_value,
+                    actual_tax,
+                    e.tax.usd_value,
+                    percent_diff * 100,
+                    absolute_diff,
+                )
+
         expected_tax = round(expected_tax, 0)
         credit_deductions.append(
             CreditDeduction(

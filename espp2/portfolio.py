@@ -335,10 +335,22 @@ class Portfolio:
         # Walk through positions available at exdate.
         no_shares = self.qty_at_date(transaction.symbol, transaction.exdate)
         expected_dividend = round(no_shares * transaction.dividend_dps, 2)
-        if expected_dividend != transaction.amount.value:
+        # Only log error if difference is more than 1% AND more than $1
+        dividend_difference = abs(expected_dividend - transaction.amount.value)
+        relative_difference = (
+            dividend_difference / expected_dividend
+            if expected_dividend != 0
+            else float("inf")
+        )
+
+        if dividend_difference > 1.0 and relative_difference > 0.01:
             logger.error(
-                f"Dividend error. {transaction.date} Expected {expected_number_of_shares} shares, holding: {no_shares}"
+                "Dividend error. %s Expected %.2f shares, holding: %.2f",
+                transaction.date,
+                expected_number_of_shares,
+                no_shares,
             )
+
         for p in self.positions:
             if p.symbol == transaction.symbol:
                 # Get qty up until exdate
@@ -377,7 +389,11 @@ class Portfolio:
                     break
         if abs(total) > 1:
             logger.error(
-                f"Dividend issue: {transaction.date} Not all dividend used: ${total} expected {expected_number_of_shares}, found: {found_number_of_shares}"
+                "Dividend issue: %s Not all dividend used: $%.2f expected %.2f, found: %.2f",
+                transaction.date,
+                total,
+                expected_number_of_shares,
+                found_number_of_shares,
             )
         self.cash.debit(transaction.date, transaction.amount, "dividend")
 
