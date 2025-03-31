@@ -324,6 +324,7 @@ dispatch = {
     "Tax Withholding": tax_withholding,
     "Dividend": dividend,
     "Dividend Reinvested": dividend_reinvested,
+    "Dividend Reinvestment": dividend_reinvested,
     "Tax Reversal": tax_reversal,
     "Journal": journal,
     "Service Fee": not_implemented,
