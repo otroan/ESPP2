@@ -1,0 +1,31 @@
+{
+    "year": 2023,
+    "broker": "schwab",
+    "stocks": [
+        {
+            "symbol": "CSCO",
+            "date": "2023-12-29",
+            "qty": "271",
+            "tax_deduction": "16.445108736",
+            "purchase_price": {
+                "currency": "USD",
+                "nok_exchange_rate": "10.1724",
+                "nok_value": "513.909648",
+                "value": "50.52"
+            }
+        }
+    ],
+    "cash": [
+        {
+            "date": "2023-11-14",
+            "description": "sale",
+            "amount": {
+                "currency": "USD",
+                "nok_exchange_rate": "11.1386",
+                "nok_value": "0.111386",
+                "value": "0.01"
+            },
+            "transfer": false
+        }
+    ]
+}

@@ -1,0 +1,78 @@
+{
+    "eoy_balance_symbol": "CSCO",
+    "eoy_balance_qty": "0.0000",
+    "summary": {
+        "year": 2024,
+        "foreignshares": [
+            {
+                "symbol": "CSCO",
+                "isin": "US17275R1023",
+                "country": "USA",
+                "account": "schwab",
+                "shares": "0.0000",
+                "wealth": "0",
+                "post_tax_inc_dividend": null,
+                "dividend": "5380",
+                "taxable_gain": "14161",
+                "taxable_post_tax_inc_gain": null,
+                "tax_deduction_used": "0"
+            }
+        ],
+        "credit_deduction": [
+            {
+                "symbol": "CSCO",
+                "country": "USA",
+                "income_tax": "807",
+                "gross_share_dividend": "5380",
+                "tax_on_gross_share_dividend": "807"
+            }
+        ],
+        "cashsummary": {
+            "transfers": [
+                {
+                    "date": "2024-07-29",
+                    "amount_sent": "162825",
+                    "amount_received": "163178",
+                    "gain": "353",
+                    "description": "wire"
+                },
+                {
+                    "date": "2024-09-26",
+                    "amount_sent": "83243",
+                    "amount_received": "84267",
+                    "gain": "1024",
+                    "description": "wire"
+                },
+                {
+                    "date": "2024-10-11",
+                    "amount_sent": "287876",
+                    "amount_received": "286432",
+                    "gain": "-1444",
+                    "description": "wire"
+                },
+                {
+                    "date": "2024-11-15",
+                    "amount_sent": "266027",
+                    "amount_received": "263418",
+                    "gain": "-2609",
+                    "description": "wire"
+                }
+            ],
+            "remaining_cash": {
+                "currency": "USD",
+                "value": "0",
+                "amountdate": "2024-12-31",
+                "legacy_nok_rate": null
+            },
+            "holdings": [],
+            "gain": "-2676"
+        }
+    },
+    "new_holdings": {
+        "year": 2024,
+        "broker": "schwab",
+        "stocks": [],
+        "cash": [],
+        "version": "2503.post1.dev2+g5161b75.d20250331 on 2025-03-31"
+    }
+}

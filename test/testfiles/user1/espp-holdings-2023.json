@@ -1,0 +1,103 @@
+{
+    "year": 2023,
+    "broker": "schwab",
+    "stocks": [
+        {
+            "symbol": "CSCO",
+            "date": "2023-08-11",
+            "qty": "0.0012",
+            "tax_deduction": "13.236280104",
+            "purchase_price": {
+                "currency": "USD",
+                "nok_exchange_rate": "10.3803",
+                "nok_value": "550.052097",
+                "value": "52.99"
+            }
+        },
+        {
+            "symbol": "CSCO",
+            "date": "2023-09-13",
+            "qty": "12",
+            "tax_deduction": "15.027721704",
+            "purchase_price": {
+                "currency": "USD",
+                "nok_exchange_rate": "10.6941",
+                "nok_value": "606.034647",
+                "value": "56.67"
+            }
+        },
+        {
+            "symbol": "CSCO",
+            "date": "2023-10-25",
+            "qty": "0.0769",
+            "tax_deduction": "18.52371157824",
+            "purchase_price": {
+                "currency": "USD",
+                "nok_exchange_rate": "11.1933",
+                "nok_value": "578.86598682",
+                "value": "51.7154"
+            }
+        },
+        {
+            "symbol": "CSCO",
+            "date": "2023-11-13",
+            "qty": "15",
+            "tax_deduction": "18.5223168",
+            "purchase_price": {
+                "currency": "USD",
+                "nok_exchange_rate": "11.1312",
+                "nok_value": "578.822400",
+                "value": "52.00"
+            }
+        },
+        {
+            "symbol": "CSCO",
+            "date": "2023-11-13",
+            "qty": "12",
+            "tax_deduction": "18.5223168",
+            "purchase_price": {
+                "currency": "USD",
+                "nok_exchange_rate": "11.1312",
+                "nok_value": "578.822400",
+                "value": "52.00"
+            }
+        },
+        {
+            "symbol": "CSCO",
+            "date": "2023-11-13",
+            "qty": "165",
+            "tax_deduction": "18.5223168",
+            "purchase_price": {
+                "currency": "USD",
+                "nok_exchange_rate": "11.1312",
+                "nok_value": "578.822400",
+                "value": "52.00"
+            }
+        },
+        {
+            "symbol": "CSCO",
+            "date": "2023-12-13",
+            "qty": "12",
+            "tax_deduction": "16.971394368",
+            "purchase_price": {
+                "currency": "USD",
+                "nok_exchange_rate": "10.9623",
+                "nok_value": "530.356074",
+                "value": "48.38"
+            }
+        },
+        {
+            "symbol": "CSCO",
+            "date": "2023-12-29",
+            "qty": "175",
+            "tax_deduction": "17.2988672808192",
+            "purchase_price": {
+                "currency": "ESPPUSD",
+                "nok_exchange_rate": "10.70050678",
+                "nok_value": "540.5896025256",
+                "value": "50.52"
+            }
+        }
+    ],
+    "cash": []
+}
