@@ -258,9 +258,11 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
     table.add_column("Risk-free return utilised", style="magenta", justify="right")
 
     # All shares that have been held at some point throughout the year
+    total_share_gain = Decimal(0)
     for e in summary.foreignshares:
         dividend = e.dividend
         gain = e.taxable_gain
+        total_share_gain += gain
         if summary.year == 2022:
             table.add_row(
                 e.symbol,
@@ -320,13 +322,34 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
     table.add_column("Sent", justify="right", style="cyan", no_wrap=True)
     table.add_column("Received", justify="right", style="cyan", no_wrap=True)
     table.add_column("Gain", justify="right", style="cyan", no_wrap=True)
+    total_cash_gain = Decimal(0)
     for e in summary.cashsummary.transfers:
         table.add_row(
             str(e.date), f"{e.amount_sent}", f"{e.amount_received}", f"{e.gain}"
         )
+        total_cash_gain += e.gain
     gain = summary.cashsummary.gain
     table.add_row("", "", "", f"{gain}", style="bold green" if gain > 0 else "bold red")
 
+    console.print(table)
+    console.print()
+
+    table = Table(title="Gain calculation:", title_justify="left")
+    table.add_column("Tax paid (alt 1)", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Tax paid (alt 2)", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Difference", justify="right", style="cyan", no_wrap=True)
+    alt1 = (total_share_gain + total_cash_gain) * Decimal(0.378)
+    alt2 = (total_share_gain * Decimal(0.378)) + (total_cash_gain * Decimal(0.22))
+    table.add_row(
+        f"{total_share_gain:.0f} + {total_cash_gain:.0f} * 37.8%",
+        f"{total_share_gain:.0f} * 37.8% + {total_cash_gain:.0f} * 22%",
+        "",
+    )
+    table.add_row(
+        f"{alt1:.2f}",
+        f"{alt2:.2f}",
+        f"{alt1 - alt2:.2f}",
+    )
     console.print(table)
     console.print()
 

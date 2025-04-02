@@ -82,6 +82,9 @@ def guess_format(broker: str, filename, data) -> str:  # noqa: C901
         if filebytes[0:1] == b"<":
             return "morgan"
 
+    if broker == "morgan" and extension == ".csv":
+        return "morgan-csv"
+
     raise ValueError("Unable to guess format", fname, extension, filebytes)
 
 
