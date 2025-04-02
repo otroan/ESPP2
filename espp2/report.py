@@ -3,6 +3,7 @@
 from decimal import Decimal
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 from espp2.datamodels import TaxReport, TaxSummary, Holdings, EOYDividend, ESPPInfo
 from espp2.console import console
 from espp2 import __version__
@@ -33,15 +34,33 @@ def print_cash_ledger(year, ledger: list, console: Console):
     table.add_column("Amount", justify="right", style="black", no_wrap=True)
     table.add_column("Amount NOK", style="magenta", justify="right")
     table.add_column("Description", style="black", justify="left")
-    table.add_column("Total USD", style="magenta", justify="right")
-
+    table.add_column("Total USD", style="black", justify="right")
+    table.add_column("Sale Date", style="black", justify="right")
+    table.add_column("Sale Price NOK", style="black", justify="right")
+    table.add_column("Gain NOK", style="black", justify="right")
+    table.add_column("A", style="black", justify="right")
     for e in ledger:
+        gain_style = (
+            "green"
+            if e[0].gain_nok and e[0].gain_nok > 0
+            else "red"
+            if e[0].gain_nok and e[0].gain_nok < 0
+            else "magenta"
+        )
+        gain_text = Text(
+            f"{e[0].gain_nok:.2f}" if e[0].gain_nok is not None else "",
+            style=gain_style,
+        )
         table.add_row(
             str(e[0].date),
             f"{e[0].amount.value:.2f}",
             f"{e[0].amount.nok_value:.2f}",
             e[0].description,
             f"{e[1]:.2f}",
+            str(e[0].sale_date) if e[0].sale_date else "",
+            f"{e[0].sale_price_nok:.2f}" if e[0].sale_price_nok is not None else "",
+            gain_text,
+            "✓" if e[0].aggregated else "",
         )
     console.print(table)
 
@@ -228,6 +247,39 @@ def print_espp_extra_report(year, espp_extra: list[ESPPInfo], console: Console):
     console.print(table)
 
 
+def print_transfer_gain_loss(summary: TaxSummary, console: Console):
+    # Transfer gain/loss
+    table = Table(title="Transfer gain/loss:", title_justify="left")
+    table.add_column("Date", justify="center", style="cyan", no_wrap=True)
+    table.add_column("Sent", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Received", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Gain", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Aggregated Gain", justify="right", style="cyan", no_wrap=True)
+    total_cash_gain = Decimal(0)
+    for e in summary.cashsummary.transfers:
+        table.add_row(
+            str(e.date),
+            f"{e.amount_sent}",
+            f"{e.amount_received}",
+            f"{e.gain}",
+            f"{e.aggregated_gain}",
+        )
+        total_cash_gain += e.gain
+    gain = summary.cashsummary.gain
+    gain_aggregated = summary.cashsummary.gain_aggregated
+    table.add_row(
+        "",
+        "",
+        "",
+        f"{gain}",
+        f"{gain_aggregated}",
+        style="bold green" if gain > 0 else "bold red",
+    )
+
+    console.print(table)
+    console.print()
+
+
 def print_report_tax_summary(summary: TaxSummary, console: Console):
     """Tax summary"""
     console.print(f"Tax Summary for {summary.year}:\n", style="bold magenta")
@@ -263,6 +315,9 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
         dividend = e.dividend
         gain = e.taxable_gain
         total_share_gain += gain
+        gain_style = "green" if gain > 0 else "red" if gain and gain < 0 else "magenta"
+        gain_text = Text(f"{gain:.2f}", style=gain_style)
+
         if summary.year == 2022:
             table.add_row(
                 e.symbol,
@@ -273,7 +328,7 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
                 f"{e.wealth:.0f}",
                 f"{dividend}",
                 f"{e.post_tax_inc_dividend}",
-                f"{gain}",
+                gain_text,
                 f"{e.taxable_post_tax_inc_gain}",
                 f"{e.tax_deduction_used}",
             )
@@ -286,7 +341,7 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
                 f"{e.shares:.4f}",
                 f"{e.wealth}",
                 f"{dividend}",
-                f"{gain}",
+                gain_text,
                 f"{e.tax_deduction_used}",
             )
     console.print(table)
@@ -316,40 +371,20 @@ def print_report_tax_summary(summary: TaxSummary, console: Console):
     console.print(table)
     console.print()
 
-    # Transfer gain/loss
-    table = Table(title="Transfer gain/loss:", title_justify="left")
-    table.add_column("Date", justify="center", style="cyan", no_wrap=True)
-    table.add_column("Sent", justify="right", style="cyan", no_wrap=True)
-    table.add_column("Received", justify="right", style="cyan", no_wrap=True)
-    table.add_column("Gain", justify="right", style="cyan", no_wrap=True)
-    total_cash_gain = Decimal(0)
-    for e in summary.cashsummary.transfers:
-        table.add_row(
-            str(e.date), f"{e.amount_sent}", f"{e.amount_received}", f"{e.gain}"
-        )
-        total_cash_gain += e.gain
-    gain = summary.cashsummary.gain
-    table.add_row("", "", "", f"{gain}", style="bold green" if gain > 0 else "bold red")
-
-    console.print(table)
-    console.print()
-
-    table = Table(title="Gain calculation:", title_justify="left")
-    table.add_column("Tax paid (alt 1)", justify="right", style="cyan", no_wrap=True)
-    table.add_column("Tax paid (alt 2)", justify="right", style="cyan", no_wrap=True)
-    table.add_column("Difference", justify="right", style="cyan", no_wrap=True)
-    alt1 = (total_share_gain + total_cash_gain) * Decimal(0.378)
-    alt2 = (total_share_gain * Decimal(0.378)) + (total_cash_gain * Decimal(0.22))
-    table.add_row(
-        f"{total_share_gain:.0f} + {total_cash_gain:.0f} * 37.8%",
-        f"{total_share_gain:.0f} * 37.8% + {total_cash_gain:.0f} * 22%",
-        "",
+    # Exchange rate gains / or losses that does not use the aggregated gains principle
+    table = Table(
+        title="Finance -> Other Financial products and ... -> Other financial products -> Type -> Currency trading (spot):",
+        title_justify="left",
     )
-    table.add_row(
-        f"{alt1:.2f}",
-        f"{alt2:.2f}",
-        f"{alt1 - alt2:.2f}",
+    table.add_column(
+        "Foreign Exchange gain/loss (NOK)",
+        width=110,
+        justify="right",
+        style="cyan",
+        no_wrap=True,
     )
+    style = "green" if summary.cashsummary.gain >= 0 else "red"
+    table.add_row(f"{summary.cashsummary.gain}", style=style)
     console.print(table)
     console.print()
 
@@ -385,6 +420,7 @@ def print_report(
 
         print_espp_extra_report(year, report.espp_extra_info, console)
 
+        print_transfer_gain_loss(summary, console)
     if report.unmatched_wires:
         print_report_unmatched_wires(report.unmatched_wires, console)
 
