@@ -23,14 +23,69 @@ Skjermingsfradraget for aksjer som beholdes over nyttår får skjermingsfradrag 
 
 **A:** Inngangsverdien av RSUer er gitt av Norges bank sin valutakurs på tildelingstidspunktet multiplisert med RSUens rapporterte FMV.
 
-**Q: Gevinst/Tap på aksjer og gevinst/tap på valuta**
+**Q: Skattemessig behandling av aksjesalg i utenlandsk valuta (valutagevinst og sammenslåingsprinsippet)**
 
-**A:** Sammenslåingsprinsippet gjelder. Slik at et eventuelt valutatap eller gevinst slåes sammen med den underliggene aksjetransaksjonen. Valutagevinst eller tap må da manuelt legges sammen med akjsegevinst/tap.
+**A:** ❓ Hva er sammenslåingsprinsippet?
 
-Selges derimot aksjer i år 1 og valuta overføres i år 2, betrakes dette som to uavhengige transaksjoner.
-Aksjegevinst/tap regnes da mot Norges bank sin valutakurs på salgstidspunktet.
-Valutagevinst/tap regnes mot Norges bank sin valutakurs på overføringstidspunktet.
-Inngangsverdien til valutaen er gitt av NBs valutakurs på salgstidspunktet.
+Sammenslåingsprinsippet innebærer at valutakursendringer knyttet til kjøp og salg av et formuesobjekt (som aksjer) inngår i gevinst- eller tapsberegningen for det underliggende objektet. Valutaen vurderes ikke som en egen skattemessig størrelse så lenge den er en integrert del av transaksjonen.
+
+Dette gjelder særlig når:
+- Aksjer er kjøpt og solgt i utenlandsk valuta (f.eks. USD),
+- Og valutavekslingen skjer automatisk eller umiddelbart etter salget.
+
+Referanse: Rt. 1929 s. 369
+
+---
+
+❓ Når skal valutagevinst/-tap vurderes separat?
+
+Valutagevinst eller -tap skal vurderes separat når den utenlandske valutaen blir stående som en **egen formuespost**, og følgende kriterier er oppfylt:
+
+- Beløpet i utenlandsk valuta ble **ikke vekslet umiddelbart**, og
+- Skattyter hadde **kontroll over tidspunktet for veksling**, og
+- Det foreligger **kursendringer mellom salgsdato og vekslingsdato**.
+
+I slike tilfeller gjelder ikke sammenslåingsprinsippet, og valutagevinst/-tap må tidfestes på vekslingstidspunktet og rapporteres som kapitalinntekt (22 % skatt).
+
+---
+
+❓ Tidfestes aksjegevinsten på salgsdato eller vekslingsdato?
+
+Aksjegevinst **tidfestes på salgsdato**, uavhengig av når valutavekslingen skjer. Dette følger realisasjonsprinsippet, jf. skatteloven § 5-1 (2) og § 9-2.
+
+Valutagevinst/-tap (dersom det skilles ut) tidfestes **på vekslingstidspunktet**.
+
+---
+
+❓ Kan man bruke valutakurs på vekslingsdato hvis vekslingen skjer noen dager etter salget?
+
+Dersom valutavekslingen skjer **automatisk eller innen svært kort tid**, og skattyter **ikke har styrt tidspunktet for veksling**, kan hele transaksjonen regnes som én samlet realisasjon. Da kan valutakursen ved veksling brukes i gevinstberegningen uten å skille ut valutagevinst/-tap.
+
+---
+
+✅ Oppsummering – når skal valutagevinst føres separat?
+
+| Situasjon | Sammenslåingsprinsippet gjelder? | Valutagevinst/-tap vurderes separat? |
+|----------|-------------------------------|-------------------------------|
+| Aksjer selges og valuta veksles automatisk eller umiddelbart | ✅ Ja | ❌ Nei |
+| Aksjer selges og valuta holdes i flere dager med kursendring | ❌ Nei | ✅ Ja |
+| Skattyter har kontroll over vekslingsdato | ❌ Nei | ✅ Ja |
+
+---
+
+📌 Anbefalt praksis
+
+- **Før kun aksjegevinst** dersom valutaelementet er en integrert del av salget.
+- **Før valutagevinst/-tap separat** dersom valutaen beholdes som formuesobjekt og veksles senere.
+- Dokumenter relevante datoer, valutakurser og vekslingskurs (f.eks. fra megler, bank eller Norges Bank).
+
+---
+
+## 📎 Kilder
+
+- Rt. 1929 s. 369 (sammenslåingsprinsippet)
+- Skatteloven §§ 5-1, 9-2, 14-2
+- Skatteetaten.no – veiledning om valutagevinst og aksjetransaksjoner
 
 **Q: Kan jeg importere Morgan Stanley transaksjoner uten en holdingsfil fra ifjor?**
 
