@@ -123,6 +123,25 @@ class Cash:
             logger.warning(warning_msg)
         return unmatched
 
+    def update_sale_info(
+        self, entry_index, sale_date, sale_price_nok
+    ) -> tuple[int, bool]:
+        """Update sale information for a cash entry at the given index.
+
+        Args:
+            entry_index (int): Index of the entry in self.cash to update
+            sale_date (datetime): Date when the sale occurred
+            sale_price_nok (float): Sale price in NOK
+        """
+        self.cash[entry_index].sale_date = sale_date
+        self.cash[entry_index].sale_price_nok = sale_price_nok
+        delta = sale_date - self.cash[entry_index].date
+        self.cash[entry_index].aggregated = True if delta.days <= 14 else False
+        self.cash[entry_index].gain_nok = (
+            sale_price_nok - self.cash[entry_index].amount.nok_value
+        )
+        return self.cash[entry_index].gain_nok, self.cash[entry_index].aggregated
+
     def process(self):  # noqa: C901
         """Process cash account"""
         cash_positions = deepcopy(self.cash)
@@ -130,9 +149,18 @@ class Cash:
         debit = [e for e in cash_positions if e.amount.value > 0]
         credit = [e for e in cash_positions if e.amount.value < 0]
         transfers = []
+
+        # Create a mapping of original entries to their copies using indices
+        original_debit_indices = [
+            i for i, e in enumerate(self.cash) if e.amount.value > 0
+        ]
+        copy_to_original = {i: original_debit_indices[i] for i in range(len(debit))}
+
         for e in credit:
             total_received_price_nok = 0
             total_paid_price_nok = 0
+            total_gain = 0
+            total_gain_aggregated = 0
             amount_to_sell = abs(e.amount.value)
             is_transfer = e.transfer
             if is_transfer:
@@ -145,9 +173,21 @@ class Cash:
                 if amount_to_sell >= amount:
                     if is_transfer:
                         total_paid_price_nok += debit[posidx].amount.nok_value
+                        # Update both copy and original entry
+                        debit[posidx].sale_price_nok = (
+                            amount * e.amount.nok_exchange_rate
+                        )
+                        debit[posidx].sale_date = e.date
+                        gain_nok, aggregated = self.update_sale_info(
+                            copy_to_original[posidx],
+                            e.date,
+                            amount * e.amount.nok_exchange_rate,
+                        )
+                        if aggregated:
+                            total_gain_aggregated += gain_nok
+                        else:
+                            total_gain += gain_nok
                     amount_to_sell -= amount
-                    # Clear the amount??
-                    # Amount(**dict.fromkeys(debit[posidx].amount, 0))
                     debit[posidx].amount.value = 0
                     posidx += 1
                 else:
@@ -155,9 +195,22 @@ class Cash:
                         total_paid_price_nok += (
                             amount_to_sell * debit[posidx].amount.nok_exchange_rate
                         )
+                        # Update both copy and original entry
+                        debit[posidx].sale_price_nok = (
+                            amount_to_sell * e.amount.nok_exchange_rate
+                        )
+                        debit[posidx].sale_date = e.date
+                        gain_nok, aggregated = self.update_sale_info(
+                            copy_to_original[posidx],
+                            e.date,
+                            amount_to_sell * e.amount.nok_exchange_rate,
+                        )
+                        if aggregated:
+                            total_gain_aggregated += gain_nok
+                        else:
+                            total_gain += gain_nok
                     debit[posidx].amount.value -= amount_to_sell
                     amount_to_sell = 0
-
             if amount_to_sell > 0:
                 logger.error(
                     f"Transferring more money than is in cash account {amount_to_sell} {e}"
@@ -171,7 +224,8 @@ class Cash:
                         amount_sent=round(total_paid_price_nok),
                         amount_received=round(total_received_price_nok),
                         description=e.description,
-                        gain=round(total_received_price_nok - total_paid_price_nok),
+                        gain=round(total_gain),
+                        aggregated_gain=round(total_gain_aggregated),
                     )
                 )
         remaining_usd = sum([c.amount.value for c in debit if c.amount.value > 0])
@@ -182,6 +236,7 @@ class Cash:
             amountdate=eoy,
         )
         total_gain = sum([t.gain for t in transfers])
+        total_gain_aggregated = sum([t.aggregated_gain for t in transfers])
         total_paid_price_nok = sum([t.amount_sent for t in transfers])
         total_received_price_nok = sum([t.amount_received for t in transfers])
 
@@ -196,5 +251,6 @@ class Cash:
             transfers=transfers,
             remaining_cash=remaining_cash,
             gain=total_gain,
+            gain_aggregated=total_gain_aggregated,
             holdings=cash_holdings,
         )

@@ -572,6 +572,10 @@ class CashEntry(BaseModel):
     description: str
     amount: Amount
     transfer: Optional[bool] = False
+    sale_date: Optional[date] = None
+    sale_price_nok: Optional[Decimal] = None
+    gain_nok: Optional[Decimal] = None
+    aggregated: Optional[bool] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -769,6 +773,7 @@ class TransferRecord(BaseModel):
     amount_sent: Annotated[Decimal, Field(ge=0, decimal_places=0)]
     amount_received: Annotated[Decimal, Field(gt=0, decimal_places=0)]
     gain: Annotated[Decimal, Field(decimal_places=0)]
+    aggregated_gain: Annotated[Decimal, Field(decimal_places=0)]
     description: str
 
 
@@ -779,6 +784,7 @@ class CashSummary(BaseModel):
     remaining_cash: Amount
     holdings: list[CashEntry]
     gain: Decimal
+    gain_aggregated: Decimal
 
 
 class TaxSummary(BaseModel):
