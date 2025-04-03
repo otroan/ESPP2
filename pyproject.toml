@@ -33,7 +33,7 @@ dependencies = [
     "urllib3", "python-dateutil", "uvicorn", "fastapi",
     "python-multipart", "tabulate", "httpx", "pytest",
     "rich", "typing", "html5lib", "typer", "openpyxl",
-    "setuptools-scm",
+    "setuptools-scm", "pytest-snapshot",
 ]
 authors = [
     { name = "Ole Troan", email = "otroan@employees.org"},

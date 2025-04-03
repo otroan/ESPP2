@@ -1,0 +1,921 @@
+{
+    "holdings2023_year": 2023,
+    "holdings2023_broker": "schwab",
+    "holdings2023_stocks": [
+        {
+            "symbol": "CSCO",
+            "date": "2023-12-29",
+            "qty": "271",
+            "tax_deduction": "16.445108736",
+            "purchase_price": {
+                "currency": "USD",
+                "value": "50.52",
+                "amountdate": "2023-12-29",
+                "nok_value": "513.909648",
+                "nok_exchange_rate": "10.1724"
+            },
+            "type": "DEPOSIT"
+        }
+    ],
+    "holdings2023_cash": [
+        {
+            "date": "2023-11-14",
+            "description": "sale",
+            "amount": {
+                "currency": "USD",
+                "value": "0.01",
+                "amountdate": "2023-11-14",
+                "nok_value": "0.111386",
+                "nok_exchange_rate": "11.1386"
+            },
+            "transfer": false
+        }
+    ],
+    "report2024_eoy_balance": {
+        "2023": [
+            {
+                "symbol": "CSCO",
+                "qty": "271",
+                "amount": {
+                    "currency": "USD",
+                    "value": "13690.92",
+                    "amountdate": "2023-12-31",
+                    "nok_value": "139269.514608",
+                    "nok_exchange_rate": "10.1724"
+                },
+                "fmv": "50.52"
+            }
+        ],
+        "2024": [
+            {
+                "symbol": "CSCO",
+                "qty": "199.0000",
+                "amount": {
+                    "currency": "USD",
+                    "value": "11780.80000",
+                    "amountdate": "2024-12-31",
+                    "nok_value": "133752.134720000",
+                    "nok_exchange_rate": "11.3534"
+                },
+                "fmv": "59.2"
+            }
+        ]
+    },
+    "report2024_ledger": {
+        "CSCO": [
+            [
+                "2023-12-29",
+                "271",
+                "271"
+            ],
+            [
+                "2024-01-26",
+                "1.7168",
+                "272.7168"
+            ],
+            [
+                "2024-02-14",
+                "47",
+                "319.7168"
+            ],
+            [
+                "2024-02-14",
+                "70",
+                "389.7168"
+            ],
+            [
+                "2024-02-14",
+                "35",
+                "424.7168"
+            ],
+            [
+                "2024-04-24",
+                "2.9945",
+                "427.7113"
+            ],
+            [
+                "2024-05-13",
+                "47",
+                "474.7113"
+            ],
+            [
+                "2024-05-13",
+                "35",
+                "509.7113"
+            ],
+            [
+                "2024-05-13",
+                "69",
+                "578.7113"
+            ],
+            [
+                "2024-06-28",
+                "226",
+                "804.7113"
+            ],
+            [
+                "2024-07-25",
+                "5.8778",
+                "810.5891"
+            ],
+            [
+                "2024-07-26",
+                "-313.5891",
+                "497.0000"
+            ],
+            [
+                "2024-08-13",
+                "70",
+                "567.0000"
+            ],
+            [
+                "2024-08-13",
+                "47",
+                "614.0000"
+            ],
+            [
+                "2024-08-13",
+                "35",
+                "649.0000"
+            ],
+            [
+                "2024-09-25",
+                "-152",
+                "497.0000"
+            ],
+            [
+                "2024-10-10",
+                "-497",
+                "0.0000"
+            ],
+            [
+                "2024-10-23",
+                "2.9985",
+                "2.9985"
+            ],
+            [
+                "2024-11-13",
+                "253",
+                "255.9985"
+            ],
+            [
+                "2024-11-13",
+                "47",
+                "302.9985"
+            ],
+            [
+                "2024-11-13",
+                "69",
+                "371.9985"
+            ],
+            [
+                "2024-11-13",
+                "35",
+                "406.9985"
+            ],
+            [
+                "2024-11-14",
+                "-406.9985",
+                "0.0000"
+            ],
+            [
+                "2024-12-31",
+                "199",
+                "199.0000"
+            ]
+        ]
+    },
+    "report2024_dividends": [
+        {
+            "symbol": "CSCO",
+            "amount": {
+                "values": {
+                    "USD": "859.41236",
+                    "NOK": "3390.758799148"
+                }
+            },
+            "gross_amount": {
+                "values": {
+                    "USD": "859.41236",
+                    "NOK": "9398.771754860"
+                }
+            },
+            "post_tax_inc_amount": null,
+            "tax": {
+                "values": {
+                    "USD": "-119.43",
+                    "NOK": "-1305.439593"
+                }
+            },
+            "tax_deduction_used": "6008.012955712"
+        }
+    ],
+    "report2024_buys": [
+        {
+            "symbol": "CSCO",
+            "qty": "944.4196",
+            "avg_usd": "51.18825789473684210526315789",
+            "avg_nok": "556.6877611042421052631578947"
+        }
+    ],
+    "report2024_sales": {
+        "CSCO": [
+            {
+                "symbol": "CSCO",
+                "date": "2024-11-14",
+                "qty": "-406.9985",
+                "amount": {
+                    "currency": "USD",
+                    "value": "23829.03",
+                    "amountdate": "2024-11-14",
+                    "nok_value": "266027.29092",
+                    "nok_exchange_rate": "11.164"
+                },
+                "fee": null,
+                "from_positions": [
+                    {
+                        "symbol": "CSCO",
+                        "qty": "271",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "58.54820103759596165587833862",
+                            "amountdate": "2024-11-14",
+                            "nok_value": "653.6321163837213159262257724",
+                            "nok_exchange_rate": "11.164"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "50.52",
+                            "amountdate": "2023-12-29",
+                            "nok_value": "513.909648",
+                            "nok_exchange_rate": "10.1724"
+                        },
+                        "purchase_date": "2023-12-29",
+                        "gain_ps": {
+                            "value": "8.02820103759596165587833862",
+                            "nok_buy_value": "513.909648",
+                            "nok_sell_value": "653.6321163837213159262257724",
+                            "nok_value": "139.7224683837213159262257724"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "135.9985",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "58.54820103759596165587833862",
+                            "amountdate": "2024-11-14",
+                            "nok_value": "653.6321163837213159262257724",
+                            "nok_exchange_rate": "11.164"
+                        },
+                        "purchase_price": {
+                            "currency": "ESPPUSD",
+                            "value": "59.20",
+                            "amountdate": "2024-12-31",
+                            "nok_value": "671.9636771680",
+                            "nok_exchange_rate": "11.35073779"
+                        },
+                        "purchase_date": "2024-12-31",
+                        "gain_ps": {
+                            "value": "-0.65179896240403834412166138",
+                            "nok_buy_value": "671.9636771680",
+                            "nok_sell_value": "653.6321163837213159262257724",
+                            "nok_value": "-18.3315607842786840737742276"
+                        },
+                        "tax_deduction_used": "0"
+                    }
+                ],
+                "totals": {
+                    "gain": {
+                        "values": {
+                            "USD": "2086.998800000000000000000001",
+                            "NOK": "35371.72416266775200000000003"
+                        }
+                    },
+                    "purchase_price": "54.86",
+                    "tax_ded_used": "0.0000"
+                }
+            },
+            {
+                "symbol": "CSCO",
+                "date": "2024-10-10",
+                "qty": "-497",
+                "amount": {
+                    "currency": "USD",
+                    "value": "26688.08",
+                    "amountdate": "2024-10-10",
+                    "nok_value": "287876.312536",
+                    "nok_exchange_rate": "10.7867"
+                },
+                "fee": null,
+                "from_positions": [
+                    {
+                        "symbol": "CSCO",
+                        "qty": "63.0015",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "53.69835010060362173038229376",
+                            "amountdate": "2024-10-10",
+                            "nok_value": "579.2279930301810865191146881",
+                            "nok_exchange_rate": "10.7867"
+                        },
+                        "purchase_price": {
+                            "currency": "ESPPUSD",
+                            "value": "59.20",
+                            "amountdate": "2024-12-31",
+                            "nok_value": "671.9636771680",
+                            "nok_exchange_rate": "11.35073779"
+                        },
+                        "purchase_date": "2024-12-31",
+                        "gain_ps": {
+                            "value": "-5.50164989939637826961770624",
+                            "nok_buy_value": "671.9636771680",
+                            "nok_sell_value": "579.2279930301810865191146881",
+                            "nok_value": "-92.7356841378189134808853119"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "253",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "53.69835010060362173038229376",
+                            "amountdate": "2024-10-10",
+                            "nok_value": "579.2279930301810865191146881",
+                            "nok_exchange_rate": "10.7867"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "58.06",
+                            "amountdate": "2024-11-13",
+                            "nok_value": "642.625498",
+                            "nok_exchange_rate": "11.0683"
+                        },
+                        "purchase_date": "2024-11-13",
+                        "gain_ps": {
+                            "value": "-4.36164989939637826961770624",
+                            "nok_buy_value": "642.625498",
+                            "nok_sell_value": "579.2279930301810865191146881",
+                            "nok_value": "-63.3975049698189134808853119"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "47",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "53.69835010060362173038229376",
+                            "amountdate": "2024-10-10",
+                            "nok_value": "579.2279930301810865191146881",
+                            "nok_exchange_rate": "10.7867"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "58.06",
+                            "amountdate": "2024-11-13",
+                            "nok_value": "642.625498",
+                            "nok_exchange_rate": "11.0683"
+                        },
+                        "purchase_date": "2024-11-13",
+                        "gain_ps": {
+                            "value": "-4.36164989939637826961770624",
+                            "nok_buy_value": "642.625498",
+                            "nok_sell_value": "579.2279930301810865191146881",
+                            "nok_value": "-63.3975049698189134808853119"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "69",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "53.69835010060362173038229376",
+                            "amountdate": "2024-10-10",
+                            "nok_value": "579.2279930301810865191146881",
+                            "nok_exchange_rate": "10.7867"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "58.06",
+                            "amountdate": "2024-11-13",
+                            "nok_value": "642.625498",
+                            "nok_exchange_rate": "11.0683"
+                        },
+                        "purchase_date": "2024-11-13",
+                        "gain_ps": {
+                            "value": "-4.36164989939637826961770624",
+                            "nok_buy_value": "642.625498",
+                            "nok_sell_value": "579.2279930301810865191146881",
+                            "nok_value": "-63.3975049698189134808853119"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "35",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "53.69835010060362173038229376",
+                            "amountdate": "2024-10-10",
+                            "nok_value": "579.2279930301810865191146881",
+                            "nok_exchange_rate": "10.7867"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "58.06",
+                            "amountdate": "2024-11-13",
+                            "nok_value": "642.625498",
+                            "nok_exchange_rate": "11.0683"
+                        },
+                        "purchase_date": "2024-11-13",
+                        "gain_ps": {
+                            "value": "-4.36164989939637826961770624",
+                            "nok_buy_value": "642.625498",
+                            "nok_sell_value": "579.2279930301810865191146881",
+                            "nok_value": "-63.3975049698189134808853119"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "2.9985",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "53.69835010060362173038229376",
+                            "amountdate": "2024-10-10",
+                            "nok_value": "579.2279930301810865191146881",
+                            "nok_exchange_rate": "10.7867"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "56.3544",
+                            "amountdate": "2024-10-23",
+                            "nok_value": "620.36050608",
+                            "nok_exchange_rate": "11.0082"
+                        },
+                        "purchase_date": "2024-10-23",
+                        "gain_ps": {
+                            "value": "-2.65604989939637826961770624",
+                            "nok_buy_value": "620.36050608",
+                            "nok_sell_value": "579.2279930301810865191146881",
+                            "nok_value": "-41.1325130498189134808853119"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "27.0000",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "53.69835010060362173038229376",
+                            "amountdate": "2024-10-10",
+                            "nok_value": "579.2279930301810865191146881",
+                            "nok_exchange_rate": "10.7867"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "45.47",
+                            "amountdate": "2024-08-13",
+                            "nok_value": "490.721334",
+                            "nok_exchange_rate": "10.7922"
+                        },
+                        "purchase_date": "2024-08-13",
+                        "gain_ps": {
+                            "value": "8.22835010060362173038229376",
+                            "nok_buy_value": "490.721334",
+                            "nok_sell_value": "579.2279930301810865191146881",
+                            "nok_value": "88.5066590301810865191146881"
+                        },
+                        "tax_deduction_used": "0"
+                    }
+                ],
+                "totals": {
+                    "gain": {
+                        "values": {
+                            "USD": "-1894.517468400000000000000002",
+                            "NOK": "-29188.73525858063200000000002"
+                        }
+                    },
+                    "purchase_price": "8.229386507936507936507936509",
+                    "tax_ded_used": "0.0000"
+                }
+            },
+            {
+                "symbol": "CSCO",
+                "date": "2024-09-25",
+                "qty": "-152",
+                "amount": {
+                    "currency": "USD",
+                    "value": "7975.19",
+                    "amountdate": "2024-09-25",
+                    "nok_value": "83242.640663",
+                    "nok_exchange_rate": "10.4377"
+                },
+                "fee": null,
+                "from_positions": [
+                    {
+                        "symbol": "CSCO",
+                        "qty": "43.0000",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "52.46835526315789473684210526",
+                            "amountdate": "2024-09-25",
+                            "nok_value": "547.6489517302631578947368421",
+                            "nok_exchange_rate": "10.4377"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "45.47",
+                            "amountdate": "2024-08-13",
+                            "nok_value": "490.721334",
+                            "nok_exchange_rate": "10.7922"
+                        },
+                        "purchase_date": "2024-08-13",
+                        "gain_ps": {
+                            "value": "6.99835526315789473684210526",
+                            "nok_buy_value": "490.721334",
+                            "nok_sell_value": "547.6489517302631578947368421",
+                            "nok_value": "56.9276177302631578947368421"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "47",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "52.46835526315789473684210526",
+                            "amountdate": "2024-09-25",
+                            "nok_value": "547.6489517302631578947368421",
+                            "nok_exchange_rate": "10.4377"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "45.47",
+                            "amountdate": "2024-08-13",
+                            "nok_value": "490.721334",
+                            "nok_exchange_rate": "10.7922"
+                        },
+                        "purchase_date": "2024-08-13",
+                        "gain_ps": {
+                            "value": "6.99835526315789473684210526",
+                            "nok_buy_value": "490.721334",
+                            "nok_sell_value": "547.6489517302631578947368421",
+                            "nok_value": "56.9276177302631578947368421"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "35",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "52.46835526315789473684210526",
+                            "amountdate": "2024-09-25",
+                            "nok_value": "547.6489517302631578947368421",
+                            "nok_exchange_rate": "10.4377"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "45.47",
+                            "amountdate": "2024-08-13",
+                            "nok_value": "490.721334",
+                            "nok_exchange_rate": "10.7922"
+                        },
+                        "purchase_date": "2024-08-13",
+                        "gain_ps": {
+                            "value": "6.99835526315789473684210526",
+                            "nok_buy_value": "490.721334",
+                            "nok_sell_value": "547.6489517302631578947368421",
+                            "nok_value": "56.9276177302631578947368421"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "5.8778",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "52.46835526315789473684210526",
+                            "amountdate": "2024-09-25",
+                            "nok_value": "547.6489517302631578947368421",
+                            "nok_exchange_rate": "10.4377"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "46.5476",
+                            "amountdate": "2024-07-25",
+                            "nok_value": "518.30287124",
+                            "nok_exchange_rate": "11.1349"
+                        },
+                        "purchase_date": "2024-07-25",
+                        "gain_ps": {
+                            "value": "5.92075526315789473684210526",
+                            "nok_buy_value": "518.30287124",
+                            "nok_sell_value": "547.6489517302631578947368421",
+                            "nok_value": "29.3460804902631578947368421"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "21.1222",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "52.46835526315789473684210526",
+                            "amountdate": "2024-09-25",
+                            "nok_value": "547.6489517302631578947368421",
+                            "nok_exchange_rate": "10.4377"
+                        },
+                        "purchase_price": {
+                            "currency": "ESPPUSD",
+                            "value": "47.51",
+                            "amountdate": "2024-06-28",
+                            "nok_value": "505.9637911226",
+                            "nok_exchange_rate": "10.64962726"
+                        },
+                        "purchase_date": "2024-06-28",
+                        "gain_ps": {
+                            "value": "4.95835526315789473684210526",
+                            "nok_buy_value": "505.9637911226",
+                            "nok_sell_value": "547.6489517302631578947368421",
+                            "nok_value": "41.6851606076631578947368421"
+                        },
+                        "tax_deduction_used": "0"
+                    }
+                ],
+                "totals": {
+                    "gain": {
+                        "values": {
+                            "USD": "1014.326794720000000000000000",
+                            "NOK": "8168.924907575746280000000000"
+                        }
+                    },
+                    "purchase_price": "13.34504666666666666666666667",
+                    "tax_ded_used": "0.0000"
+                }
+            },
+            {
+                "symbol": "CSCO",
+                "date": "2024-07-26",
+                "qty": "-313.5891",
+                "amount": {
+                    "currency": "USD",
+                    "value": "14813.49",
+                    "amountdate": "2024-07-26",
+                    "nok_value": "162825.438033",
+                    "nok_exchange_rate": "10.9917"
+                },
+                "fee": null,
+                "from_positions": [
+                    {
+                        "symbol": "CSCO",
+                        "qty": "204.8778",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "47.23853603329962680463064564",
+                            "amountdate": "2024-07-26",
+                            "nok_value": "519.2318165172195079484586677",
+                            "nok_exchange_rate": "10.9917"
+                        },
+                        "purchase_price": {
+                            "currency": "ESPPUSD",
+                            "value": "47.51",
+                            "amountdate": "2024-06-28",
+                            "nok_value": "505.9637911226",
+                            "nok_exchange_rate": "10.64962726"
+                        },
+                        "purchase_date": "2024-06-28",
+                        "gain_ps": {
+                            "value": "-0.27146396670037319536935436",
+                            "nok_buy_value": "505.9637911226",
+                            "nok_sell_value": "519.2318165172195079484586677",
+                            "nok_value": "13.2680253946195079484586677"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "47",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "47.23853603329962680463064564",
+                            "amountdate": "2024-07-26",
+                            "nok_value": "519.2318165172195079484586677",
+                            "nok_exchange_rate": "10.9917"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "47.79",
+                            "amountdate": "2024-05-13",
+                            "nok_value": "517.078242",
+                            "nok_exchange_rate": "10.8198"
+                        },
+                        "purchase_date": "2024-05-13",
+                        "gain_ps": {
+                            "value": "-0.55146396670037319536935436",
+                            "nok_buy_value": "517.078242",
+                            "nok_sell_value": "519.2318165172195079484586677",
+                            "nok_value": "2.1535745172195079484586677"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "35",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "47.23853603329962680463064564",
+                            "amountdate": "2024-07-26",
+                            "nok_value": "519.2318165172195079484586677",
+                            "nok_exchange_rate": "10.9917"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "47.79",
+                            "amountdate": "2024-05-13",
+                            "nok_value": "517.078242",
+                            "nok_exchange_rate": "10.8198"
+                        },
+                        "purchase_date": "2024-05-13",
+                        "gain_ps": {
+                            "value": "-0.55146396670037319536935436",
+                            "nok_buy_value": "517.078242",
+                            "nok_sell_value": "519.2318165172195079484586677",
+                            "nok_value": "2.1535745172195079484586677"
+                        },
+                        "tax_deduction_used": "0"
+                    },
+                    {
+                        "symbol": "CSCO",
+                        "qty": "26.7113",
+                        "sale_price": {
+                            "currency": "USD",
+                            "value": "47.23853603329962680463064564",
+                            "amountdate": "2024-07-26",
+                            "nok_value": "519.2318165172195079484586677",
+                            "nok_exchange_rate": "10.9917"
+                        },
+                        "purchase_price": {
+                            "currency": "USD",
+                            "value": "47.79",
+                            "amountdate": "2024-05-13",
+                            "nok_value": "517.078242",
+                            "nok_exchange_rate": "10.8198"
+                        },
+                        "purchase_date": "2024-05-13",
+                        "gain_ps": {
+                            "value": "-0.55146396670037319536935436",
+                            "nok_buy_value": "517.078242",
+                            "nok_sell_value": "519.2318165172195079484586677",
+                            "nok_value": "2.1535745172195079484586677"
+                        },
+                        "tax_deduction_used": "0"
+                    }
+                ],
+                "totals": {
+                    "gain": {
+                        "values": {
+                            "USD": "-115.5673050000000000000000013",
+                            "NOK": "2952.441738607581719999999991"
+                        }
+                    },
+                    "purchase_price": "19.90083333333333333333333333",
+                    "tax_ded_used": "0.0000"
+                }
+            }
+        ]
+    },
+    "report2024_cash_ledger": [
+        [
+            "date=datetime.date(2023, 11, 14) description='sale' amount=Amount(currency='USD', value=Decimal('0.01'), amountdate=datetime.date(2023, 11, 14), legacy_nok_rate=Decimal('11.1386'), nok_value=Decimal('0.111386'), nok_exchange_rate=Decimal('11.1386')) transfer=False",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 1, 24) description='tax' amount=NegativeAmount(currency='USD', value=Decimal('-15.85'), amountdate=datetime.date(2024, 1, 24), legacy_nok_rate=None, nok_value=Decimal('-165.919385'), nok_exchange_rate=Decimal('10.4681')) transfer=False",
+            "-15.84"
+        ],
+        [
+            "date=datetime.date(2024, 1, 24) description='dividend' amount=PositiveAmount(currency='USD', value=Decimal('105.69'), amountdate=datetime.date(2024, 1, 24), legacy_nok_rate=None, nok_value=Decimal('1106.373489'), nok_exchange_rate=Decimal('10.4681')) transfer=False",
+            "89.85"
+        ],
+        [
+            "date=datetime.date(2024, 1, 24) description='dividend reinvest' amount=NegativeAmount(currency='USD', value=Decimal('-89.84'), amountdate=datetime.date(2024, 1, 24), legacy_nok_rate=None, nok_value=Decimal('-940.454104'), nok_exchange_rate=Decimal('10.4681')) transfer=False",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 4, 24) description='dividend reinvest' amount=NegativeAmount(currency='USD', value=Decimal('-144.41'), amountdate=datetime.date(2024, 4, 24), legacy_nok_rate=None, nok_value=Decimal('-1585.592918'), nok_exchange_rate=Decimal('10.9798')) transfer=False",
+            "-144.40"
+        ],
+        [
+            "date=datetime.date(2024, 4, 24) description='tax' amount=NegativeAmount(currency='USD', value=Decimal('-25.48'), amountdate=datetime.date(2024, 4, 24), legacy_nok_rate=None, nok_value=Decimal('-279.765304'), nok_exchange_rate=Decimal('10.9798')) transfer=False",
+            "-169.88"
+        ],
+        [
+            "date=datetime.date(2024, 4, 24) description='dividend' amount=PositiveAmount(currency='USD', value=Decimal('169.89'), amountdate=datetime.date(2024, 4, 24), legacy_nok_rate=None, nok_value=Decimal('1865.358222'), nok_exchange_rate=Decimal('10.9798')) transfer=False",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 7, 24) description='dividend reinvest' amount=NegativeAmount(currency='USD', value=Decimal('-273.60'), amountdate=datetime.date(2024, 7, 24), legacy_nok_rate=None, nok_value=Decimal('-3011.925600'), nok_exchange_rate=Decimal('11.0085')) transfer=False",
+            "-273.59"
+        ],
+        [
+            "date=datetime.date(2024, 7, 24) description='dividend' amount=PositiveAmount(currency='USD', value=Decimal('321.88'), amountdate=datetime.date(2024, 7, 24), legacy_nok_rate=None, nok_value=Decimal('3543.415980'), nok_exchange_rate=Decimal('11.0085')) transfer=False",
+            "48.29"
+        ],
+        [
+            "date=datetime.date(2024, 7, 24) description='tax' amount=NegativeAmount(currency='USD', value=Decimal('-48.28'), amountdate=datetime.date(2024, 7, 24), legacy_nok_rate=None, nok_value=Decimal('-531.490380'), nok_exchange_rate=Decimal('11.0085')) transfer=False",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 7, 26) description='sale' amount=PositiveAmount(currency='USD', value=Decimal('14813.49'), amountdate=datetime.date(2024, 7, 26), legacy_nok_rate=None, nok_value=Decimal('162825.438033'), nok_exchange_rate=Decimal('10.9917')) transfer=False",
+            "14813.50"
+        ],
+        [
+            "date=datetime.date(2024, 7, 29) description='wire' amount=PositiveAmount(currency='USD', value=Decimal('-14813.49'), amountdate=datetime.date(2024, 7, 29), legacy_nok_rate=None, nok_value=Decimal('-163177.999095'), nok_exchange_rate=Decimal('11.0155')) transfer=True",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 7, 29) description='wire fee' amount=NegativeAmount(currency='USD', value=Decimal('-0.0'), amountdate=datetime.date(2024, 7, 29), legacy_nok_rate=None, nok_value=Decimal('-0.00000'), nok_exchange_rate=Decimal('11.0155')) transfer=False",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 9, 25) description='sale' amount=PositiveAmount(currency='USD', value=Decimal('7975.19'), amountdate=datetime.date(2024, 9, 25), legacy_nok_rate=None, nok_value=Decimal('83242.640663'), nok_exchange_rate=Decimal('10.4377')) transfer=False",
+            "7975.20"
+        ],
+        [
+            "date=datetime.date(2024, 9, 26) description='wire' amount=PositiveAmount(currency='USD', value=Decimal('-7975.19'), amountdate=datetime.date(2024, 9, 26), legacy_nok_rate=None, nok_value=Decimal('-84266.655059'), nok_exchange_rate=Decimal('10.5661')) transfer=True",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 9, 26) description='wire fee' amount=NegativeAmount(currency='USD', value=Decimal('-0.0'), amountdate=datetime.date(2024, 9, 26), legacy_nok_rate=None, nok_value=Decimal('-0.00000'), nok_exchange_rate=Decimal('10.5661')) transfer=False",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 10, 10) description='sale' amount=PositiveAmount(currency='USD', value=Decimal('26688.08'), amountdate=datetime.date(2024, 10, 10), legacy_nok_rate=None, nok_value=Decimal('287876.312536'), nok_exchange_rate=Decimal('10.7867')) transfer=False",
+            "26688.09"
+        ],
+        [
+            "date=datetime.date(2024, 10, 11) description='wire' amount=PositiveAmount(currency='USD', value=Decimal('-26688.08'), amountdate=datetime.date(2024, 10, 11), legacy_nok_rate=None, nok_value=Decimal('-286432.487408'), nok_exchange_rate=Decimal('10.7326')) transfer=True",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 10, 11) description='wire fee' amount=NegativeAmount(currency='USD', value=Decimal('-0.0'), amountdate=datetime.date(2024, 10, 11), legacy_nok_rate=None, nok_value=Decimal('-0.00000'), nok_exchange_rate=Decimal('10.7326')) transfer=False",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 10, 23) description='dividend reinvest' amount=NegativeAmount(currency='USD', value=Decimal('-168.98'), amountdate=datetime.date(2024, 10, 23), legacy_nok_rate=None, nok_value=Decimal('-1860.165636'), nok_exchange_rate=Decimal('11.0082')) transfer=False",
+            "-168.97"
+        ],
+        [
+            "date=datetime.date(2024, 10, 23) description='dividend' amount=PositiveAmount(currency='USD', value=Decimal('198.80'), amountdate=datetime.date(2024, 10, 23), legacy_nok_rate=None, nok_value=Decimal('2188.430160'), nok_exchange_rate=Decimal('11.0082')) transfer=False",
+            "29.83"
+        ],
+        [
+            "date=datetime.date(2024, 10, 23) description='tax' amount=NegativeAmount(currency='USD', value=Decimal('-29.82'), amountdate=datetime.date(2024, 10, 23), legacy_nok_rate=None, nok_value=Decimal('-328.264524'), nok_exchange_rate=Decimal('11.0082')) transfer=False",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 11, 14) description='sale' amount=PositiveAmount(currency='USD', value=Decimal('23829.03'), amountdate=datetime.date(2024, 11, 14), legacy_nok_rate=None, nok_value=Decimal('266027.29092'), nok_exchange_rate=Decimal('11.164')) transfer=False",
+            "23829.04"
+        ],
+        [
+            "date=datetime.date(2024, 11, 15) description='wire' amount=PositiveAmount(currency='USD', value=Decimal('-23829.03'), amountdate=datetime.date(2024, 11, 15), legacy_nok_rate=None, nok_value=Decimal('-263418.012135'), nok_exchange_rate=Decimal('11.0545')) transfer=True",
+            "0.01"
+        ],
+        [
+            "date=datetime.date(2024, 11, 15) description='wire fee' amount=NegativeAmount(currency='USD', value=Decimal('-0.0'), amountdate=datetime.date(2024, 11, 15), legacy_nok_rate=None, nok_value=Decimal('-0.00000'), nok_exchange_rate=Decimal('11.0545')) transfer=False",
+            "0.01"
+        ]
+    ],
+    "report2024_unmatched_wires": [
+        {
+            "date": "2024-11-15",
+            "currency": "USD",
+            "nok_value": "-263418.012135",
+            "value": "-23829.03"
+        },
+        {
+            "date": "2024-10-11",
+            "currency": "USD",
+            "nok_value": "-286432.487408",
+            "value": "-26688.08"
+        },
+        {
+            "date": "2024-09-26",
+            "currency": "USD",
+            "nok_value": "-84266.655059",
+            "value": "-7975.19"
+        },
+        {
+            "date": "2024-07-29",
+            "currency": "USD",
+            "nok_value": "-163177.999095",
+            "value": "-14813.49"
+        }
+    ]
+}

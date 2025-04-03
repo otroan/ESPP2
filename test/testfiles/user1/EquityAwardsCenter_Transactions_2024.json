@@ -1,0 +1,1010 @@
+{
+  "FromDate": "01/01/2024",
+  "ToDate": "01/01/2025",
+  "Transactions": [
+    {
+      "Date": "12/11/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "12",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "06/01/2021",
+            "AwardId": "1506423",
+            "VestDate": "12/10/2024",
+            "VestFairMarketValue": "$58.95"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "12/09/2024",
+      "Action": "Wire Transfer",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Cash Disbursement",
+      "FeesAndCommissions": "",
+      "DisbursementElection": null,
+      "Amount": "-$23,211.55",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "12/05/2024",
+      "Action": "Sale",
+      "Symbol": "CSCO",
+      "Quantity": "387",
+      "Description": "Share Sale",
+      "FeesAndCommissions": "$0.71",
+      "DisbursementElection": null,
+      "Amount": "$23,211.55",
+      "TransactionDetails": [
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "12",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1506423",
+            "VestDate": "09/10/2023",
+            "VestFairMarketValue": "$56.67",
+            "GrossProceeds": "$719.76"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "15",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1569973",
+            "VestDate": "02/10/2024",
+            "VestFairMarketValue": "$50.13",
+            "GrossProceeds": "$899.70"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "11",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1542332",
+            "VestDate": "02/10/2024",
+            "VestFairMarketValue": "$50.13",
+            "GrossProceeds": "$659.78"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "12",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1506423",
+            "VestDate": "12/10/2023",
+            "VestFairMarketValue": "$48.38",
+            "GrossProceeds": "$719.76"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "15",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1569973",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06",
+            "GrossProceeds": "$899.70"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "165",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1600213",
+            "VestDate": "11/10/2023",
+            "VestFairMarketValue": "$52.00",
+            "GrossProceeds": "$9,896.70"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "12",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1506423",
+            "VestDate": "03/10/2024",
+            "VestFairMarketValue": "$49.50",
+            "GrossProceeds": "$719.76"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "39",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1600213",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06",
+            "GrossProceeds": "$2,339.22"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "12",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1542332",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06",
+            "GrossProceeds": "$719.76"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "67",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1662210",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06",
+            "GrossProceeds": "$4,018.66"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "15",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1569973",
+            "VestDate": "11/10/2023",
+            "VestFairMarketValue": "$52.00",
+            "GrossProceeds": "$899.70"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "12",
+            "SalePrice": "$59.98",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1542332",
+            "VestDate": "11/10/2023",
+            "VestFairMarketValue": "$52.00",
+            "GrossProceeds": "$719.76"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "11/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "39",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/09/2022",
+            "AwardId": "1600213",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "11/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "15",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "07/27/2022",
+            "AwardId": "1569973",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "11/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "67",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/08/2023",
+            "AwardId": "1662210",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "11/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "12",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/04/2021",
+            "AwardId": "1542332",
+            "VestDate": "11/10/2024",
+            "VestFairMarketValue": "$58.06"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "10/31/2024",
+      "Action": "Wire Transfer",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Cash Disbursement",
+      "FeesAndCommissions": "",
+      "DisbursementElection": null,
+      "Amount": "-$140.27",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "10/23/2024",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$24.75",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "10/23/2024",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$165.02",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "10/15/2024",
+      "Action": "Wire Transfer",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Cash Disbursement",
+      "FeesAndCommissions": "",
+      "DisbursementElection": null,
+      "Amount": "-$8,423.74",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "10/11/2024",
+      "Action": "Sale",
+      "Symbol": "CSCO",
+      "Quantity": "156",
+      "Description": "Share Sale",
+      "FeesAndCommissions": "$0.26",
+      "DisbursementElection": null,
+      "Amount": "$8,423.74",
+      "TransactionDetails": [
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "12",
+            "SalePrice": "$54.00",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1506423",
+            "VestDate": "09/10/2024",
+            "VestFairMarketValue": "$48.70",
+            "GrossProceeds": "$648.00"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "12",
+            "SalePrice": "$54.00",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1542332",
+            "VestDate": "05/10/2024",
+            "VestFairMarketValue": "$47.79",
+            "GrossProceeds": "$648.00"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "15",
+            "SalePrice": "$54.00",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1569973",
+            "VestDate": "08/10/2024",
+            "VestFairMarketValue": "$45.47",
+            "GrossProceeds": "$810.00"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "11",
+            "SalePrice": "$54.00",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1542332",
+            "VestDate": "08/10/2024",
+            "VestFairMarketValue": "$45.47",
+            "GrossProceeds": "$594.00"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "12",
+            "SalePrice": "$54.00",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1506423",
+            "VestDate": "06/10/2024",
+            "VestFairMarketValue": "$45.84",
+            "GrossProceeds": "$648.00"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "15",
+            "SalePrice": "$54.00",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1569973",
+            "VestDate": "05/10/2024",
+            "VestFairMarketValue": "$47.79",
+            "GrossProceeds": "$810.00"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "39",
+            "SalePrice": "$54.00",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1600213",
+            "VestDate": "05/10/2024",
+            "VestFairMarketValue": "$47.79",
+            "GrossProceeds": "$2,106.00"
+          }
+        },
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "40",
+            "SalePrice": "$54.00",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1600213",
+            "VestDate": "08/10/2024",
+            "VestFairMarketValue": "$45.47",
+            "GrossProceeds": "$2,160.00"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "09/18/2024",
+      "Action": "Wire Transfer",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Cash Disbursement",
+      "FeesAndCommissions": "",
+      "DisbursementElection": null,
+      "Amount": "-$8,214.08",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "09/17/2024",
+      "Action": "Sale",
+      "Symbol": "CSCO",
+      "Quantity": "156",
+      "Description": "Share Sale",
+      "FeesAndCommissions": "$0.25",
+      "DisbursementElection": null,
+      "Amount": "$7,960.06",
+      "TransactionDetails": [
+        {
+          "Details": {
+            "Type": "ESPP",
+            "Shares": "156",
+            "SalePrice": "$51.0276",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseDate": "06/28/2024",
+            "PurchasePrice": "$36.21",
+            "PurchaseFairMarketValue": "$47.51",
+            "DispositionType": "Disqualified",
+            "GrantId": null,
+            "VestDate": "",
+            "VestFairMarketValue": "",
+            "GrossProceeds": "$7,960.31"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "09/11/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "12",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "06/01/2021",
+            "AwardId": "1506423",
+            "VestDate": "09/10/2024",
+            "VestFairMarketValue": "$48.70"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "08/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "11",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/04/2021",
+            "AwardId": "1542332",
+            "VestDate": "08/10/2024",
+            "VestFairMarketValue": "$45.47"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "08/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "40",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/09/2022",
+            "AwardId": "1600213",
+            "VestDate": "08/10/2024",
+            "VestFairMarketValue": "$45.47"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "08/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "15",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "07/27/2022",
+            "AwardId": "1569973",
+            "VestDate": "08/10/2024",
+            "VestFairMarketValue": "$45.47"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "07/24/2024",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$29.43",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "07/24/2024",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$196.22",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "07/01/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "156",
+      "Description": "ESPP",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "PurchaseDate": "06/28/2024",
+            "PurchasePrice": "$36.21",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseFairMarketValue": "$47.51",
+            "TaxWithholdingMethod": null,
+            "NetSharesDeposited": "",
+            "SharesWithheld": "",
+            "SharesSold": "",
+            "CashRefund": "",
+            "CarryForward": ""
+          }
+        }
+      ]
+    },
+    {
+      "Date": "06/12/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "12",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "06/01/2021",
+            "AwardId": "1506423",
+            "VestDate": "06/10/2024",
+            "VestFairMarketValue": "$45.84"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "05/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "15",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "07/27/2022",
+            "AwardId": "1569973",
+            "VestDate": "05/10/2024",
+            "VestFairMarketValue": "$47.79"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "05/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "39",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/09/2022",
+            "AwardId": "1600213",
+            "VestDate": "05/10/2024",
+            "VestFairMarketValue": "$47.79"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "05/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "12",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/04/2021",
+            "AwardId": "1542332",
+            "VestDate": "05/10/2024",
+            "VestFairMarketValue": "$47.79"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "04/24/2024",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$102.62",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "04/24/2024",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$15.39",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "03/15/2024",
+      "Action": "Wire Transfer",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Cash Disbursement",
+      "FeesAndCommissions": "-$15.00",
+      "DisbursementElection": null,
+      "Amount": "-$10,734.87",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "03/15/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "12",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "06/01/2021",
+            "AwardId": "1506423",
+            "VestDate": "03/10/2024",
+            "VestFairMarketValue": "$49.50"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "03/13/2024",
+      "Action": "Sale",
+      "Symbol": "CSCO",
+      "Quantity": "215",
+      "Description": "Share Sale",
+      "FeesAndCommissions": "$0.13",
+      "DisbursementElection": null,
+      "Amount": "$10,749.87",
+      "TransactionDetails": [
+        {
+          "Details": {
+            "Type": "RS",
+            "Shares": "40",
+            "SalePrice": "$50.00",
+            "SubscriptionDate": "",
+            "SubscriptionFairMarketValue": "",
+            "PurchaseDate": "",
+            "PurchasePrice": "",
+            "PurchaseFairMarketValue": "",
+            "DispositionType": null,
+            "GrantId": "1600213",
+            "VestDate": "02/10/2024",
+            "VestFairMarketValue": "$50.13",
+            "GrossProceeds": "$2,000.00"
+          }
+        },
+        {
+          "Details": {
+            "Type": "ESPP",
+            "Shares": "175",
+            "SalePrice": "$50.00",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseDate": "12/29/2023",
+            "PurchasePrice": "$36.21",
+            "PurchaseFairMarketValue": "$50.52",
+            "DispositionType": "Disqualified",
+            "GrantId": null,
+            "VestDate": "",
+            "VestFairMarketValue": "",
+            "GrossProceeds": "$8,750.00"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "02/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "40",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/09/2022",
+            "AwardId": "1600213",
+            "VestDate": "02/10/2024",
+            "VestFairMarketValue": "$50.13"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "02/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "15",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "07/27/2022",
+            "AwardId": "1569973",
+            "VestDate": "02/10/2024",
+            "VestFairMarketValue": "$50.13"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "02/13/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "11",
+      "Description": "RS",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "AwardDate": "11/04/2021",
+            "AwardId": "1542332",
+            "VestDate": "02/10/2024",
+            "VestFairMarketValue": "$50.13"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "01/26/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "2.4773",
+      "Description": "Div Reinv",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "PurchasePrice": "$52.3305"
+          }
+        }
+      ]
+    },
+    {
+      "Date": "01/24/2024",
+      "Action": "Tax Withholding",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$22.88",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/24/2024",
+      "Action": "Dividend",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Credit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "$152.52",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/24/2024",
+      "Action": "Dividend Reinvested",
+      "Symbol": "CSCO",
+      "Quantity": null,
+      "Description": "Debit",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": "-$129.64",
+      "TransactionDetails": []
+    },
+    {
+      "Date": "01/02/2024",
+      "Action": "Deposit",
+      "Symbol": "CSCO",
+      "Quantity": "175",
+      "Description": "ESPP",
+      "FeesAndCommissions": null,
+      "DisbursementElection": null,
+      "Amount": null,
+      "TransactionDetails": [
+        {
+          "Details": {
+            "PurchaseDate": "12/29/2023",
+            "PurchasePrice": "$36.21",
+            "SubscriptionDate": "07/01/2022",
+            "SubscriptionFairMarketValue": "$42.60",
+            "PurchaseFairMarketValue": "$50.52",
+            "TaxWithholdingMethod": null,
+            "NetSharesDeposited": "",
+            "SharesWithheld": "",
+            "SharesSold": "",
+            "CashRefund": "",
+            "CarryForward": ""
+          }
+        }
+      ]
+    }
+  ]
+}
