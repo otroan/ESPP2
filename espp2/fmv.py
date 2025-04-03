@@ -7,7 +7,6 @@ caches them in a set of JSON files.
 
 # pylint: disable=invalid-name,line-too-long
 
-import os
 import json
 from importlib import resources
 from enum import Enum
@@ -52,16 +51,14 @@ def get_tax_deduction_rate(year):
     #
     # Remember to add the new tax-free deduction rates for a new year
     #
-
-    if year < 2006:
-        logger.error(
-            "The tax deduction rate was introduced in 2006, no support for years prior to that. %s",
-            year,
-        )
-        return 0
-
     yearstr = str(year)
     if yearstr not in MANUALRATES["tax_deduction_rates"]:
+        if year < 2006:
+            logger.error(
+                "The tax deduction rate was introduced in 2006, no support for years prior to that. %s",
+                year,
+            )
+            return Decimal("0.0")
         raise FMVException(f"No tax deduction rate for year {year}")
 
     return Decimal(str(MANUALRATES["tax_deduction_rates"][yearstr][0]))
@@ -218,6 +215,27 @@ class FMV:
             return True
         return False
 
+    def patch_table_for_tests(self, fmvtype, symbol):
+        """Patch official tables to support various testing"""
+
+        if fmvtype == FMVTypeEnum.CURRENCY and symbol == "USD":
+            # Add fake USD exchange-rates for 1900-1904 that supports the
+            # test-case for Aksjonaermodellen - should not cause problems
+            # for regular use of USD exchange rate
+            aksjonaermodell_example = {
+                "1900-12-31": 10.000,
+                "1901-07-07": 10.000,
+                "1901-09-09": 10.000,
+                "1901-12-31": 10.000,
+                "1902-09-09": 10.000,
+                "1902-12-31": 10.000,
+                "1903-09-09": 10.000,
+                "1903-12-31": 10.000,
+                "1904-03-03": 10.000,
+                "1904-12-31": 10.000,
+            }
+            self.table[fmvtype][symbol].update(aksjonaermodell_example)
+
     def refresh(self, symbol: str, d: datetime.date, fmvtype: FMVTypeEnum):
         """Refresh data for symbol if needed"""
         if not self.need_refresh(fmvtype, symbol, d):
@@ -229,6 +247,7 @@ class FMV:
         try:
             with open(filename, "r", encoding="utf-8") as f:
                 self.table[fmvtype][symbol] = json.load(f)
+                self.patch_table_for_tests(fmvtype, symbol)
                 if not self.need_refresh(fmvtype, symbol, d):
                     return
         except IOError:
@@ -242,6 +261,7 @@ class FMV:
             json.dump(data, f)
 
         self.table[fmvtype][symbol] = data
+        self.patch_table_for_tests(fmvtype, symbol)
 
     def extract_date(
         self, input_date: Union[str, datetime, datetime.date]
@@ -364,7 +384,6 @@ class FMV:
 
 
 if __name__ == "__main__":
-
     fmv = FMV()
     print("LOOKING UP DATA", fmv[FMVTypeEnum.STOCK, "CSCO", "2021-12-31"])
     # print('LOOKING UP DATA', f['CSCO', '2022-12-31'])

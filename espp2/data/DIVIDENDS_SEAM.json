@@ -1,0 +1,24 @@
+{
+    "fetched": "2025-04-03",
+    "1901-09-09": {
+	"date": "1901-08-08",
+	"declarationDate": "1901-08-01",
+	"paymentDate": "1901-09-09",
+	"value": 0.50,
+	"currency": "USD"
+    },
+    "1902-09-09": {
+	"date": "1902-08-08",
+	"declarationDate": "1902-08-01",
+	"paymentDate": "1902-09-09",
+	"value": 0.10,
+	"currency": "USD"
+    },
+    "1903-09-09": {
+	"date": "1903-08-08",
+	"declarationDate": "1903-08-01",
+	"paymentDate": "1903-09-09",
+	"value": 0.10,
+	"currency": "USD"
+    }
+}
