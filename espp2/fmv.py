@@ -7,7 +7,6 @@ caches them in a set of JSON files.
 
 # pylint: disable=invalid-name,line-too-long
 
-import os
 import json
 from importlib import resources
 from enum import Enum
@@ -52,13 +51,12 @@ def get_tax_deduction_rate(year):
     #
     # Remember to add the new tax-free deduction rates for a new year
     #
-
     if year < 2006:
         logger.error(
             "The tax deduction rate was introduced in 2006, no support for years prior to that. %s",
             year,
         )
-        return 0
+        return Decimal("0.0")
 
     yearstr = str(year)
     if yearstr not in MANUALRATES["tax_deduction_rates"]:
@@ -364,7 +362,6 @@ class FMV:
 
 
 if __name__ == "__main__":
-
     fmv = FMV()
     print("LOOKING UP DATA", fmv[FMVTypeEnum.STOCK, "CSCO", "2021-12-31"])
     # print('LOOKING UP DATA', f['CSCO', '2022-12-31'])

@@ -977,8 +977,10 @@ class Portfolio:
             if p.current_qty > 0:
                 tax_deduction_rate = get_tax_deduction_rate(self.year)
                 tax_deduction = (
-                    (p.purchase_price.nok_value + p.tax_deduction) * tax_deduction_rate
+                    (p.purchase_price.nok_value + p.tax_deduction_acc)
+                    * tax_deduction_rate
                 ) / 100
+
                 p.tax_deduction_new = tax_deduction
                 logger.debug(
                     "Position that gets tax deduction for this year: "

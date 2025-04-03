@@ -1,0 +1,35 @@
+{
+    "FromDate": "01/01/1904",
+    "ToDate": "01/31/1904",
+    "Transactions": [
+	{
+	    "Date": "03/03/1904",
+	    "Action": "Sale",
+	    "Symbol": "SEAM",
+	    "Quantity": "100",
+	    "Description": "Share Sale",
+	    "FeesAndCommissions": "$0.00",
+	    "DisbursementElection": null,
+	    "Amount": "$1,200.00",
+	    "TransactionDetails": [
+		{
+		    "Details": {
+			"Type": "RS",
+			"Shares": "100",
+			"SalePrice": "$12.00",
+			"SubscriptionDate": "07/01/1900",
+			"SubscriptionFairMarketValue": "$10.00",
+			"PurchaseDate": "12/31/2024",
+			"PurchasePrice": "$10.00",
+			"PurchaseFairMarketValue": "$10.00",
+			"DispositionType": "Disqualified",
+			"GrantId": null,
+			"VestDate": "",
+			"VestFairMarketValue": "",
+			"GrossProceeds": "$1,200.00"
+		    }
+		}
+	    ]
+	}
+    ]
+}

@@ -1,0 +1,18 @@
+{
+    "FromDate": "01/01/1903",
+    "ToDate": "01/31/1903",
+    "fetched": "2025-04-03",
+    "Transactions": [
+	{
+	    "Date": "09/09/1903",
+	    "Action": "Dividend",
+	    "Symbol": "SEAM",
+	    "Quantity": null,
+	    "Description": "Credit",
+	    "FeesAndCommissions": null,
+	    "DisbursementElection": null,
+	    "Amount": "$10.00",
+	    "TransactionDetails": []
+	}
+    ]
+}
