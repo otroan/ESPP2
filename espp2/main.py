@@ -138,6 +138,10 @@ def tax_report(  # noqa: C901
                 total_gain_post_tax_inc_nok += s.totals["post_tax_inc_gain"].nok_value
             tax_deduction_used += s.totals["tax_ded_used"]
             total_gain_nok -= s.totals["tax_ded_used"]
+
+        # Subtract aggregated currency gains from share gains
+        total_gain_nok += cashsummary.gain_aggregated
+
         if year == 2022:
             dividend_post_tax_inc_nok_value = 0
             if dividend:

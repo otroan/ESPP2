@@ -80,18 +80,23 @@ class Amount(BaseModel):
         if target_currency == self.currency:
             return self.value
 
-        # Check if the conversion is already cached
-        if target_currency in self._converted_values:
-            return self._converted_values[target_currency]
-
-        # Handle legacy USD-NOK conversion
+        # PRIORITIZE legacy rate for USD<->NOK if available
         if self.legacy_nok_rate is not None:
             if self.currency == "USD" and target_currency == "NOK":
                 return self.value * self.legacy_nok_rate
             if self.currency == "NOK" and target_currency == "USD":
-                return self.value / self.legacy_nok_rate
+                # Avoid division by zero if legacy_nok_rate is 0, though unlikely
+                return (
+                    self.value / self.legacy_nok_rate
+                    if self.legacy_nok_rate
+                    else Decimal(0)
+                )
 
-        # For all other conversions, require a date
+        # Check if the conversion is already cached (and no legacy rate took precedence)
+        if target_currency in self._converted_values:
+            return self._converted_values[target_currency]
+
+        # For all other conversions (or if legacy rate didn't apply), require a date
         if self.amountdate is None:
             raise ValueError(
                 f"Cannot convert {self.currency} to {target_currency} without a date"
@@ -106,10 +111,26 @@ class Amount(BaseModel):
 
     def _get_exchange_rate(self, target_currency: str) -> Decimal:
         """Get exchange rate for target currency (with caching)"""
+
+        # PRIORITIZE legacy rate for USD<->NOK if available
+        if self.legacy_nok_rate is not None:
+            if self.currency == "USD" and target_currency == "NOK":
+                return self.legacy_nok_rate
+            if self.currency == "NOK" and target_currency == "USD":
+                # Avoid division by zero if legacy_nok_rate is 0, though unlikely
+                return 1 / self.legacy_nok_rate if self.legacy_nok_rate else Decimal(0)
+
+        # Check cache (and no legacy rate took precedence)
         if target_currency not in self._exchange_rates:
+            # Ensure date exists for FMV lookup if legacy wasn't used
+            if self.amountdate is None:
+                raise ValueError(
+                    f"Cannot convert {self.currency} to {target_currency} without a date (and no legacy rate)"
+                )
             self._exchange_rates[target_currency] = fmv.get_currency(
                 self.currency, self.amountdate, target_currency
             )
+
         return self._exchange_rates[target_currency]
 
     @computed_field
@@ -164,6 +185,12 @@ class Amount(BaseModel):
                 f"Cannot add different currencies: {self.currency} and {other.currency}"
             )
 
+        # Check if dates differ and raise error if they do, as summing across dates is ambiguous
+        if self.amountdate and other.amountdate and self.amountdate != other.amountdate:
+            raise ValueError(
+                f"Cannot add Amounts with different dates: {self.amountdate} and {other.amountdate}"
+            )
+
         # Ensure both amounts have their NOK values calculated
         self_nok_value = self.get_in("NOK")
         other_nok_value = other.get_in("NOK")
@@ -171,7 +198,7 @@ class Amount(BaseModel):
         result = self.model_copy()
         result.value += other.value
         result.legacy_nok_rate = None
-        result.amountdate = None
+        result.amountdate = self.amountdate
 
         # Combine converted values where both amounts have them
         result._converted_values = {}
@@ -185,8 +212,18 @@ class Amount(BaseModel):
 
         return result
 
-    def __sub__(self, other: "Amount") -> "Amount":
-        """Subtract two amounts (must be same currency)"""
+    def __sub__(self, other: Union["Amount", Decimal]) -> "Amount":
+        """Subtract two amounts (must be same currency) or subtract a decimal from an amount"""
+        if isinstance(other, Decimal):
+            result = self.model_copy()
+            result.value -= other
+            # Scale any existing converted values using the exchange rate
+            result._converted_values = {
+                curr: value - (other * self._get_exchange_rate(curr))
+                for curr, value in self._converted_values.items()
+            }
+            return result
+
         # Check if self.currency or other.currency are ESPPUSD and USD.
         # Then allow the subtraction.
         if (
@@ -241,6 +278,15 @@ class Amount(BaseModel):
             curr: -value for curr, value in self._converted_values.items()
         }
         return result
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Override attribute setting to clear cache when 'value' changes."""
+        # Set the attribute value first using the parent's __setattr__
+        super().__setattr__(name, value)
+        # If the 'value' attribute was changed, clear the cache
+        # Check hasattr for initialization phase when cache might not exist
+        if name == "value" and hasattr(self, "_converted_values"):
+            self._converted_values.clear()
 
 
 class PositiveAmount(Amount):
@@ -572,6 +618,10 @@ class CashEntry(BaseModel):
     description: str
     amount: Amount
     transfer: Optional[bool] = False
+    sale_date: Optional[date] = None
+    sale_price_nok: Optional[Decimal] = None
+    gain_nok: Optional[Decimal] = None
+    aggregated: Optional[bool] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -582,6 +632,15 @@ class CashEntry(BaseModel):
                 if isinstance(values["amount"], dict):
                     values["amount"]["amountdate"] = values["date"]
         return values
+
+    @model_validator(mode="after")
+    def ensure_amount_date(self) -> "CashEntry":
+        """Ensure the amount object has the correct date after initialization."""
+        if self.amount and self.amount.amountdate is None:
+            # If the amount object exists but lacks a date, assign the entry's date
+            # print(f"Setting amount date to {self.date}") # Debug print
+            self.amount.amountdate = self.date
+        return self
 
     model_config = ConfigDict(extra="allow")
 
@@ -769,6 +828,7 @@ class TransferRecord(BaseModel):
     amount_sent: Annotated[Decimal, Field(ge=0, decimal_places=0)]
     amount_received: Annotated[Decimal, Field(gt=0, decimal_places=0)]
     gain: Annotated[Decimal, Field(decimal_places=0)]
+    aggregated_gain: Annotated[Decimal, Field(decimal_places=0)]
     description: str
 
 
@@ -779,6 +839,7 @@ class CashSummary(BaseModel):
     remaining_cash: Amount
     holdings: list[CashEntry]
     gain: Decimal
+    gain_aggregated: Decimal
 
 
 class TaxSummary(BaseModel):
@@ -799,3 +860,29 @@ class ESPPResponse(BaseModel):
     holdings: Holdings
     log: str
     version: str
+
+
+def aggregate_amounts(amounts: List[Amount]) -> NativeAmount:
+    totals = {}
+    for amount in amounts:
+        # Sum base currency
+        base_curr = amount.currency
+        totals[base_curr] = totals.get(base_curr, Decimal(0)) + amount.value
+        # Sum NOK value (calculated on its specific date)
+        try:
+            nok_val = amount.nok_value
+            if nok_val is not None:
+                totals["NOK"] = totals.get("NOK", Decimal(0)) + nok_val
+        except ValueError:
+            # Handle cases where NOK conversion isn't possible (e.g., missing date on input)
+            pass
+        # TODO: Could add logic to sum other cached/convertible currencies if needed
+    return NativeAmount(values=totals)
+
+
+# Example usage:
+# list_of_cash_entries = [...] # Your CashEntry objects
+# amounts_to_sum = [entry.amount for entry in list_of_cash_entries]
+# total_native = aggregate_amounts(amounts_to_sum)
+# print(total_native.usd_value)
+# print(total_native.nok_value)
