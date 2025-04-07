@@ -22,7 +22,7 @@ from espp2.main import (
     get_zipdata,
     do_holdings,
 )
-from espp2.datamodels import ESPPResponse, Wires, Holdings
+from espp2.datamodels import ESPPResponse, Wires, Holdings, EOYBalanceComparison
 from espp2 import __version__
 
 logging.basicConfig(level=logging.WARNING)
@@ -49,6 +49,7 @@ def capture_logs_stop(log_handler) -> str:
 
 @app.post("/taxreport/", response_model=ESPPResponse)
 async def taxreport(
+    eoy_balance: EOYBalanceComparison,
     transaction_files: list[UploadFile],
     broker: str = Form(...),
     holdfile: UploadFile | None = None,
@@ -78,7 +79,13 @@ async def taxreport(
             holdfile = holdfile.file
     try:
         report, holdings, exceldata, summary = do_taxes(
-            broker, transaction_files, holdfile, wires, year, portfolio_engine=True
+            broker,
+            transaction_files,
+            holdfile,
+            wires,
+            year,
+            portfolio_engine=True,
+            eoy_balance=eoy_balance,
         )
     except Exception as e:
         logger.exception(e)
