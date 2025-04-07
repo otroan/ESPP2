@@ -127,6 +127,12 @@ def tax_report(  # noqa: C901
     report["espp_extra_info"] = p.espp_extra_info()
     foreignshares = []
 
+    if eoy_balance and report["cash_ledger"]:
+        if eoy_balance[-1].cash_qty != report["cash_ledger"][-1][1]:
+            logger.error(
+                f"Cash quantity mismatch for year {year}: expected {report['cash_ledger'][-1][1]}, got {eoy_balance[-1].cash_qty}",
+            )
+
     for e in report["eoy_balance"][year]:
         tax_deduction_used = 0
         dividend_nok_value = 0
