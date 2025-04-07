@@ -23,10 +23,12 @@ from espp2.datamodels import (
     ForeignShares,
     TaxSummary,
     CreditDeduction,
+    EOYBalanceComparison,
 )
 from espp2.report import print_ledger, print_cash_ledger, print_report_holdings
 from espp2.portfolio import Portfolio
 from espp2 import __version__
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,7 @@ def tax_report(  # noqa: C901
     portfolio_engine: bool,
     verbose: bool = False,
     feature_flags=[],
+    eoy_balance: Optional[list[EOYBalanceComparison]] = None,
 ) -> Tuple[TaxReport, Holdings, TaxSummary]:
     """Generate tax report"""
 
@@ -64,7 +67,14 @@ def tax_report(  # noqa: C901
 
     # Run the chosen tax calculation engine
     portfolio = Portfolio(
-        year, broker, this_year, wires, prev_holdings, verbose, feature_flags
+        year,
+        broker,
+        this_year,
+        wires,
+        prev_holdings,
+        verbose,
+        feature_flags,
+        expected_cash_balance=eoy_balance[0] if eoy_balance else None,
     )
     if portfolio_engine is False:
         p = Positions(year, prev_holdings, this_year, wires)
@@ -94,6 +104,7 @@ def tax_report(  # noqa: C901
     report["eoy_balance"] = {year - 1: prev_year_eoy, year: this_year_eoy}
     logger.info("Previous year eoy: %s", prev_year_eoy)
     logger.info("This tax year eoy: %s", this_year_eoy)
+
     try:
         report["dividends"] = p.dividends()
     except InvalidPositionException as err:
@@ -417,6 +428,7 @@ def do_taxes(
     portfolio_engine,
     verbose=False,
     feature_flags=[],
+    eoy_balance=None,
 ) -> Tuple[TaxReport, Holdings, TaxSummary]:
     """Do taxes
     This function is run in two phases:
@@ -463,4 +475,5 @@ def do_taxes(
         portfolio_engine,
         verbose=verbose,
         feature_flags=feature_flags,
+        eoy_balance=eoy_balance,
     )

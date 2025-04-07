@@ -768,6 +768,13 @@ class ESPPInfo(BaseModel):
     roi_net: Decimal
 
 
+class EOYBalanceComparison(BaseModel):
+    """Comparison of stocks and cash for the last two years"""
+
+    year: int
+    cash_qty: Decimal
+
+
 class TaxReport(BaseModel):
     """Tax report"""
 
@@ -781,6 +788,7 @@ class TaxReport(BaseModel):
     unmatched_wires: list[WireAmount]
     prev_holdings: Optional[Holdings] = None
     espp_extra_info: list[ESPPInfo] = []
+    eoy_balance_comparison: Optional[EOYBalanceComparison] = None
 
 
 class CashModel(BaseModel):

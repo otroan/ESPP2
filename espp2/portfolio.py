@@ -31,6 +31,7 @@ from espp2.datamodels import (
     NegativeAmount,
     GainAmount,
     NativeAmount,
+    EOYBalanceComparison,
 )
 from espp2.fmv import FMV, get_tax_deduction_rate, Fundamentals, todate
 from espp2.cash import Cash
@@ -876,13 +877,18 @@ class Portfolio:
         holdings: Holdings,
         verbose: bool,
         feature_flags: list[FeatureFlagEnum],
+        expected_cash_balance: Optional[EOYBalanceComparison] = None,
     ):
         self.year = year
         self.taxes = []
         self.positions = []
         self.new_positions = []
         if holdings and holdings.cash:
-            self.cash = Cash(year=year, opening_balance=holdings.cash)
+            self.cash = Cash(
+                year=year,
+                opening_balance=holdings.cash,
+                expected_cash_balance=expected_cash_balance,
+            )
         else:
             self.cash = Cash(year=year)
         self.broker = broker
