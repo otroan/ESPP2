@@ -98,7 +98,7 @@ class TestCashAdjustments(unittest.TestCase):
                     value=Decimal("10.00"),
                     amountdate=datetime(self.year - 1, 12, 31),
                 ),
-                "Cash balance adjustment (debit)",
+                "cash balance adjustment (debit)",
             )
 
         mock_logger.warning.assert_called_once()
@@ -119,7 +119,7 @@ class TestCashAdjustments(unittest.TestCase):
                     value=Decimal("-10.00"),
                     amountdate=datetime(self.year - 1, 12, 31),
                 ),
-                "Cash balance adjustment (credit)",
+                "cash balance adjustment (credit)",
             )
 
         mock_logger.warning.assert_called_once()

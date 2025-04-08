@@ -42,11 +42,11 @@ class Cash:
         self.generate_holdings = generate_holdings
         self.user_input_cash_balance = user_input_cash_balance
 
-        self.cash_adjustments()
-
         # Spin through and add the opening balance
         for e in opening_balance:
             self.cash.append(e)
+
+        self.cash_adjustments()
 
     def cash_adjustments(self):
         ledger = self.ledger()
@@ -72,7 +72,7 @@ class Cash:
                 self.debit(
                     amountdate,
                     Amount(currency="USD", value=cash_diff, amountdate=amountdate),
-                    "Cash balance adjustment (debit)",
+                    "cash balance adjustment (debit)",
                 )
             elif cash_diff < 0:
                 logger.warning(
@@ -83,7 +83,7 @@ class Cash:
                 self.credit(
                     amountdate,
                     Amount(currency="USD", value=cash_diff, amountdate=amountdate),
-                    "Cash balance adjustment (credit)",
+                    "cash balance adjustment (credit)",
                 )
 
     def sort(self):

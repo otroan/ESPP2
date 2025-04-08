@@ -13,10 +13,11 @@ from espp2.main import (
     console,
     get_zipdata,
 )
-from espp2.datamodels import Wires
+from espp2.datamodels import Wires, EOYBalanceComparison
 from espp2.report import print_report
 from espp2.util import FeatureFlagEnum
 from espp2 import __version__
+from decimal import Decimal
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
@@ -56,6 +57,7 @@ def main(  # noqa: C901
     version: bool = typer.Option(
         None, "--version", callback=version_callback, is_eager=True
     ),
+    openingcash: float = None,
 ):
     """ESPPv2 tax reporting tool"""
     lognames = logging.getLevelNamesMapping()
@@ -65,6 +67,19 @@ def main(  # noqa: C901
     logging.basicConfig(
         level=lognames[loglevel], handlers=[RichHandler(rich_tracebacks=False)]
     )
+
+    # Create EOYBalanceComparison object if openingcash is provided
+    eoy_balance = None
+    if openingcash is not None:
+        logger.info(f"Using provided opening cash: {openingcash:.2f}")
+        try:
+            eoy_balance = [
+                EOYBalanceComparison(year=year - 1, cash_qty=Decimal(str(openingcash)))
+            ]
+        except Exception as e:
+            logger.error(f"Error creating EOYBalanceComparison from opening cash: {e}")
+            raise typer.Exit(code=1)
+
     result = None
     result = do_taxes(
         broker,
@@ -75,6 +90,7 @@ def main(  # noqa: C901
         portfolio_engine=portfolio_engine,
         verbose=verbose,
         feature_flags=features,
+        eoy_balance=eoy_balance,
     )
     print_report(year, result.summary, result.report, result.holdings, verbose)
 
