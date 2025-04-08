@@ -67,7 +67,7 @@ def generate_wires_from_transactions(transactions, unmatched):
         # Match up wire with transfer record
         wire = next((w for w in unmatched if w.date == t.date), None)
         if wire:
-            wire.nok_value = t.amount_sent
+            wire.nok_value = abs(t.amount_sent)
     return unmatched
 
 
