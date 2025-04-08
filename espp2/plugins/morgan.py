@@ -42,6 +42,12 @@ def setitem(rec, name, val):
     rec[name] = val
 
 
+def close_to_zero(value, strval):
+    if value >= Decimal(f"-{strval}") and value <= Decimal(strval):
+        return True
+    return False
+
+
 class Table:
     def __init__(self, tablenode, idx):
         self.tablenode = tablenode
@@ -1435,6 +1441,34 @@ def parse_cash_holdings_html(all_tables, state, year):
     state.cashadjust(f"{year}-12-31", cash, f"Closing balance {year}")
 
 
+def compute_transaction_deltas(transes):
+    csco_delta = Decimal("0.00")
+    cash_delta = Decimal("0.00")
+    for t in transes:
+        if t.type == EntryTypeEnum.SELL:
+            csco_delta += t.qty
+            cash_delta += t.amount.value
+        elif t.type == EntryTypeEnum.WIRE:
+            cash_delta += t.amount.value
+            cash_delta += t.fee.value
+        elif t.type == EntryTypeEnum.TAX:
+            cash_delta += t.amount.value
+        elif t.type == EntryTypeEnum.DIVIDEND:
+            cash_delta += t.amount.value
+        elif t.type == EntryTypeEnum.DEPOSIT:
+            csco_delta += t.qty
+        elif t.type == EntryTypeEnum.CASHADJUST:
+            cash_delta += t.amount.value
+        elif t.type == EntryTypeEnum.TAXSUB:
+            cash_delta += t.amount.value
+        elif t.type == EntryTypeEnum.DIVIDEND_REINV:
+            cash_delta += t.amount.value
+        else:
+            print(f"Not handled: {t}")
+            assert False
+    return csco_delta, cash_delta
+
+
 def morgan_html_import(html_fd, filename):
     """Parse Morgan Stanley HTML table file."""
 
@@ -1500,6 +1534,23 @@ def morgan_html_import(html_fd, filename):
 
     # The transactions of the tax-year
     transes = sorted(state.transactions, key=lambda d: d.date)
+
+    # Check if our transaction entries sums up to the expected deltas
+    delta_csco_qty, delta_cash = compute_transaction_deltas(transes)
+
+    calculated_closing_cash = state.opening_value_cash + delta_cash
+    error = state.closing_value_cash - calculated_closing_cash
+    if not close_to_zero(error, "0.01"):
+        logger.warning(
+            f"Calculated yearly change to cash is different from expected by ${error}"
+        )
+
+    calculated_closing_shares = state.opening_value_shares + delta_csco_qty
+    error = state.closing_value_shares - calculated_closing_shares
+    if not close_to_zero(error, "0.0001"):
+        logger.warning(
+            f"Calculated yearly change to shares is different from expected by {error} shares"
+        )
 
     # The amount of cash in USD at the beginning of the tax-year
     opening_cash = Decimal(state.opening_value_cash)
