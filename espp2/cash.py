@@ -6,7 +6,6 @@ from math import isclose
 from datetime import datetime
 from decimal import Decimal
 from espp2.fmv import FMV
-from decimal import Decimal
 from espp2.datamodels import (
     CashModel,
     CashEntry,
@@ -34,13 +33,13 @@ class Cash:
         year,
         opening_balance=[],
         generate_holdings=False,
-        expected_cash_balance: EOYBalanceComparison = None,
+        user_input_cash_balance: EOYBalanceComparison = None,
     ):
         """Initialize cash balance for a given year."""
         self.year = year
         self.cash = CashModel().cash
         self.generate_holdings = generate_holdings
-        self.expected_cash_balance = expected_cash_balance
+        self.user_input_cash_balance = user_input_cash_balance
 
         self.cash_adjustments()
 
@@ -51,22 +50,22 @@ class Cash:
     def cash_adjustments(self):
         ledger = self.ledger()
         amountdate = datetime(self.year - 1, 12, 31)
-        if len(ledger) > 0 and self.expected_cash_balance is not None:
+        if len(ledger) > 0 and self.user_input_cash_balance is not None:
             current_balance = ledger[-1][1]
-            cash_diff = self.expected_cash_balance.cash_qty - current_balance
+            cash_diff = self.user_input_cash_balance.cash_qty - current_balance
 
-            if cash_diff > Decimal("10"):
+            if abs(cash_diff) > Decimal("10"):
                 logger.error(
-                    f"Cash quantity mismatch exceeds 10 USD for year {self.year}: "
-                    f"expected {current_balance}, got {self.expected_cash_balance.cash_qty}. "
+                    f"Cash quantity mismatch exceeds 10 USD for year {self.year - 1}: "
+                    f"expected {current_balance}, got {self.user_input_cash_balance.cash_qty}. "
                     f"Difference: {abs(cash_diff)}."
                 )
                 return
 
             if cash_diff > 0:
                 logger.warning(
-                    f"Minor cash mismatch detected for year {self.year}: "
-                    f"expected {current_balance}, got {self.expected_cash_balance}. "
+                    f"Minor cash mismatch detected for year {self.year - 1}: "
+                    f"expected {current_balance}, got {self.user_input_cash_balance.cash_qty}. "
                     f"Difference: {cash_diff}."
                 )
                 self.debit(
@@ -76,8 +75,8 @@ class Cash:
                 )
             elif cash_diff < 0:
                 logger.warning(
-                    f"Minor cash mismatch detected for year {self.year}: "
-                    f"expected {self.expected_cash_balance.cash_qty}, got {current_balance}. "
+                    f"Minor cash mismatch detected for year {self.year - 1}: "
+                    f"expected {current_balance}, got {self.user_input_cash_balance.cash_qty}. "
                     f"Difference: {cash_diff}."
                 )
                 self.credit(

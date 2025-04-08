@@ -74,7 +74,7 @@ def tax_report(  # noqa: C901
         prev_holdings,
         verbose,
         feature_flags,
-        expected_cash_balance=eoy_balance[0] if eoy_balance else None,
+        user_input_cash_balance=eoy_balance[0] if eoy_balance else None,
     )
     if portfolio_engine is False:
         p = Positions(year, prev_holdings, this_year, wires)
