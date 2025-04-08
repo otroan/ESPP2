@@ -49,11 +49,11 @@ def capture_logs_stop(log_handler) -> str:
 
 @app.post("/taxreport/", response_model=ESPPResponse)
 async def taxreport(
-    eoy_balance: EOYBalanceComparison,
     transaction_files: list[UploadFile],
     broker: str = Form(...),
     holdfile: UploadFile | None = None,
     wires: str = Form(""),
+    eoy_balance: str = Form(""),
     #        opening_balance: str = Form(...),
     year: int = Form(...),
 ):
@@ -63,6 +63,11 @@ async def taxreport(
     if wires:
         wires_list = json.loads(wires)
         wires = Wires(root=wires_list)
+
+    eoy_balance_obj_list = None
+    if eoy_balance:
+        eoy_balance_list = json.loads(eoy_balance)
+        eoy_balance_obj_list = [EOYBalanceComparison(**eoy) for eoy in eoy_balance_list]
 
     if opening_balance:
         adapter = TypeAdapter(Holdings)
@@ -85,7 +90,7 @@ async def taxreport(
             wires,
             year,
             portfolio_engine=True,
-            eoy_balance=eoy_balance,
+            eoy_balance=eoy_balance_obj_list,
         )
     except Exception as e:
         logger.exception(e)
