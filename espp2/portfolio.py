@@ -877,7 +877,7 @@ class Portfolio:
         holdings: Holdings,
         verbose: bool,
         feature_flags: list[FeatureFlagEnum],
-        expected_cash_balance: Optional[EOYBalanceComparison] = None,
+        user_input_cash_balance: Optional[EOYBalanceComparison] = None,
     ):
         self.year = year
         self.taxes = []
@@ -887,7 +887,7 @@ class Portfolio:
             self.cash = Cash(
                 year=year,
                 opening_balance=holdings.cash,
-                expected_cash_balance=expected_cash_balance,
+                user_input_cash_balance=user_input_cash_balance,
             )
         else:
             self.cash = Cash(year=year)
