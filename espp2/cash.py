@@ -55,9 +55,9 @@ class Cash:
             current_balance = ledger[-1][1]
             cash_diff = self.expected_cash_balance.cash_qty - current_balance
 
-            if cash_diff > Decimal("10"):
+            if abs(cash_diff) > Decimal("10"):
                 logger.error(
-                    f"Cash quantity mismatch exceeds 10 USD for year {self.year}: "
+                    f"Cash quantity mismatch exceeds 10 USD for year {self.year - 1}: "
                     f"expected {current_balance}, got {self.expected_cash_balance.cash_qty}. "
                     f"Difference: {abs(cash_diff)}."
                 )
@@ -65,8 +65,8 @@ class Cash:
 
             if cash_diff > 0:
                 logger.warning(
-                    f"Minor cash mismatch detected for year {self.year}: "
-                    f"expected {current_balance}, got {self.expected_cash_balance}. "
+                    f"Minor cash mismatch detected for year {self.year - 1}: "
+                    f"expected {current_balance}, got {self.expected_cash_balance.cash_qty}. "
                     f"Difference: {cash_diff}."
                 )
                 self.debit(
@@ -76,8 +76,8 @@ class Cash:
                 )
             elif cash_diff < 0:
                 logger.warning(
-                    f"Minor cash mismatch detected for year {self.year}: "
-                    f"expected {self.expected_cash_balance.cash_qty}, got {current_balance}. "
+                    f"Minor cash mismatch detected for year {self.year - 1}: "
+                    f"expected {current_balance}, got {self.expected_cash_balance.cash_qty}. "
                     f"Difference: {cash_diff}."
                 )
                 self.credit(
