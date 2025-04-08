@@ -61,6 +61,16 @@ def format_fill_columns(ws, headers, columns, color):
             cell.fill = fill
 
 
+def generate_wires_from_transactions(transactions, unmatched):
+    """Generate unmatched wires from transactions"""
+    for t in transactions:
+        # Match up wire with transfer record
+        wire = next((w for w in unmatched if w.date == t.date), None)
+        if wire:
+            wire.nok_value = t.amount_sent
+    return unmatched
+
+
 class PortfolioPosition(BaseModel):
     """Stock positions"""
 
@@ -1028,14 +1038,15 @@ class Portfolio:
         db_wires = [t for t in transactions if t.type == "WIRE"]
         unmatched = self.cash.wire(db_wires, wires)
         self.unmatched_wires = unmatched
-        self.unmatched_wires_report = unmatched
         cash_report = self.cash.process()
         self.cash_report = cash_report
         self.cash_summary = cash_report
-        # print("CASH REPORT", cash_report)
         self.cash_ledger = self.cash.ledger()
-        # print_cash_ledger(self.ledger, console)
         self.ledger = Ledger(holdings, transactions)
+
+        self.unmatched_wires_report = generate_wires_from_transactions(
+            cash_report.transfers, unmatched
+        )
 
         # Generate holdings for next year.
         self.eoy_holdings = self.generate_holdings(year, broker)

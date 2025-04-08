@@ -14,6 +14,7 @@ from espp2.datamodels import (
     CashSummary,
     WireAmount,
     EOYBalanceComparison,
+    TransferType,
 )
 
 logger = logging.getLogger(__name__)
@@ -99,7 +100,13 @@ class Cash:
         )
         self.sort()
 
-    def credit(self, creditdate, amount, description="", transfer=False):
+    def credit(
+        self,
+        creditdate,
+        amount,
+        description="",
+        transfer: TransferType = TransferType.NO,
+    ):
         """TODO: Return usdnok rate for the item credited"""
         logger.debug("Cash credit: %s: %s", creditdate, amount.value)
         if amount.value > 0:
@@ -150,7 +157,7 @@ class Cash:
                     value=-1 * match.value,
                     nok_exchange_rate=match.nok_value / match.value,
                 )
-                self.credit(match.date, amount, "wire", transfer=True)
+                self.credit(match.date, amount, "wire", transfer=TransferType.YES)
             else:
                 # TODO: What's the exchange rate here?
                 # Should be NaN?
@@ -162,7 +169,7 @@ class Cash:
                         value=w.amount.value,
                     )
                 )
-                self.credit(w.date, w.amount, "wire", transfer=True)
+                self.credit(w.date, w.amount, "wire", transfer=TransferType.UNMATCHED)
             if w.fee:
                 self.credit(w.date, w.fee, "wire fee")
 
@@ -281,7 +288,7 @@ class Cash:
             total_gain = 0
             total_gain_aggregated = 0
             amount_to_sell = abs(e.amount.value)
-            is_transfer = e.transfer
+            is_transfer = e.transfer != TransferType.NO
             if is_transfer:
                 total_received_price_nok += abs(e.amount.nok_value)
                 logger.debug(
@@ -322,36 +329,40 @@ class Cash:
                     logger.debug("  Using full debit entry %s.", posidx)
                     amount_used = original_debit_value  # Amount used from this debit
                     if is_transfer:
-                        sale_value_nok = amount_used * e.amount.nok_exchange_rate
-                        cost_basis_nok = (
-                            original_debit_nok_value  # Full original cost basis
-                        )
+                        # Determine the NOK cost basis for the amount used (full debit)
+                        cost_basis_nok = original_debit_nok_value
+
+                        # Determine the sale value NOK: cost basis for unmatched, calculated for matched
+                        if e.transfer == TransferType.UNMATCHED:
+                            sale_value_nok = (
+                                cost_basis_nok  # Set sale = cost for unmatched
+                            )
+                        else:  # Matched transfer
+                            sale_value_nok = amount_used * e.amount.nok_exchange_rate
+
+                        # Accumulate total paid (cost basis)
                         total_paid_price_nok += cost_basis_nok
-                        # Update both copy and original entry
-                        debit[
-                            posidx
-                        ].sale_price_nok = (
-                            sale_value_nok  # Corrected: was amount * rate
-                        )
+
+                        # Update the debit entry being processed (copy)
+                        debit[posidx].sale_price_nok = sale_value_nok
                         debit[posidx].sale_date = e.date
-                        gain_nok = (
-                            sale_value_nok - cost_basis_nok
-                        )  # Corrected: was amount * rate - debit_nok_value
+
+                        # Calculate gain for this chunk
+                        gain_nok = sale_value_nok - cost_basis_nok
 
                         logger.debug(
-                            "    Sale Value (NOK): %s * %s = %s",
-                            amount_used,
-                            e.amount.nok_exchange_rate,
+                            "    Sale Value (NOK) used for gain calc: %s",
                             sale_value_nok,
                         )
                         logger.debug("    Cost Basis (NOK): %s", cost_basis_nok)
-                        logger.debug("    Calculated Gain (Full): %s", gain_nok)
+                        logger.debug("    Calculated Gain (Full Debit): %s", gain_nok)
 
+                        # Update the original cash entry and check aggregation
                         aggregated = self.update_sale_info(
                             copy_to_original[posidx],
                             e.date,
-                            sale_value_nok,  # Use calculated sale_value_nok
-                            gain_nok,
+                            sale_value_nok,  # Use potentially adjusted sale_value_nok
+                            gain_nok,  # Use calculated gain_nok
                         )
                         if aggregated:
                             logger.debug(
@@ -387,27 +398,36 @@ class Cash:
                     logger.debug("  Using partial debit entry %s.", posidx)
                     amount_used = amount_to_sell  # Amount used from this debit is the remaining amount_to_sell
                     if is_transfer:
-                        sale_value_nok = amount_used * e.amount.nok_exchange_rate
+                        # Determine the proportional NOK cost basis for the partial amount used
                         proportional_cost_basis = original_debit_nok_value * (
                             amount_used / original_debit_value
                         )
-                        total_paid_price_nok += proportional_cost_basis
-
-                        # Update both copy and original entry
-                        debit[
-                            posidx
-                        ].sale_price_nok = (
-                            sale_value_nok  # Sale price for the portion sold
+                        cost_basis_nok = (
+                            proportional_cost_basis  # Use this name for consistency
                         )
-                        debit[
-                            posidx
-                        ].sale_date = e.date  # Sale date for the portion sold
-                        gain_nok = sale_value_nok - proportional_cost_basis
+
+                        # Determine the sale value NOK: cost basis for unmatched, calculated for matched
+                        if e.transfer == TransferType.UNMATCHED:
+                            sale_value_nok = (
+                                cost_basis_nok  # Set sale = cost for unmatched
+                            )
+                        else:  # Matched transfer
+                            sale_value_nok = amount_used * e.amount.nok_exchange_rate
+
+                        # Accumulate total paid (cost basis)
+                        total_paid_price_nok += cost_basis_nok
+
+                        # Update the debit entry being processed (copy) - partial sale info IS relevant
+                        # We record the sale price and date for the portion sold.
+                        # Gain/aggregation below relates to the original entry.
+                        debit[posidx].sale_price_nok = sale_value_nok
+                        debit[posidx].sale_date = e.date
+
+                        # Calculate gain for this chunk
+                        gain_nok = sale_value_nok - cost_basis_nok
 
                         logger.debug(
-                            "    Sale Value (NOK): %s * %s = %s",
-                            amount_used,
-                            e.amount.nok_exchange_rate,
+                            "    Sale Value (NOK) used for gain calc: %s",
                             sale_value_nok,
                         )
                         logger.debug(
@@ -428,13 +448,16 @@ class Cash:
                             original_debit_value,
                             proportional_cost_basis,
                         )
-                        logger.debug("    Calculated Gain (Partial): %s", gain_nok)
+                        logger.debug(
+                            "    Calculated Gain (Partial Debit): %s", gain_nok
+                        )
 
+                        # Update the original cash entry and check aggregation
                         aggregated = self.update_sale_info(
                             copy_to_original[posidx],
                             e.date,
-                            sale_value_nok,  # Use calculated sale_value_nok
-                            gain_nok,  # Use potentially corrected gain_nok
+                            sale_value_nok,  # Use potentially adjusted sale_value_nok
+                            gain_nok,  # Use calculated gain_nok
                         )
                         if aggregated:
                             logger.debug(
@@ -469,7 +492,7 @@ class Cash:
                 )
 
             # Create TransferRecord if applicable
-            if is_transfer:
+            if e.transfer != TransferType.NO:
                 # Lookup fee associated with this transfer date
                 # fee_nok will be negative as it's a cost
                 fee_nok = original_fee_nok_map.get(e.date, Decimal(0))
@@ -494,14 +517,22 @@ class Cash:
                         fee_nok,
                         total_gain,
                     )
+                if e.transfer == TransferType.UNMATCHED:
+                    amount_received = total_paid_price_nok
+                    gain = 0
+                    aggregated_gain = 0
+                else:
+                    amount_received = total_received_price_nok
+                    gain = total_gain
+                    aggregated_gain = total_gain_aggregated
                 transfers.append(
                     TransferRecord(
                         date=e.date,
                         amount_sent=round(total_paid_price_nok),
-                        amount_received=round(total_received_price_nok),
+                        amount_received=round(amount_received),
                         description=e.description,
-                        gain=round(total_gain),
-                        aggregated_gain=round(total_gain_aggregated),
+                        gain=round(gain),
+                        aggregated_gain=round(aggregated_gain),
                     )
                 )
         remaining_usd = sum([c.amount.value for c in debit if c.amount.value > 0])

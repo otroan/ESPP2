@@ -27,6 +27,17 @@ from espp2.fmv import FMV
 fmv = FMV()
 
 
+class TransferType(str, Enum):
+    """Enum to represent the type of transfer for a cash entry."""
+
+    NO = "NO"
+    YES = "YES"
+    UNMATCHED = "UNMATCHED"
+
+    def __str__(self):
+        return self.value
+
+
 class EntryTypeEnum(str, Enum):
     """Entry type"""
 
@@ -401,7 +412,7 @@ class Deposit(TransactionEntry):
     symbol: str
     description: str
     purchase_price: Amount
-    purchase_date: Optional[date] = None
+    purchase_date: Optional["date"] = None
     discounted_purchase_price: Optional[Amount] = None
     source: str
     id: str = Optional[str]
@@ -548,6 +559,15 @@ Entry = Annotated[
 ]
 
 
+class TransactionTaxYearBalances(BaseModel):
+    """Transaction balances"""
+
+    opening_cash: Amount
+    closing_cash: Amount
+    opening_value_symbol_qty: Optional[Dict[str, Decimal]] = dict()
+    closing_value_symbol_qty: Optional[Dict[str, Decimal]] = dict()
+
+
 class Transactions(BaseModel):
     """Transactions"""
 
@@ -617,8 +637,8 @@ class CashEntry(BaseModel):
     date: date
     description: str
     amount: Amount
-    transfer: Optional[bool] = False
-    sale_date: Optional[date] = None
+    transfer: TransferType = Field(default=TransferType.NO)
+    sale_date: Optional["date"] = None
     sale_price_nok: Optional[Decimal] = None
     gain_nok: Optional[Decimal] = None
     aggregated: Optional[bool] = None
@@ -641,6 +661,27 @@ class CashEntry(BaseModel):
             # print(f"Setting amount date to {self.date}") # Debug print
             self.amount.amountdate = self.date
         return self
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_dividend_reinv(cls, values):
+        """Make sure dividend reinvesment has required fields"""
+        if (
+            isinstance(values, dict)
+            and values.get("type") == EntryTypeEnum.DIVIDEND_REINV
+        ):
+            for field in ["symbol", "qty", "purchase_price", "description", "amount"]:
+                if field not in values:
+                    raise ValueError(f"{field} must be present for dividend reinv.")
+        return values
+
+    @field_validator("transfer", mode="before")
+    @classmethod
+    def validate_transfer_type(cls, v):
+        """Allow boolean values for backward compatibility."""
+        if isinstance(v, bool):
+            return TransferType.YES if v else TransferType.NO
+        return v
 
     model_config = ConfigDict(extra="allow")
 
