@@ -50,8 +50,8 @@ class Cash:
     def cash_adjustments(self):
         ledger = self.ledger()
         amountdate = datetime(self.year - 1, 12, 31)
-        if len(ledger) > 0 and self.user_input_cash_balance is not None:
-            current_balance = ledger[-1][1]
+        if self.user_input_cash_balance is not None:
+            current_balance = ledger[-1][1] if ledger else Decimal("0")
             cash_diff = self.user_input_cash_balance.cash_qty - current_balance
 
             if abs(cash_diff) > Decimal("10"):
