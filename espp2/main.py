@@ -327,11 +327,13 @@ def merge_transactions(transaction_files: list, broker: str) -> Transactions:
     all_transactions = []
     date_intervals = []
     years = {}
+    opening_balance = []
     # Put all transactions together
     for tf in transaction_files:
         t = normalize(tf, broker)
         # Add to date interval
         date_intervals.append((t.fromdate, t.todate))
+        opening_balance.append(t.opening_balance)
         all_transactions.extend(t.transactions)
 
     # Sort date intervals by start date
@@ -356,8 +358,10 @@ def merge_transactions(transaction_files: list, broker: str) -> Transactions:
     for transaction in all_transactions:
         if transaction.date.year not in years:
             years[transaction.date.year] = 0
-
-    return Transactions(transactions=all_transactions), years
+    opening_balance = opening_balance[0] if len(opening_balance) == 1 else None
+    return Transactions(
+        transactions=all_transactions, opening_balance=opening_balance
+    ), years
 
 
 def generate_previous_year_holdings(
@@ -458,7 +462,16 @@ def do_taxes(
             logger.error(f"No transactions into the year after the tax year {year + 1}")
 
     if broker == "morgan":
-        print(f"transactions: {transactions.opening_balance}")
+        eoy_balance = [
+            EOYBalanceComparison(
+                cash_qty=transactions.opening_balance.opening_cash,
+                year=year - 1,
+            ),
+            EOYBalanceComparison(
+                cash_qty=transactions.opening_balance.closing_cash,
+                year=year,
+            ),
+        ]
 
     if wirefile and not isinstance(wirefile, Wires):
         wires = json_load(wirefile)

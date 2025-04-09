@@ -175,6 +175,8 @@ def test_stock_sale_with_currency_fluctuations():
 
     from espp2.report import print_report
 
+    print_report(2024, summary2024, report2024, holdings2024, True)
+
     # Verify final position is reduced by 40 shares
     assert holdings2024.stocks[0].qty == 60
 

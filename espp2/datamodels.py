@@ -573,7 +573,7 @@ class Transactions(BaseModel):
 
     fromdate: date = None
     todate: date = None
-    opening_balance: TransactionTaxYearBalances = None
+    opening_balance: Optional[TransactionTaxYearBalances] = None
     transactions: list[Entry]
 
 
