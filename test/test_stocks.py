@@ -11,6 +11,13 @@ from espp2.main import tax_report, do_holdings
 from espp2.datamodels import (
     Transactions,
     Holdings,
+    Deposit,
+    EntryTypeEnum,
+    Amount,
+    Sell,
+    Wire,
+    WireAmount,
+    Wires,
 )
 from espp2.transactions import plugin_read
 from espp2.espp2 import app
@@ -91,6 +98,100 @@ def test_stock1(tmp_path):
     )
     assert holdings2024.stocks[0].symbol == "CSCO"
     assert holdings2024.sum_qty() == 103
+
+
+def test_stock_sale_with_currency_fluctuations():
+    """Test selling stocks with currency fluctuations and transfers to NOK"""
+
+    transactions = [
+        Deposit(
+            type=EntryTypeEnum.DEPOSIT,
+            date="2024-01-01",
+            symbol="CSCO",
+            qty=100,
+            purchase_date="2024-01-01",
+            purchase_price=Amount(
+                currency="USD",
+                value=50,
+                nok_exchange_rate=Decimal("10"),
+                amountdate="2024-01-01",
+            ),
+            description="",
+            source="test",
+        ),
+        Sell(
+            symbol="CSCO",
+            date="2024-01-15",
+            type=EntryTypeEnum.SELL,
+            qty=-20,
+            amount=Amount(
+                currency="USD",
+                value=Decimal("1000"),
+                nok_exchange_rate=Decimal("9"),
+                amountdate=datetime(2024, 1, 15),
+            ),
+            description="Sale of 20 CSCO @ $50",
+            source="test",
+        ),
+        Sell(
+            symbol="CSCO",
+            date="2024-07-15",
+            type=EntryTypeEnum.SELL,
+            qty=-20,
+            amount=Amount(
+                currency="USD",
+                value=Decimal("1000"),
+                nok_exchange_rate=Decimal("11"),
+                amountdate=datetime(2024, 7, 15),
+            ),
+            description="Sale of 20 CSCO @ $50",
+            source="test",
+        ),
+        Wire(
+            date="2024-07-20",
+            amount=Amount(currency="USD", value=-2000, amountdate="2024-07-20"),
+            description="Wire from Schwab",
+            source="test",
+        ),
+    ]
+    transactions = Transactions(transactions=transactions)
+    wires = Wires(
+        [WireAmount(date="2024-07-20", currency="USD", nok_value=20000, value=2000)]
+    )
+
+    # Generate 2024 report with the sales and wires
+    report2024, holdings2024, _, summary2024 = tax_report(
+        2024,
+        "schwab",
+        transactions,
+        wires,
+        None,
+        portfolio_engine=True,
+        verbose=True,
+        feature_flags=[],
+    )
+    assert report2024.cash_ledger[0][0].gain_nok == 1000
+    assert report2024.cash_ledger[1][0].gain_nok == -1000
+
+    from espp2.report import print_report
+
+    # Verify final position is reduced by 40 shares
+    assert holdings2024.stocks[0].qty == 60
+
+    # Generate 2024 report with the sales and wires
+    report2024, holdings2024, _, summary2024 = tax_report(
+        2024,
+        "schwab",
+        transactions,
+        [],
+        None,
+        portfolio_engine=True,
+        verbose=True,
+        feature_flags=[],
+    )
+    assert report2024.cash_ledger[0][0].gain_nok == 0
+    assert report2024.cash_ledger[1][0].gain_nok == 0
+    print_report(2024, summary2024, report2024, holdings2024, True)
 
 
 def test_holdings_consistency_between_generated_and_actual_holdings_for_entire_history():
