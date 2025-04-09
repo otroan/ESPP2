@@ -457,6 +457,9 @@ def do_taxes(
         if year + 1 not in years:
             logger.error(f"No transactions into the year after the tax year {year + 1}")
 
+    if broker == "morgan":
+        print(f"transactions: {transactions.opening_balance}")
+
     if wirefile and not isinstance(wirefile, Wires):
         wires = json_load(wirefile)
         wires = Wires(wires)
