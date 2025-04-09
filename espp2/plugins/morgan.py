@@ -11,7 +11,14 @@ from decimal import Decimal
 import html5lib
 from pydantic import TypeAdapter
 from espp2.fmv import FMV
-from espp2.datamodels import Transactions, Entry, EntryTypeEnum, Amount, NegativeAmount
+from espp2.datamodels import (
+    Transactions,
+    Entry,
+    EntryTypeEnum,
+    Amount,
+    NegativeAmount,
+    TransactionTaxYearBalances,
+)
 import re
 import logging
 import datetime
@@ -1471,13 +1478,35 @@ def morgan_html_import(html_fd, filename):
     # patch the sale. This would be more work and generally undesirable.
     # state.fixup_selldates()
 
+    # The transactions of the tax-year
     transes = sorted(state.transactions, key=lambda d: d.date)
+
+    # The amount of cash in USD at the beginning of the tax-year
+    opening_cash = Amount(
+        currency="USD",
+        value=state.opening_value_cash,
+        amountdate=start_period,
+    )
+
+    # The amount of cash in USD at the end of the tax-year
+    closing_cash = Amount(
+        currency="USD",
+        value=state.closing_value_cash,
+        amountdate=end_period,
+    )
+
+    # Collect cash amounts from above, and CSCO shares
+    balances = TransactionTaxYearBalances(
+        opening_cash=opening_cash,
+        closing_cash=closing_cash,
+        opening_value_symbol_qty={"CSCO": state.opening_value_shares},
+        closing_value_symbol_qty={"CSCO": state.closing_value_shares},
+    )
 
     return Transactions(
         fromdate=start_period,
         enddate=end_period,
-        opening_value_cash_usd=state.opening_value_cash,
-        opening_value_symbol_qty={"CSCO": state.opening_value_shares},
+        opening_balance=balances,
         transactions=transes,
     )
 
