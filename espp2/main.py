@@ -128,10 +128,16 @@ def tax_report(  # noqa: C901
     foreignshares = []
 
     if eoy_balance and report["cash_ledger"]:
-        if eoy_balance[-1].cash_qty != report["cash_ledger"][-1][1]:
-            logger.error(
-                f"Cash quantity mismatch for year {year}: expected {report['cash_ledger'][-1][1]}, got {eoy_balance[-1].cash_qty}",
-            )
+        cash_difference = eoy_balance[-1].cash_qty - report["cash_ledger"][-1][1]
+        if cash_difference != 0:
+            if broker == "morgan" and abs(cash_difference) < 10:
+                logger.warning(
+                    f"Cash quantity mismatch for year {year}: expected {report['cash_ledger'][-1][1]}, got {eoy_balance[-1].cash_qty}",
+                )
+            else:
+                logger.error(
+                    f"Cash quantity mismatch for year {year}: expected {report['cash_ledger'][-1][1]}, got {eoy_balance[-1].cash_qty}",
+                )
 
     for e in report["eoy_balance"][year]:
         tax_deduction_used = 0
