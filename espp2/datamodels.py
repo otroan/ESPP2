@@ -71,6 +71,9 @@ class Amount(BaseModel):
     model_config = ConfigDict(
         extra="allow",  # Allow extra fields
         exclude_none=True,  # Exclude None values from JSON output
+        json_encoders={
+            Decimal: lambda d: f"{d:.4f}"  # Format Decimals to 4 places as strings
+        },
     )
 
     @model_validator(mode="before")
@@ -627,7 +630,9 @@ class Stock(BaseModel):
             )
         return value
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(
+        extra="allow", json_encoders={Decimal: lambda d: f"{d:.4f}"}
+    )
 
 
 class CashEntry(BaseModel):
