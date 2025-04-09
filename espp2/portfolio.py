@@ -33,7 +33,6 @@ from espp2.cash import Cash
 from espp2.positions import Ledger
 from typing import Any, Dict
 from espp2.util import FeatureFlagEnum
-from .excel_report import generate_workbook, index_to_cell
 
 fmv = FMV()
 logger = logging.getLogger(__name__)
@@ -63,16 +62,12 @@ class PortfolioPosition(BaseModel):
     discounted_purchase_price: Optional[Amount] = None
     current_qty: Decimal = 0
     records: list[Any] = []
-    coord: Dict[str, str] = {}
     split: bool = False
 
     @field_validator("pre_split_qty", mode="before")
     @classmethod
     def set_pre_split_qty(cls, v, info):
         return v or info.data.get("qty")
-
-    def get_coord(self, key):
-        return self.coord[key]
 
     def qty_at_date(self, exdate):
         """Return qty at date"""
@@ -86,35 +81,6 @@ class PortfolioPosition(BaseModel):
                     qty -= abs(r.qty)
         return qty
 
-    def format(self, row, columns):
-        """Return a list of cells for a row"""
-        col = [(row, columns.index("Symbol"), self.symbol)]
-        if not self.split:
-            col.append((row, columns.index("Date"), self.date))
-        if self.pre_split_qty > 0:
-            col.append((row, columns.index("pQty"), self.pre_split_qty))
-        col.append((row, columns.index("Qty"), self.qty))
-        col.append(
-            (
-                row,
-                columns.index("Price"),
-                f"={index_to_cell(row, columns.index('Price USD'))}*{index_to_cell(row, columns.index('Exchange Rate'))}",
-            )
-        )
-        self.coord["Price"] = index_to_cell(row, columns.index("Price"))
-        self.coord["Price USD"] = index_to_cell(row, columns.index("Price USD"))
-        col.append(
-            (row, columns.index("Price USD"), round(self.purchase_price.value, 2))
-        )
-        col.append(
-            (row, columns.index("Exchange Rate"), self.purchase_price.nok_exchange_rate)
-        )
-        col.append(
-            (row, columns.index("Accumulated"), round(self.tax_deduction_acc, 2))
-        )
-        col.append((row, columns.index("Added"), round(self.tax_deduction_new, 2)))
-        return col
-
 
 class PortfolioDividend(BaseModel):
     """Stock dividends"""
@@ -126,49 +92,6 @@ class PortfolioDividend(BaseModel):
     tax_deduction_used: Decimal = 0
     tax_deduction_used_total: Decimal = 0
     parent: PortfolioPosition = None
-
-    def format(self, row, columns):
-        """Return a list of cells for a row"""
-        col = [(row, columns.index("Date"), self.divdate)]
-        col.append((row, columns.index("Type"), "Dividend"))
-        col.append((row, columns.index("iQty"), self.qty))
-        col.append(
-            (row, columns.index("Exchange Rate"), self.dividend_dps.nok_exchange_rate)
-        )
-        col.append(
-            (
-                row,
-                columns.index("Div PS"),
-                f"={index_to_cell(row, columns.index('Div PS USD'))}*{index_to_cell(row, columns.index('Exchange Rate'))}",
-            )
-        )
-        col.append(
-            (row, columns.index("Div PS USD"), round(self.dividend_dps.value, 2))
-        )
-        col.append(
-            (
-                row,
-                columns.index("Total Dividend"),
-                f"={index_to_cell(row, columns.index('Div PS'))}*{index_to_cell(row, columns.index('iQty'))}",
-            )
-        )
-
-        col.append(
-            (
-                row,
-                columns.index("Total Dividend USD"),
-                f"={index_to_cell(row, columns.index('Div PS USD'))}*{index_to_cell(row, columns.index('iQty'))}",
-            )
-        )
-        col.append((row, columns.index("Used"), round(self.tax_deduction_used, 2)))
-        col.append(
-            (
-                row,
-                columns.index("TD Total"),
-                round(self.tax_deduction_used_total, 2),
-            )
-        )
-        return col
 
 
 class PortfolioSale(BaseModel):
@@ -184,87 +107,12 @@ class PortfolioSale(BaseModel):
     parent: PortfolioPosition = None
     id: str
 
-    def format(self, row, columns):
-        col = [(row, columns.index("Date"), self.saledate)]
-        col.append((row, columns.index("Type"), "Sale"))
-        col.append((row, columns.index("Qty"), self.qty))
-        col.append(
-            (
-                row,
-                columns.index("Price"),
-                f"={index_to_cell(row, columns.index('Price USD'))}*{index_to_cell(row, columns.index('Exchange Rate'))}",
-            )
-        )
-        col.append((row, columns.index("Price USD"), self.sell_price.value))
-        col.append(
-            (row, columns.index("Exchange Rate"), self.sell_price.nok_exchange_rate)
-        )
-        col.append(
-            (
-                row,
-                columns.index("Gain PS"),
-                f"={index_to_cell(row, columns.index('Price'))}-{self.parent.get_coord('Price')}",
-            )
-        )
-
-        col.append(
-            (
-                row,
-                columns.index("Gain PS USD"),
-                f"={index_to_cell(row, columns.index('Price USD'))}-{self.parent.get_coord('Price USD')}",
-            )
-        )
-
-        col.append(
-            (
-                row,
-                columns.index("Gain"),
-                f"={index_to_cell(row, columns.index('Gain PS'))}*ABS({index_to_cell(row, columns.index('Qty'))})",
-            )
-        )
-        col.append(
-            (
-                row,
-                columns.index("Gain USD"),
-                f"={index_to_cell(row, columns.index('Gain PS USD'))}*ABS({index_to_cell(row, columns.index('Qty'))})",
-            )
-        )
-        col.append(
-            (
-                row,
-                columns.index("Amount"),
-                f"=ABS({index_to_cell(row, columns.index('Price'))}*{index_to_cell(row, columns.index('Qty'))})",
-            )
-        )
-        col.append(
-            (
-                row,
-                columns.index("Amount USD"),
-                f"=ABS({index_to_cell(row, columns.index('Price USD'))}*{index_to_cell(row, columns.index('Qty'))})",
-            )
-        )
-        col.append((row, columns.index("Used"), round(self.tax_deduction_used, 2)))
-        col.append(
-            (
-                row,
-                columns.index("TD Total"),
-                round(self.tax_deduction_used_total, 2),
-            )
-        )
-        return col
-
 
 class PortfolioTransfer(BaseModel):
     date: date
     qty: Decimal
     parent: PortfolioPosition = None
     id: str
-
-    def format(self, row, columns):
-        col = [(row, columns.index("Date"), self.date)]
-        col.append((row, columns.index("Type"), "Transfer"))
-        col.append((row, columns.index("Qty"), self.qty))
-        return col
 
 
 class Portfolio:
@@ -862,24 +710,24 @@ class Portfolio:
             "iQty",  # Individual qty after split/sale
             "Price",
             "Price USD",
-            "Exchange Rate",
+            "Exch. Rate",
             # Dividends
-            "Div PS",
-            "Div PS USD",
-            "Total Dividend",
-            "Total Dividend USD",
-            # Deductibe Risk-free return
-            "Accumulated",
-            "Added",
-            "Used",
-            "TD Total",
+            "Div/Share",
+            "Div/Share USD",
+            "Tot. Div.",
+            "Tot. Div. USD",
+            # Deductibe Risk-free return (Skjerming)
+            "Acc. TxtDed",
+            "New TxtDed",
+            "Used TxtDed",
+            "Rem. TxtDed",
             # Sales
-            "Gain PS",
-            "Gain PS USD",
+            "Gain/Share",
+            "Gain/Share USD",
             "Gain",
             "Gain USD",
             "Amount",
-            "Amount USD",
+            "Amt USD",
         ]
 
         self.prev_holdings = holdings
@@ -1000,4 +848,8 @@ class Portfolio:
         # Generate holdings for next year.
         self.eoy_holdings = self.generate_holdings(year, broker)
         # self.summary = self.generate_tax_summary()
-        self.excel_data = generate_workbook(self)
+
+        # --- MODIFIED: Import and Call generate_workbook locally ---
+        from .excel_report import generate_workbook  # Local import
+
+        self.excel_data = generate_workbook(self)  # Call
