@@ -40,6 +40,15 @@ def version_callback(value: bool):
         raise typer.Exit()
 
 
+def check_unmatched_wires(unmatched):
+    if unmatched:
+        warning_msg = "Wire Transfers missing corresponding received records:"
+        for wire in unmatched:
+            exchange_rate = wire.nok_value / wire.value if wire.value != 0 else 0
+            warning_msg += f"\n  - {wire.date.strftime('%Y-%m-%d')}: {abs(wire.value):>10.2f} USD / {abs(wire.nok_value):>12.2f} NOK @ {abs(exchange_rate):>6.4f}"
+        logger.warning(warning_msg)
+
+
 @app.command()
 def main(  # noqa: C901
     transaction_files: list[typer.FileBinaryRead],
@@ -92,6 +101,7 @@ def main(  # noqa: C901
         feature_flags=features,
         eoy_balance=eoy_balance,
     )
+    check_unmatched_wires(result.report.unmatched_wires)
     print_report(year, result.summary, result.report, result.holdings, verbose)
 
     # New holdings
