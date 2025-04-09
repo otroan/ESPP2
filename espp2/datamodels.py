@@ -682,7 +682,7 @@ class CashEntry(BaseModel):
             return TransferType.YES if v else TransferType.NO
         return v
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", exclude_none=True)
 
 
 class Holdings(BaseModel):

@@ -98,7 +98,7 @@ def main(  # noqa: C901
     if outholdings:
         holdings = result.holdings
         logger.info("Writing new holdings to %s", outholdings.name)
-        j = holdings.model_dump_json(indent=4)
+        j = holdings.model_dump_json(indent=4, exclude_none=True)
         with outholdings as f:
             f.write(j)
     else:
