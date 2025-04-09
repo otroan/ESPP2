@@ -17,6 +17,16 @@ from pydantic import (
     computed_field,
 )
 from espp2.fmv import FMV
+from pydantic.functional_serializers import PlainSerializer
+
+
+#
+# Helper function for Decimal serialization
+#
+def format_decimal_4places(d: Decimal) -> str:
+    """Format Decimal to 4 places as string for JSON."""
+    return f"{d:.4f}"
+
 
 #
 # Transactions data model
@@ -61,7 +71,7 @@ class Amount(BaseModel):
     """Amount represents a monetary value in a specific currency with lazy conversion capabilities"""
 
     currency: str
-    value: Decimal
+    value: Annotated[Decimal, PlainSerializer(format_decimal_4places)]
     _exchange_rates: Dict[str, Decimal] = {}
     _converted_values: Dict[str, Decimal] = {}
     amountdate: Optional[date] = None
@@ -71,9 +81,6 @@ class Amount(BaseModel):
     model_config = ConfigDict(
         extra="allow",  # Allow extra fields
         exclude_none=True,  # Exclude None values from JSON output
-        json_encoders={
-            Decimal: lambda d: f"{d:.4f}"  # Format Decimals to 4 places as strings
-        },
     )
 
     @model_validator(mode="before")
@@ -149,13 +156,17 @@ class Amount(BaseModel):
 
     @computed_field
     @property
-    def nok_value(self) -> Optional[Decimal]:
+    def nok_value(
+        self,
+    ) -> Optional[Annotated[Decimal, PlainSerializer(format_decimal_4places)]]:
         """NOK value, calculated on demand"""
         return self.get_in("NOK")
 
     @computed_field
     @property
-    def nok_exchange_rate(self) -> Optional[Decimal]:
+    def nok_exchange_rate(
+        self,
+    ) -> Optional[Annotated[Decimal, PlainSerializer(format_decimal_4places)]]:
         """Exchange rate to NOK"""
         if self.amountdate is None and self.legacy_nok_rate is not None:
             return self.legacy_nok_rate
@@ -610,8 +621,8 @@ class Stock(BaseModel):
 
     symbol: str
     date: date
-    qty: Decimal
-    tax_deduction: Decimal
+    qty: Annotated[Decimal, PlainSerializer(format_decimal_4places)]
+    tax_deduction: Annotated[Decimal, PlainSerializer(format_decimal_4places)]
     purchase_price: Amount
 
     @field_validator("purchase_price", mode="before")
@@ -630,9 +641,7 @@ class Stock(BaseModel):
             )
         return value
 
-    model_config = ConfigDict(
-        extra="allow", json_encoders={Decimal: lambda d: f"{d:.4f}"}
-    )
+    model_config = ConfigDict(extra="allow")
 
 
 class CashEntry(BaseModel):
