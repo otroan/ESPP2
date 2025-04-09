@@ -562,8 +562,8 @@ Entry = Annotated[
 class TransactionTaxYearBalances(BaseModel):
     """Transaction balances"""
 
-    opening_cash: Amount
-    closing_cash: Amount
+    opening_cash: Decimal
+    closing_cash: Decimal
     opening_value_symbol_qty: Optional[Dict[str, Decimal]] = dict()
     closing_value_symbol_qty: Optional[Dict[str, Decimal]] = dict()
 

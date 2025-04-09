@@ -1482,18 +1482,10 @@ def morgan_html_import(html_fd, filename):
     transes = sorted(state.transactions, key=lambda d: d.date)
 
     # The amount of cash in USD at the beginning of the tax-year
-    opening_cash = Amount(
-        currency="USD",
-        value=state.opening_value_cash,
-        amountdate=start_period,
-    )
+    opening_cash = Decimal(state.opening_value_cash)
 
     # The amount of cash in USD at the end of the tax-year
-    closing_cash = Amount(
-        currency="USD",
-        value=state.closing_value_cash,
-        amountdate=end_period,
-    )
+    closing_cash = Decimal(state.closing_value_cash)
 
     # Collect cash amounts from above, and CSCO shares
     balances = TransactionTaxYearBalances(
