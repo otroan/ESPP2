@@ -134,7 +134,16 @@ espp2 <schwab-all-transactions.json> --inholdings holdings-2023.json --output ca
   - Removed support for Schwab CSV1 and CSV2 formats
   - Removed ESPPv1 pickle
 - Split holdings generation into separate CLI tool (holdinator)
-- Committed known symbol cache files to repo
+- Committed known symbol cache files to repo so key to data broker is no longer needed
+- Added validation checks for opening and closing cash balance
+- Added more unit tests. Including for aksjonaermodellen
+- Handle cash as a FIFO and only apply aggregation principle on sale amount
+- Aggregation princpile applied when sale and wire happens within 14 days
+- New table from CLI showing ESPP benefits
+- morgan fixes. opening/closing values, dates for sales/purchase
+- support holdings in zip format (last years run output)
+- Added new Amount type that dynamically handles currency exchanges
+
 
 ## Release notes 2023
 
