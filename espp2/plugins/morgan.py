@@ -80,7 +80,7 @@ class ParseState:
         self.entry_date = None
         self.date2dividend = dict()
         self.adapter = TypeAdapter(Entry)
-        self.settledate2selldate = dict()
+        self.settledate2saleswithdrawals = dict()
         self.espp_purchase_date2price = dict()
 
         self.opening_value_cash = Decimal(0)
@@ -139,11 +139,13 @@ class ParseState:
     def sell(self, qty, price):
         assert self.symbol is not None
 
+        gross = self.get_gross_sales_price(-qty, price, self.entry_date)
+
         r = {
             "type": EntryTypeEnum.SELL,
             "date": self.entry_date,
             "qty": qty,
-            "amount": fixup_price(self.entry_date, "USD", f"{price * -qty}"),
+            "amount": fixup_price(self.entry_date, "USD", f"{gross}"),
             "symbol": self.symbol,
             "description": self.activity,
             "source": self.source,
@@ -195,8 +197,6 @@ class ParseState:
         self.transactions.append(self.adapter.validate_python(r))
 
     def wire_transfer(self, date, amount, fee):
-        assert self.symbol is not None
-
         r = {
             "type": EntryTypeEnum.WIRE,
             "date": date,
@@ -236,13 +236,39 @@ class ParseState:
         self.transactions.append(self.adapter.validate_python(r))
         return True
 
-    def record_selldate(self, sell_date, settle_date):
-        """Record a pair of dates for selling and settlement."""
-        self.settledate2selldate[settle_date] = sell_date
+    def record_sales_withdrawal(self, withdrawal):
+        """Record a Withdrawal record for a sales operation"""
+        settle_date = withdrawal.settlement_date
+        if settle_date not in self.settledate2saleswithdrawals:
+            self.settledate2saleswithdrawals[settle_date] = []
+        self.settledate2saleswithdrawals[settle_date].append(withdrawal)
+
+    def get_gross_sales_price(self, qty, price, salesdate):
+        """Compute qty * price, but use Withdrawal gross for date if suitable"""
+        gross_calc = qty * price
+        try:
+            for w in self.settledate2saleswithdrawals[salesdate]:
+                assert w.gross_amount.currency == "USD"
+                gross_given = w.gross_amount.value
+                grossprice = gross_given / qty
+                diff = grossprice - price
+                # print(f"### get_gross_sales_price({salesdate}) {gross_calc} => {gross_given} ?  diff={diff}")
+                if diff >= Decimal("-0.01") and diff <= Decimal("0.01"):
+                    if gross_calc != gross_given:
+                        print(
+                            f"### Sale at {salesdate}: Using gross {gross_given} for qty={qty} price={price} ({gross_calc})"
+                        )
+                    return gross_given
+        except KeyError:
+            pass
+        return gross_calc
 
     def fixup_selldates(self):
         """Change SELL-records to use actual selldate"""
         # TODO!!!! Fixing now needs to patch amountdate in the Amount instance for sales!
+        # TODO!!!! This is *not* needed for latest test-files; maybe more complicated
+        # than first anticipated. Disabled for now.
+        # TODO!!!! If this is revived, it needs to use settledate2saleswithdrawals
         for t in self.transactions:
             if t.type == EntryTypeEnum.SELL:
                 settledate = t.date.isoformat()
@@ -965,18 +991,12 @@ def parse_withdrawal_sales(state, sales):
     """Withdrawals from sale of shares"""
     for wd, sb, np in sales:
         w = Withdrawal(wd, sb, np)
+        state.record_sales_withdrawal(w)
         if w.is_wire:
             assert w.symbol != "Cash"  # No Cash-fund for sale withdrawals
             state.wire_transfer(w.settlement_date, w.net_amount, w.fees_amount)
-            print(
-                f"### Found settlement {w.settlement_date} for withdrawal date {w.withdrawal_date}"
-            )
-            state.record_selldate(w.withdrawal_date, w.settlement_date)
         elif w.is_transfer:
-            print(
-                f"### Found settlement {w.settlement_date} for withdrawal date {w.withdrawal_date}"
-            )
-            state.record_selldate(w.withdrawal_date, w.settlement_date)
+            pass
         else:
             raise ValueError(
                 f"Sales withdrawal w/o wire-transfer: wd={wd.data} sb={sb.data} np={np.data}"
@@ -1433,14 +1453,14 @@ def morgan_html_import(html_fd, filename):
         and start_period[5:10] == "01-01"
         and end_period[5:10] == "12-31"
     ):
+        print("Parse withdrawals ...")
+        parse_withdrawals_html(all_tables, state)
         print("Parse ESPP Holdings for purchase prices ...")
         parse_espp_purchase_price_table_html(all_tables, state)
         print("Parse RSU activity ...")
         parse_rsu_activity_html(all_tables, state)
         print("Parse ESPP activity ...")
         parse_espp_activity_html(all_tables, state)
-        print("Parse withdrawals ...")
-        parse_withdrawals_html(all_tables, state)
         state.flush_dividend()
     elif end_period[4:10] == "-12-31":
         # Assume this file will be used to find holdings up to the EOY in
