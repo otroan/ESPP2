@@ -1450,7 +1450,8 @@ def compute_transaction_deltas(transes):
             cash_delta += t.amount.value
         elif t.type == EntryTypeEnum.WIRE:
             cash_delta += t.amount.value
-            cash_delta += t.fee.value
+            if t.fee:
+                cash_delta += t.fee.value
         elif t.type == EntryTypeEnum.TAX:
             cash_delta += t.amount.value
         elif t.type == EntryTypeEnum.DIVIDEND:
