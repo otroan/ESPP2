@@ -1290,6 +1290,7 @@ def parse_espp_holdings_html(all_tables, state, year):
 
     assert len(espp_holdings) == 1
 
+    parse_espp_purchase_price_table(state, espp_holdings[0].to_dict())
     parse_espp_holdings_table(state, espp_holdings[0].to_dict())
 
 
@@ -1359,32 +1360,6 @@ def parse_espp_activity_html(all_tables, state):
         parse_espp_activity_table(state, espp[0].to_dict())
     elif len(espp) != 0:
         raise ValueError(f"Expected 0 or 1 ESPP tables, got {len(espp)}")
-
-
-def parse_espp_purchase_price_table_html(all_tables, state):
-    """Look for the ESPP Holdings table and parse it for purchase prices"""
-    search_espp_holdings = [
-        ["Purchase History for Stock/Shares"],
-        [
-            "Grant Date",
-            "Subscription Date",
-            "Subscription Date FMV",
-            "Purchase Date",
-            "Purchase Date FMV",
-            "Purchase Price",
-            "Qualification Date *",
-            "Shares Purchased",
-            "Total Shares You Hold",
-            "Current Share Price",
-            "Current Value",
-        ],
-    ]
-
-    espp_holdings = find_tables_by_header(all_tables, search_espp_holdings, 1)
-    print(f"ESPP-Holdings: Found {len(espp_holdings)} tables")
-
-    if len(espp_holdings) == 1:
-        parse_espp_purchase_price_table(state, espp_holdings[0].to_dict())
 
 
 def parse_withdrawals_html(all_tables, state):
@@ -1490,8 +1465,6 @@ def morgan_html_import(html_fd, filename):
     ):
         print("Parse withdrawals ...")
         parse_withdrawals_html(all_tables, state)
-        print("Parse ESPP Holdings for purchase prices ...")
-        parse_espp_purchase_price_table_html(all_tables, state)
         print("Parse RSU activity ...")
         parse_rsu_activity_html(all_tables, state)
         print("Parse ESPP activity ...")
