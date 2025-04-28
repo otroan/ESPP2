@@ -379,6 +379,12 @@ def read(json_file, filename="") -> Transactions:
         # record_date = get_record_date(t)
         # print(f"Record date: {record_date}")
         # Create the record object
+        try:
+            d = fixup_date_as_date(t["Date"])
+            if d > date(2025, 1, 31):
+                continue
+        except ValueError:
+            pass
         r = dispatch[t["Action"]](t, source=f"schwab:{filename}")
         records.append(r)
 
