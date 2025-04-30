@@ -899,6 +899,9 @@ def parse_espp_activity_table(state, recs):
         if state.activity in ignore:
             continue
 
+        if re.fullmatch(r"""Transaction Cash Deposit.*""", state.activity):
+            continue
+
         raise ValueError(f'Unknown ESPP activity: "{state.activity}"')
 
     return state.transactions
@@ -943,6 +946,7 @@ class Withdrawal:
         self.description = "Withdrawal"
         self.is_transfer = False
         self.is_wire = False
+        self.is_retain_stockplan = False
         self.has_wire_fee = False
 
         assert self.wd.data[3][2] == "Settlement Date:"
@@ -989,6 +993,8 @@ class Withdrawal:
         if "Deposit funds into my Morgan Stanley" in self.wd.data[5][1]:
             self.description = "Transfer to Morgan Stanley account"
             self.is_transfer = True
+        if "Retain funds in StockPlan Connect Account" in self.wd.data[5][1]:
+            self.is_retain_stockplan = True
         if self.is_wire:
             self.description = "Wire-transfer"
 
@@ -1003,6 +1009,8 @@ def parse_withdrawal_sales(state, sales):
             state.wire_transfer(w.settlement_date, w.net_amount, w.fees_amount)
         elif w.is_transfer:
             pass
+        elif w.is_retain_stockplan:
+            state.cashadjust(w.settlement_date, w.fees_amount, "StockPlan transfer fee")
         else:
             raise ValueError(
                 f"Sales withdrawal w/o wire-transfer: wd={wd.data} sb={sb.data} np={np.data}"
@@ -1416,32 +1424,37 @@ def parse_cash_holdings_html(all_tables, state, year):
     state.cashadjust(f"{year}-12-31", cash, f"Closing balance {year}")
 
 
-def compute_transaction_deltas(transes):
+def compute_transaction_deltas(opening_cash, transes):
     csco_delta = Decimal("0.00")
     cash_delta = Decimal("0.00")
     for t in transes:
+        csco_adj = Decimal("0.00")
+        cash_adj = Decimal("0.00")
         if t.type == EntryTypeEnum.SELL:
-            csco_delta += t.qty
-            cash_delta += t.amount.value
+            csco_adj = t.qty
+            cash_adj = t.amount.value
         elif t.type == EntryTypeEnum.WIRE:
-            cash_delta += t.amount.value
+            cash_adj = t.amount.value
             if t.fee:
-                cash_delta += t.fee.value
+                cash_adj += t.fee.value
         elif t.type == EntryTypeEnum.TAX:
-            cash_delta += t.amount.value
+            cash_adj = t.amount.value
         elif t.type == EntryTypeEnum.DIVIDEND:
-            cash_delta += t.amount.value
+            cash_adj = t.amount.value
         elif t.type == EntryTypeEnum.DEPOSIT:
-            csco_delta += t.qty
+            csco_adj = t.qty
         elif t.type == EntryTypeEnum.CASHADJUST:
-            cash_delta += t.amount.value
+            cash_adj = t.amount.value
         elif t.type == EntryTypeEnum.TAXSUB:
-            cash_delta += t.amount.value
+            cash_adj = t.amount.value
         elif t.type == EntryTypeEnum.DIVIDEND_REINV:
-            cash_delta += t.amount.value
+            cash_adj = t.amount.value
         else:
             print(f"Not handled: {t}")
             assert False
+        cash_delta += cash_adj
+        csco_delta += csco_adj
+        print(f"### Cash: type={t.type} => {opening_cash + cash_delta} ({cash_adj})")
     return csco_delta, cash_delta
 
 
@@ -1510,7 +1523,9 @@ def morgan_html_import(html_fd, filename):
     transes = sorted(state.transactions, key=lambda d: d.date)
 
     # Check if our transaction entries sums up to the expected deltas
-    delta_csco_qty, delta_cash = compute_transaction_deltas(transes)
+    delta_csco_qty, delta_cash = compute_transaction_deltas(
+        state.opening_value_cash, transes
+    )
 
     calculated_closing_cash = state.opening_value_cash + delta_cash
     error = state.closing_value_cash - calculated_closing_cash
