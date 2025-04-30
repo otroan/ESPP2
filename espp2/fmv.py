@@ -290,7 +290,7 @@ class FMV:
                 return get_espp_exchange_rate(date_str)
             except KeyError:
                 # Missing ESPP data for this date
-                logger.error("Missing ESPP data for %s", date_str)
+                logger.error("Missing ESPP exchange rate for %s", date_str)
                 # Fall-back to USD
                 currency = "USD"
         self.refresh(currency, itemdate, FMVTypeEnum.CURRENCY)
