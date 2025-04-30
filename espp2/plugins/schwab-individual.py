@@ -5,7 +5,6 @@ Schwab JSON normalizer.
 # pylint: disable=invalid-name, too-many-locals, too-many-branches
 
 from datetime import date
-import math
 import json
 from decimal import Decimal, InvalidOperation
 import logging
@@ -99,6 +98,7 @@ def fixup_price(datestr, currency, pricestr) -> Amount:
 def fixup_price_negative(datestr, currency, pricestr) -> Amount:
     """Fixup price."""
     price = Decimal(pricestr.replace("$", "").replace(",", ""))
+    price = -abs(price)
     return NegativeAmount(
         amountdate=datestr,
         currency=currency,
@@ -120,19 +120,20 @@ def sale(csv_item, source):
     """Process sale"""
     d = fixup_date(csv_item["Date"])
     try:
-        fee = fixup_price_negative(d, "USD", csv_item["FeesAndCommissions"])
+        fee = fixup_price_negative(d, "USD", csv_item["Fees & Comm"])
     except InvalidOperation:
         fee = None
 
-    saleprice = fixup_price(d, "USD", get_saleprice(csv_item))
+    # saleprice = fixup_price(d, "USD", csv_item["Amount"])
+    # saleprice = fixup_price(d, "USD", get_saleprice(csv_item))
     grossproceeds = fixup_price(d, "USD", csv_item["Amount"])
-    g = get_grossproceeds(csv_item)
-    g += fee
-    if not math.isclose(g.value, grossproceeds.value, abs_tol=5):
-        logger.error(
-            f"Gross proceeds mismatch: {g} != {grossproceeds}. {d} {csv_item['Description']}"
-        )
-        grossproceeds = g
+    # g = get_grossproceeds(csv_item)
+    # g += fee
+    # if not math.isclose(g.value, grossproceeds.value, abs_tol=5):
+    #     logger.error(
+    #         f"Gross proceeds mismatch: {g} != {grossproceeds}. {d} {csv_item['Description']}"
+    #     )
+    #     grossproceeds = g
     qty = fixup_number(csv_item["Quantity"])
 
     return Sell(
@@ -140,7 +141,7 @@ def sale(csv_item, source):
         symbol=csv_item["Symbol"],
         description=csv_item["Description"],
         qty=qty * -1,
-        sale_price=saleprice,
+        sale_price=grossproceeds,
         amount=grossproceeds,
         fee=fee,
         source=source,
@@ -178,7 +179,6 @@ def dividend(csv_item, source):
 
 def cash_dividend(csv_item, source):
     """Process cash dividend"""
-    print("CASH DIVIDEND", csv_item)
     d = fixup_date(csv_item["Date"])
     amount = fixup_price(d, "USD", csv_item["Amount"])
     description = csv_item["Description"]
@@ -263,12 +263,11 @@ def not_implemented(csv_item, source):
 
 def transfer(csv_item, source):
     """Process transfer"""
-    print("TRANSFER", csv_item)
     d = fixup_date(csv_item["Date"])
     if csv_item["Fees & Comm"]:
-        fee = fixup_price(d, "USD", csv_item["Fees & Comm"])
+        fee = fixup_price_negative(d, "USD", csv_item["Fees & Comm"])
     else:
-        fee = fixup_price(d, "USD", "$0.0")
+        fee = fixup_price_negative(d, "USD", "$0.0")
     return Transfer(
         date=d,
         description=csv_item["Description"],
@@ -300,12 +299,14 @@ def exercise_and_sell(csv_item, source):
 
 def journal(csv_item, source):
     """Process journal"""
-    # Stocks
-    if csv_item["Quantity"]:
-        return transfer(csv_item, source)
-
-    # Wires
-    return wire(csv_item, source)
+    d = fixup_date_pick_first(csv_item["Date"])
+    amount = fixup_price(d, "USD", csv_item["Amount"])
+    return Cashadjust(
+        date=d,
+        description=csv_item["Description"],
+        amount=amount,
+        source=source,
+    )
 
 
 def adjustment(csv_item, source):
@@ -323,12 +324,28 @@ def adjustment(csv_item, source):
     )
 
 
+def bank_interest(csv_item, source):
+    """Process bank interest"""
+    d = fixup_date_pick_first(csv_item["Date"])
+    amount = fixup_price(d, "USD", csv_item["Amount"])
+    return Cashadjust(
+        date=d,
+        description=csv_item["Description"],
+        amount=amount,
+        source=source,
+    )
+
+
 dispatch = {
     "Reinvest Shares": dividend_reinvested,
     "Reinvest Dividend": dividend,
     "NRA Tax Adj": tax_withholding,
-    "Journaled Shares": tax_withholding,
+    "Journaled Shares": deposit,
     "Cash Dividend": cash_dividend,
+    "Bank Interest": bank_interest,
+    "Qualified Dividend": dividend,
+    "Sell": sale,
+    "Journal": journal,
     # "Deposit": deposit,
     # "Wire Transfer": wire,
     # "MWI": wire,

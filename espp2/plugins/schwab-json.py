@@ -258,15 +258,15 @@ def transfer(csv_item, source):
     """Process transfer"""
     d = fixup_date(csv_item["Date"])
     if csv_item["FeesAndCommissions"]:
-        fee = fixup_price(d, "USD", csv_item["FeesAndCommissions"])
+        fee = fixup_price_negative(d, "USD", csv_item["FeesAndCommissions"])
     else:
-        fee = fixup_price(d, "USD", "$0.0")
+        fee = fixup_price_negative(d, "USD", "$0.0")
     return Transfer(
         date=d,
         description=csv_item["Description"],
         symbol=csv_item["Symbol"],
         qty=-fixup_number(csv_item["Quantity"]),
-        fee=fee,
+        fee=-fee,
         source=source,
     )
 
