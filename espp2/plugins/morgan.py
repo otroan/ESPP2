@@ -368,7 +368,7 @@ class ParseState:
         if not ok:
             raise ValueError(f"Missing colummns for {row}")
         price, currency = morgan_price(price)
-        qty = Decimal(qty)
+        qty = morgan_qty(qty)
         price = Decimal(price)
 
         self.sell(qty, price)
@@ -580,10 +580,10 @@ def morgan_price(price_str):
 
 def morgan_qty(qty_str):
     """Parse a quantity entity, with comma as thousands separator"""
-    m = re.fullmatch(r"""(\d+),(\d\d\d(\.\d+)?)""", qty_str)
+    m = re.fullmatch(r"""(-?\d+),(\d\d\d(\.\d+)?)""", qty_str)
     if m:
         return Decimal(f"{m.group(1)}{m.group(2)}")
-    m = re.fullmatch(r"""(\d+(\.\d+)?)""", qty_str)
+    m = re.fullmatch(r"""(-?\d+(\.\d+)?)""", qty_str)
     if m:
         return Decimal(m.group(1))
     raise ValueError(f"Failed to parse QTY '{qty_str}'")
