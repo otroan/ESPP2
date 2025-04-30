@@ -63,11 +63,30 @@ def format_fill_columns(ws, headers, columns, color):
 
 def generate_wires_from_transactions(transactions, unmatched):
     """Generate unmatched wires from transactions"""
+    # Create a copy of unmatched wires to track which ones have been matched
+    remaining_unmatched = list(unmatched)
+
     for t in transactions:
-        # Match up wire with transfer record
-        wire = next((w for w in unmatched if w.date == t.date), None)
+        # First try to match by date and amount (most precise)
+        wire = next(
+            (
+                w
+                for w in remaining_unmatched
+                if w.date == t.date and abs(w.value) == t.amount_sent
+            ),
+            None,
+        )
+
+        # If no match by amount, fall back to just date matching
+        if not wire:
+            wire = next((w for w in remaining_unmatched if w.date == t.date), None)
+
         if wire:
-            wire.nok_value = abs(t.amount_sent)
+            # Set the NOK value from the transaction amount_received
+            wire.nok_value = t.amount_received
+            # Remove the matched wire from the remaining unmatched list
+            remaining_unmatched.remove(wire)
+
     return unmatched
 
 
@@ -1043,7 +1062,6 @@ class Portfolio:
         self.cash_summary = cash_report
         self.cash_ledger = self.cash.ledger()
         self.ledger = Ledger(holdings, transactions)
-
         self.unmatched_wires_report = generate_wires_from_transactions(
             cash_report.transfers, unmatched
         )
